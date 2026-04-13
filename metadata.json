@@ -1,5 +1,5 @@
 {
   "name": "VitalPath AI",
   "description": "Personalized fitness and nutrition coach that tracks vitals, calculates macros, generates grocery lists, and provides custom workout plans.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["camera"]
 }

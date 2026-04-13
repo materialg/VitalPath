@@ -12,6 +12,7 @@ export interface UserProfile {
   activityLevel?: ActivityLevel;
   goalBodyFat?: number;
   targetDate?: string;
+  activeMealPlanId?: string;
   createdAt: string;
 }
 
@@ -49,6 +50,7 @@ export interface DayPlan {
 export interface MealPlan {
   id: string;
   weekStartDate: string;
+  updatedAt: string;
   dailyCalories: number;
   macros: {
     protein: number;
@@ -98,4 +100,5 @@ export interface FoodBankItem {
   carbs: number;
   fats: number;
   fiber: number;
+  mealTypes?: ('B' | 'L' | 'D')[];
 }

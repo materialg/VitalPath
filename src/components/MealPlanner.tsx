@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { generateMealPlan, calculateDailyTargets, logDailyTarget } from '../services/aiService';
@@ -24,6 +24,8 @@ export function MealPlanner({ profile }: Props) {
   const targets = calculateDailyTargets(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20);
 
   useEffect(() => {
+    if (!profile.uid) return;
+
     const qVitals = query(
       collection(db, 'users', profile.uid, 'vitals'),
       orderBy('date', 'desc'),
@@ -37,15 +39,24 @@ export function MealPlanner({ profile }: Props) {
 
     const qPlans = query(
       collection(db, 'users', profile.uid, 'mealPlans'),
-      orderBy('weekStartDate', 'desc'),
+      orderBy('updatedAt', 'desc'),
       limit(10)
     );
     const unsubscribePlans = onSnapshot(qPlans, (snap) => {
       const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlan));
       setMealPlans(plans);
-      if (plans.length > 0 && !activePlanId) {
-        setActivePlanId(plans[0].id);
-      }
+      
+      // Persistence logic:
+      // 1. If we have a stored activeMealPlanId in profile, use it
+      // 2. Otherwise, use the latest plan (plans[0])
+      setActivePlanId(prev => {
+        if (prev) return prev;
+        if (profile.activeMealPlanId && plans.some(p => p.id === profile.activeMealPlanId)) {
+          return profile.activeMealPlanId;
+        }
+        if (plans.length > 0) return plans[0].id;
+        return null;
+      });
     });
 
     const qTargets = query(
@@ -68,24 +79,62 @@ export function MealPlanner({ profile }: Props) {
       unsubscribeTargets();
       unsubscribeFoodBank();
     };
-  }, [profile.uid, activePlanId]);
+  }, [profile.uid]);
+
+  const handlePlanSelect = async (id: string) => {
+    setActivePlanId(id);
+    setIsHistoryOpen(false);
+    // Persist selection to profile
+    await updateDoc(doc(db, 'users', profile.uid), {
+      activeMealPlanId: id
+    });
+  };
 
   const activePlan = mealPlans.find(p => p.id === activePlanId) || null;
 
   const handleGenerate = async () => {
+    if (foodBankItems.length === 0) {
+      setError("Your Food Bank is empty. Please add some foods first so the AI can build your plan!");
+      return;
+    }
     setIsGenerating(true);
     setError(null);
     try {
       const plan = await generateMealPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, foodBankItems);
+      const today = new Date().toLocaleDateString('en-CA');
+      const now = new Date().toISOString();
       const newPlan = {
         ...plan,
-        weekStartDate: new Date().toLocaleDateString('en-CA'),
+        weekStartDate: today,
+        updatedAt: now,
       };
       
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
+      // Check for existing plan for today to avoid duplicates
+      const q = query(
+        collection(db, 'users', profile.uid, 'mealPlans'),
+        where('weekStartDate', '==', today),
+        limit(1)
+      );
+      const snap = await getDocs(q);
       
-      // Also generate grocery list
+      let planId = '';
+      if (!snap.empty) {
+        // Overwrite existing plan
+        planId = snap.docs[0].id;
+        await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', planId), newPlan);
+      } else {
+        // Save new plan
+        const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
+        planId = docRef.id;
+      }
+
+      // Persist active plan selection to profile
+      await updateDoc(doc(db, 'users', profile.uid), {
+        activeMealPlanId: planId
+      });
+      setActivePlanId(planId);
+      
+      // Also generate/update grocery list
       const items: any[] = [];
       plan.days.forEach((day: any) => {
         day.meals.forEach((meal: any) => {
@@ -97,10 +146,21 @@ export function MealPlanner({ profile }: Props) {
         });
       });
 
-      await addDoc(collection(db, 'users', profile.uid, 'groceryLists'), {
-        weekStartDate: new Date().toLocaleDateString('en-CA'),
-        items,
-      });
+      const gq = query(
+        collection(db, 'users', profile.uid, 'groceryLists'),
+        where('weekStartDate', '==', today),
+        limit(1)
+      );
+      const gSnap = await getDocs(gq);
+
+      if (!gSnap.empty) {
+        await updateDoc(doc(db, 'users', profile.uid, 'groceryLists', gSnap.docs[0].id), { items });
+      } else {
+        await addDoc(collection(db, 'users', profile.uid, 'groceryLists'), {
+          weekStartDate: today,
+          items,
+        });
+      }
 
     } catch (err: any) {
       console.error(err);
@@ -116,18 +176,6 @@ export function MealPlanner({ profile }: Props) {
         <div>
           <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Meal Planner</h1>
           <p className="text-[#141414]/60">AI-generated nutrition tailored to your body fat goals.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
-            ) : <Sparkles size={18} />}
-            {activePlan ? 'Regenerate Plan' : 'Generate Weekly Plan'}
-          </button>
         </div>
       </header>
 
@@ -195,30 +243,50 @@ export function MealPlanner({ profile }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Day Selector */}
           <div className="lg:col-span-1 space-y-8">
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mb-4">Select Day</h3>
-              {activePlan?.days.map((day, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDay(idx)}
-                  className={`w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                    selectedDay === idx 
-                      ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]' 
-                      : 'text-[#141414]/40 hover:bg-white/50'
-                  }`}
-                >
-                  <span className="font-bold">{day.day}</span>
-                  <ChevronRight size={16} className={selectedDay === idx ? 'opacity-100' : 'opacity-0'} />
-                </button>
-              ))}
-              
-              <button
-                onClick={() => setIsHistoryOpen(true)}
-                className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-white/50 mt-4 border border-dashed border-[#141414]/10"
+            <div className="space-y-4">
+              <button 
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="w-full px-6 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#141414]/10"
               >
-                <span className="font-bold">View History</span>
-                <Calendar size={18} />
+                {isGenerating ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
+                ) : <Sparkles size={18} />}
+                {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
               </button>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mb-4 mt-8">Select Day</h3>
+                {activePlan?.days.map((day, idx) => {
+                  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                  const displayName = day.day.toLowerCase().includes('day') && day.day.length <= 6 
+                    ? dayNames[idx] || day.day 
+                    : day.day;
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedDay(idx)}
+                      className={`w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
+                        selectedDay === idx 
+                          ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]' 
+                          : 'text-[#141414]/40 hover:bg-white/50'
+                      }`}
+                    >
+                      <span className="font-bold">{displayName}</span>
+                      <ChevronRight size={16} className={selectedDay === idx ? 'opacity-100' : 'opacity-0'} />
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-white/50 mt-4 border border-dashed border-[#141414]/10"
+                >
+                  <span className="font-bold text-sm">View History</span>
+                  <Calendar size={18} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -226,11 +294,36 @@ export function MealPlanner({ profile }: Props) {
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
               <div className="flex flex-wrap gap-8 mb-8">
-                <MacroStat label="Daily Calories" value={`${activePlan?.dailyCalories || 0} kcal`} icon={<Flame className="text-orange-500" />} />
-                <MacroStat label="Protein" value={`${activePlan?.macros?.protein || 0}g`} />
-                <MacroStat label="Carbs" value={`${activePlan?.macros?.carbs || 0}g`} />
-                <MacroStat label="Fats" value={`${activePlan?.macros?.fats || 0}g`} />
-                <MacroStat label="Fiber" value={`${activePlan?.macros?.fiber || 0}g`} />
+                {(() => {
+                  const dayMeals = activePlan?.days?.[selectedDay]?.meals || [];
+                  const totals = dayMeals.reduce((acc: any, meal: any) => ({
+                    calories: acc.calories + (meal.calories || 0),
+                    protein: acc.protein + (meal.protein || 0),
+                    carbs: acc.carbs + (meal.carbs || 0),
+                    fats: acc.fats + (meal.fats || 0),
+                    fiber: acc.fiber + (meal.fiber || 0),
+                  }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
+
+                  const isOverTarget = totals.calories > (targets?.dailyCalories || 0) + 50;
+
+                  return (
+                    <>
+                      <div className="relative">
+                        <MacroStat label="Daily Calories" value={`${totals.calories} kcal`} icon={<Flame className={isOverTarget ? "text-red-500" : "text-orange-500"} />} />
+                        {isOverTarget && (
+                          <span className="absolute -top-2 -right-2 flex h-4 w-4">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">!</span>
+                          </span>
+                        )}
+                      </div>
+                      <MacroStat label="Protein" value={`${Math.round(totals.protein * 10) / 10}g`} />
+                      <MacroStat label="Carbs" value={`${Math.round(totals.carbs * 10) / 10}g`} />
+                      <MacroStat label="Fats" value={`${Math.round(totals.fats * 10) / 10}g`} />
+                      <MacroStat label="Fiber" value={`${Math.round(totals.fiber * 10) / 10}g`} />
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="space-y-8">
@@ -362,13 +455,14 @@ export function MealPlanner({ profile }: Props) {
               </div>
 
               <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                {mealPlans.map((plan) => (
+                {mealPlans
+                  .filter((plan, index, self) => 
+                    index === self.findIndex((p) => p.weekStartDate === plan.weekStartDate)
+                  )
+                  .map((plan) => (
                   <button
                     key={plan.id}
-                    onClick={() => {
-                      setActivePlanId(plan.id);
-                      setIsHistoryOpen(false);
-                    }}
+                    onClick={() => handlePlanSelect(plan.id)}
                     className={`w-full p-6 text-left rounded-2xl transition-all border ${
                       activePlanId === plan.id 
                         ? 'bg-[#141414] text-white border-transparent shadow-lg' 

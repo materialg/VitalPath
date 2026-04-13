@@ -46,7 +46,7 @@ export function WorkoutCoach({ profile }: Props) {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20);
+      const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, workout);
       const newPlan = {
         ...plan,
         date: new Date().toLocaleDateString('en-CA'),
@@ -140,27 +140,49 @@ export function WorkoutCoach({ profile }: Props) {
 
           {/* Exercise List */}
           <div className="lg:col-span-2 space-y-4">
-            {workout.exercises.map((ex, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm flex items-center gap-6 group hover:border-[#141414]/20 transition-all"
-              >
-                <div className="w-14 h-14 bg-[#141414]/5 rounded-2xl flex items-center justify-center shrink-0 font-sans font-black text-2xl text-[#141414]/10 group-hover:text-[#141414]/20 transition-colors">
-                  {idx + 1}
+            {workout.title === 'Rest' ? (
+              <div className="bg-white p-12 rounded-3xl border border-[#141414]/5 shadow-sm text-center">
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Zap className="text-blue-500" size={40} />
                 </div>
-                <div className="flex-1">
-                  <h4 className="text-xl font-bold text-[#141414] mb-1">{ex.name}</h4>
-                  <p className="text-sm text-[#141414]/60">{ex.notes}</p>
+                <h3 className="text-2xl font-bold text-[#141414] mb-2">Rest & Recovery</h3>
+                <p className="text-[#141414]/60 max-w-md mx-auto mb-8">
+                  {workout.notes || "Focus on active recovery, mobility, and high-quality sleep today. Your muscles grow while you rest, not while you train."}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                  <div className="p-4 bg-blue-50 rounded-2xl">
+                    <p className="font-bold text-blue-900 mb-1">Hydration</p>
+                    <p className="text-sm text-blue-700">Drink at least 3-4 liters of water today.</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-2xl">
+                    <p className="font-bold text-purple-900 mb-1">Mobility</p>
+                    <p className="text-sm text-purple-700">15 mins of light stretching or foam rolling.</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
-                  <p className="text-xs font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
-                </div>
-              </motion.div>
-            ))}
+              </div>
+            ) : (
+              workout.exercises.map((ex, idx) => (
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm flex items-center gap-6 group hover:border-[#141414]/20 transition-all"
+                >
+                  <div className="w-14 h-14 bg-[#141414]/5 rounded-2xl flex items-center justify-center shrink-0 font-sans font-black text-2xl text-[#141414]/10 group-hover:text-[#141414]/20 transition-colors">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold text-[#141414] mb-1">{ex.name}</h4>
+                    <p className="text-sm text-[#141414]/60">{ex.notes}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
+                    <p className="text-xs font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       ) : (

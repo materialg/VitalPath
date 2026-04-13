@@ -173,7 +173,6 @@ export function VitalsTracker({ profile }: Props) {
                     <th className="px-6 py-4 font-bold">Weight</th>
                     <th className="px-6 py-4 font-bold">Body Fat</th>
                     <th className="px-6 py-4 font-bold">Goal</th>
-                    <th className="px-6 py-4 font-bold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#141414]/5">
@@ -201,27 +200,11 @@ export function VitalsTracker({ profile }: Props) {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={() => setEditingLog(log)}
-                            className="p-2 text-[#141414]/40 opacity-0 group-hover:opacity-100 hover:bg-[#141414]/5 hover:text-[#141414] rounded-lg transition-all"
-                          >
-                            <Pencil size={18} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(log.id)}
-                            className="p-2 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg transition-all"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   ))}
                   {vitals.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-[#141414]/40 italic">
+                      <td colSpan={4} className="px-6 py-12 text-center text-[#141414]/40 italic">
                         No logs yet. Start by adding your first measurement.
                       </td>
                     </tr>
