@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user physical details and fitness goals.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "age": { "type": "number" },
+        "height": { "type": "number", "description": "Height in cm" },
+        "gender": { "type": "string", "enum": ["male", "female", "other"] },
+        "activityLevel": { "type": "string", "enum": ["sedentary", "light", "moderate", "active", "very_active"] },
+        "goalBodyFat": { "type": "number", "description": "Target body fat percentage" },
+        "currentWeight": { "type": "number" },
+        "currentBodyFat": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "VitalLog": {
+      "title": "Vital Log",
+      "description": "Daily or periodic tracking of weight and body fat.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "weight": { "type": "number" },
+        "bodyFat": { "type": "number" },
+        "muscleMass": { "type": "number" }
+      },
+      "required": ["date", "weight"]
+    },
+    "MealPlan": {
+      "title": "Meal Plan",
+      "description": "Weekly meal plan with calorie and macro targets.",
+      "type": "object",
+      "properties": {
+        "weekStartDate": { "type": "string", "format": "date" },
+        "dailyCalories": { "type": "number" },
+        "macros": {
+          "type": "object",
+          "properties": {
+            "protein": { "type": "number" },
+            "carbs": { "type": "number" },
+            "fats": { "type": "number" }
+          }
+        },
+        "days": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": { "type": "string" },
+              "meals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "calories": { "type": "number" },
+                    "recipe": { "type": "string" },
+                    "ingredients": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "GroceryList": {
+      "title": "Grocery List",
+      "description": "Shopping list generated from meal plans.",
+      "type": "object",
+      "properties": {
+        "weekStartDate": { "type": "string", "format": "date" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "category": { "type": "string" },
+              "amount": { "type": "string" },
+              "checked": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "WorkoutPlan": {
+      "title": "Workout Plan",
+      "description": "Customized workout routines.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "title": { "type": "string" },
+        "exercises": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "sets": { "type": "number" },
+              "reps": { "type": "string" },
+              "weight": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "DailyTarget": {
+      "title": "Daily Target",
+      "description": "Snapshot of calculated targets for a specific day.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "dailyCalories": { "type": "number" },
+        "macros": {
+          "type": "object",
+          "properties": {
+            "protein": { "type": "number" },
+            "carbs": { "type": "number" },
+            "fats": { "type": "number" }
+          }
+        },
+        "tdee": { "type": "number" },
+        "dailyDeficit": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data"
+    },
+    "/users/{userId}/vitals/{vitalId}": {
+      "schema": "VitalLog",
+      "description": "Historical vital logs"
+    },
+    "/users/{userId}/mealPlans/{planId}": {
+      "schema": "MealPlan",
+      "description": "Weekly meal plans"
+    },
+    "/users/{userId}/groceryLists/{listId}": {
+      "schema": "GroceryList",
+      "description": "Weekly grocery lists"
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": "WorkoutPlan",
+      "description": "Daily workout plans"
+    },
+    "/users/{userId}/dailyTargets/{targetId}": {
+      "schema": "DailyTarget",
+      "description": "Historical daily target snapshots"
+    }
+  }
+}
