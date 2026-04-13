@@ -12,19 +12,19 @@ function getAI() {
   return aiInstance;
 }
 
-export function calculateDailyTargets(profile: any) {
-  if (!profile || !profile.currentWeight || !profile.height || !profile.age) {
+export function calculateDailyTargets(profile: any, weight: number, bodyFat: number) {
+  if (!profile || !weight || !profile.height || !profile.age) {
     return {
       dailyCalories: 2000,
       macros: { protein: 150, carbs: 200, fats: 65 },
       tdee: 2500,
       dailyDeficit: 500,
       daysLeft: 90,
-      targetWeight: profile?.currentWeight || 180
+      targetWeight: weight || 180
     };
   }
 
-  const weightKg = profile.currentWeight / 2.20462;
+  const weightKg = weight / 2.20462;
   const heightCm = profile.height * 2.54;
   const age = profile.age;
   
@@ -48,10 +48,10 @@ export function calculateDailyTargets(profile: any) {
 
   // Target Weight Calculation
   // Lean Body Mass = Current Weight * (1 - Current BF%)
-  const leanBodyMass = profile.currentWeight * (1 - (profile.currentBodyFat / 100));
+  const leanBodyMass = weight * (1 - (bodyFat / 100));
   // Target Weight = Lean Body Mass / (1 - Target BF%)
   const targetWeight = leanBodyMass / (1 - (profile.goalBodyFat / 100));
-  const weightToLose = profile.currentWeight - targetWeight;
+  const weightToLose = weight - targetWeight;
   const totalDeficitNeeded = weightToLose * 3500;
 
   const targetDate = new Date(profile.targetDate);
@@ -66,13 +66,14 @@ export function calculateDailyTargets(profile: any) {
   targetCalories = Math.max(minCalories, targetCalories);
 
   // Macros
-  const protein = Math.round(profile.currentWeight * 1.0); // 1g per lb
+  const protein = Math.round(weight * 1.0); // 1g per lb
   const fats = Math.round((targetCalories * 0.25) / 9); // 25% of calories
   const carbs = Math.round((targetCalories - (protein * 4) - (fats * 9)) / 4);
+  const fiber = Math.round((targetCalories / 1000) * 14); // 14g per 1000 kcal
 
   return {
     dailyCalories: targetCalories,
-    macros: { protein, carbs, fats },
+    macros: { protein, carbs, fats, fiber },
     tdee: Math.round(tdee),
     dailyDeficit: Math.round(dailyDeficit),
     daysLeft,
@@ -99,8 +100,8 @@ export function calculateTargetDate(currentBF: number, goalBF: number, activityL
   return target.toISOString().split('T')[0];
 }
 
-export async function logDailyTarget(uid: string, profile: any, date?: string) {
-  const targets = calculateDailyTargets(profile);
+export async function logDailyTarget(uid: string, profile: any, weight: number, bodyFat: number, date?: string) {
+  const targets = calculateDailyTargets(profile, weight, bodyFat);
   const targetDate = date || new Date().toISOString();
   
   // Check if target for this date already exists (simplified check by date string)
@@ -121,22 +122,44 @@ export async function logDailyTarget(uid: string, profile: any, date?: string) {
   }
 }
 
-export async function generateMealPlan(profile: any) {
-  const targets = calculateDailyTargets(profile);
+export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
+  if (foodBankItems.length === 0) {
+    throw new Error("Your Food Bank is empty. Please add items to your Food Bank before generating a meal plan.");
+  }
+
+  const targets = calculateDailyTargets(profile, weight, bodyFat);
   
-  const prompt = `Generate a 7-day meal plan for a user with the following targets:
+    const foodBankContext = `\nSTRICT REQUIREMENT: You MUST ONLY use the following items from the user's Food Bank to construct the meals. DO NOT suggest any foods, ingredients, or items not explicitly listed below.
+  
+  USER'S FOOD BANK ITEMS (Use these and ONLY these):
+  ${foodBankItems.map(i => `- ${i.name} (Base Serving: ${i.servingSize}${i.servingUnit}): ${i.calories} cal, ${i.protein}g P, ${i.carbs}g C, ${i.fats}g F, ${i.fiber}g Fiber`).join('\n')}
+  
+  IMPORTANT: The macros above are for the "Base Serving" listed. You must calculate the specific amount needed for each item to hit the daily targets.`;
+
+  const prompt = `Generate a 7-day meal plan for a user with the following DAILY targets:
     Daily Calories: ${targets.dailyCalories} kcal
-    Macros: Protein ${targets.macros.protein}g, Carbs ${targets.macros.carbs}g, Fats ${targets.macros.fats}g
+    Macros: Protein ${targets.macros.protein}g, Carbs ${targets.macros.carbs}g, Fats ${targets.macros.fats}g, Fiber ${targets.macros.fiber}g
     
     Context:
-    Current Weight: ${profile.currentWeight} lbs
-    Current Body Fat: ${profile.currentBodyFat}%
+    Current Weight: ${weight} lbs
+    Current Body Fat: ${bodyFat}%
     Goal Body Fat: ${profile.goalBodyFat}%
     Days until target: ${targets.daysLeft}
+    ${foodBankContext}
     
-    Provide 3 meals per day that strictly adhere to these daily calorie and macro targets.
-    Each day should have a variety of healthy, whole-food recipes.
-    Include ingredients list for each meal.`;
+    STRICT RULES (FAILURE TO FOLLOW RESULTS IN ERROR):
+    1. ONLY use items from the Food Bank list provided above. NO OUTSIDE FOODS.
+    2. Meal names MUST be exactly "Breakfast", "Lunch", or "Dinner". NO OTHER NAMES.
+    3. Breakfast: MUST use eggs or yogurt from the list if available.
+    4. Lunch: MUST use lighter meats (chicken, fish, etc.) from the list if available.
+    5. Dinner: MUST use heavier proteins (beef, etc.) from the list if available.
+    6. Each meal MUST specify the exact amount. 
+       - If the Food Bank item unit is "g", "oz", or "ml", include the unit (e.g., "150g Chicken Breast").
+       - If the Food Bank item unit is "unit", just include the number (e.g., "3 Eggs").
+    7. The sum of all 3 meals for a day MUST hit the daily calorie and macro targets as closely as possible.
+    8. The "recipe" field should be empty as we are only showing ingredients.
+    9. The "ingredientsWithAmounts" list MUST contain the name and the specific amount (with unit if applicable) for each item.
+    10. ALL macro fields (protein, carbs, fats, fiber) MUST be numbers, not null or undefined. Use 0 if a value is missing.`;
 
   const ai = getAI();
   const response = await ai.models.generateContent({
@@ -157,11 +180,26 @@ export async function generateMealPlan(profile: any) {
                   type: Type.ARRAY,
                   items: {
                     type: Type.OBJECT,
+                    required: ["name", "calories", "protein", "carbs", "fats", "fiber", "recipe", "ingredientsWithAmounts"],
                     properties: {
-                      name: { type: Type.STRING },
+                      name: { type: Type.STRING, enum: ["Breakfast", "Lunch", "Dinner"] },
                       calories: { type: Type.NUMBER },
+                      protein: { type: Type.NUMBER },
+                      carbs: { type: Type.NUMBER },
+                      fats: { type: Type.NUMBER },
+                      fiber: { type: Type.NUMBER },
                       recipe: { type: Type.STRING },
-                      ingredients: { type: Type.ARRAY, items: { type: Type.STRING } }
+                      ingredientsWithAmounts: {
+                        type: Type.ARRAY,
+                        items: {
+                          type: Type.OBJECT,
+                          required: ["name", "amount"],
+                          properties: {
+                            name: { type: Type.STRING },
+                            amount: { type: Type.STRING }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -174,6 +212,17 @@ export async function generateMealPlan(profile: any) {
   });
 
   const plan = JSON.parse(response.text);
+  // Map ingredientsWithAmounts back to ingredients array for compatibility if needed
+  plan.days.forEach((day: any) => {
+    day.meals.forEach((meal: any) => {
+      meal.ingredients = meal.ingredientsWithAmounts.map((i: any) => {
+        // If amount already contains the unit (like '150g'), just use it.
+        // If it's just a number and the item was a 'unit' type, it should be fine.
+        return `${i.amount} ${i.name}`;
+      });
+    });
+  });
+
   return {
     ...plan,
     dailyCalories: targets.dailyCalories,
@@ -181,11 +230,11 @@ export async function generateMealPlan(profile: any) {
   };
 }
 
-export async function generateWorkoutPlan(profile: any) {
+export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number) {
   const prompt = `Generate a customized workout plan for a user with the following profile:
     Age: ${profile.age}
-    Current Weight: ${profile.currentWeight} lbs
-    Current Body Fat: ${profile.currentBodyFat}%
+    Current Weight: ${weight} lbs
+    Current Body Fat: ${bodyFat}%
     Goal: Reach ${profile.goalBodyFat}% body fat
     Activity Level: ${profile.activityLevel}
     

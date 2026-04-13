@@ -15,8 +15,8 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
   const [formData, setFormData] = useState({
     displayName: profile.displayName,
     goalBodyFat: profile.goalBodyFat || 15,
-    currentWeight: profile.currentWeight || 180,
-    currentBodyFat: profile.currentBodyFat || 20,
+    currentWeight: 180,
+    currentBodyFat: 20,
     activityLevel: profile.activityLevel || 'moderate' as ActivityLevel,
     targetDate: profile.targetDate || '',
   });
@@ -55,8 +55,8 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
       const vitalsSnap = await getDocs(vitalsQuery);
       const latestVital = !vitalsSnap.empty ? vitalsSnap.docs[0].data() as VitalLog : null;
       
-      const prevWeight = latestVital?.weight ?? profile.currentWeight;
-      const prevBF = latestVital?.bodyFat ?? profile.currentBodyFat;
+      const prevWeight = latestVital?.weight ?? 180;
+      const prevBF = latestVital?.bodyFat ?? 20;
 
       const newTargetDate = calculateTargetDate(
         formData.currentBodyFat, 
@@ -73,8 +73,9 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
         });
       }
 
+      const { currentWeight, currentBodyFat, ...rest } = formData;
       await updateDoc(doc(db, 'users', profile.uid), {
-        ...formData,
+        ...rest,
         targetDate: newTargetDate,
       });
       onClose();
@@ -103,9 +104,24 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
         onClick={e => e.stopPropagation()}
         className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl border border-[#141414]/5"
       >
-        <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-bold text-[#141414]">Profile Settings</h3>
-          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-16 h-16 bg-[#141414] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+            {profile.photoURL ? (
+              <img 
+                src={profile.photoURL} 
+                alt={profile.displayName} 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <UserIcon className="text-white w-8 h-8" />
+            )}
+          </div>
+          <div className="flex-1">
+            <h3 className="text-2xl font-bold text-[#141414]">Profile Settings</h3>
+            <p className="text-sm text-[#141414]/40">{profile.email}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors self-start">
             <X size={20} />
           </button>
         </div>

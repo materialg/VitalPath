@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History } from 'lucide-react';
-import { logDailyTarget, calculateTargetDate } from '../services/aiService';
+import { logDailyTarget, calculateTargetDate, calculateDailyTargets } from '../services/aiService';
 
 interface Props {
   profile: UserProfile;
@@ -73,8 +73,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
     };
   }, [profile.uid]);
 
-  const currentWeight = vitals.length > 0 ? vitals[vitals.length - 1].weight : profile.currentWeight || 0;
-  const startWeight = vitals.length > 0 ? vitals[0].weight : profile.currentWeight || 0;
+  const currentWeight = vitals.length > 0 ? vitals[vitals.length - 1].weight : 180;
+  const startWeight = vitals.length > 0 ? vitals[0].weight : 180;
   const weightDiff = currentWeight - startWeight;
   
   const daysLeft = profile.targetDate 
@@ -87,15 +87,21 @@ export function Dashboard({ profile, onNavigate }: Props) {
   
   const timelineProgress = totalDays > 0 ? Math.round(Math.min(100, Math.max(0, ((totalDays - daysLeft) / totalDays) * 100))) : 0;
 
-  const currentBF = vitals.length > 0 ? (vitals[vitals.length - 1].bodyFat || profile.currentBodyFat || 0) : profile.currentBodyFat || 0;
+  const currentBF = vitals.length > 0 ? (vitals[vitals.length - 1].bodyFat || 20) : 20;
   
-  const today = new Date().toISOString().split('T')[0];
+  const currentTargets = calculateDailyTargets(profile, currentWeight, currentBF);
+
+  const today = new Date().toLocaleDateString('en-CA');
   const vitalsLoggedToday = vitals.some(v => v.date.startsWith(today));
 
   const bfProgress = profile.goalBodyFat && currentBF ? Math.min(100, Math.round((profile.goalBodyFat / currentBF) * 100)) : 0;
 
   const handleVitalsAction = (action: 'approve' | 'deny' | 'edit') => {
-    if (action === 'approve' || action === 'edit') {
+    if (action === 'edit' || (action === 'approve' && vitalsLoggedToday)) {
+      onNavigate('vitals');
+      return;
+    }
+    if (action === 'approve') {
       setShowVitalsModal(true);
     }
   };
@@ -149,7 +155,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
         <StatCard 
           progress={timelineProgress}
           label="Timeline" 
@@ -165,17 +171,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
           color="text-orange-500"
         />
         <StatCard 
-          progress={Math.abs(weightDiff) > 0 ? 100 : 0}
-          label="Weight Progress" 
-          value={weightDiff === 0 ? "0 lbs" : (weightDiff > 0 ? `+${weightDiff.toFixed(1)} lbs` : `${weightDiff.toFixed(1)} lbs`)} 
-          subValue="Since Start"
-          color="text-blue-500"
-        />
-        <StatCard 
-          progress={latestMealPlan ? 100 : 0}
+          progress={100}
           label="Daily Target" 
-          value={latestMealPlan ? `${latestMealPlan.dailyCalories} kcal` : '---'} 
-          subValue={latestMealPlan ? `${latestMealPlan.macros.protein}g Protein` : '---'}
+          value={`${currentTargets.dailyCalories} kcal`} 
+          subValue={`${currentTargets.macros.protein}g Protein`}
           color="text-red-500"
         />
       </div>
@@ -196,7 +195,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
                 icon={<Scale size={18} />}
                 title="Log Daily Vitals"
                 description={vitalsLoggedToday ? "Vitals logged for today" : "Weight and body fat entry needed"}
-                isCompleted={vitalsLoggedToday}
+                status={vitalsLoggedToday ? 'completed' : 'none'}
                 color="blue"
                 onAction={handleVitalsAction}
               />
@@ -205,7 +204,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
                 icon={<Utensils size={18} />}
                 title="Today's Meal Plan"
                 description={latestMealPlan ? latestMealPlan.days[0].meals[0].name : "No meal plan generated"}
-                isCompleted={latestMealPlan?.days[0]?.meals[0]?.status === 'completed'}
+                status={latestMealPlan?.days[0]?.meals[0]?.status || 'none'}
                 color="orange"
                 onAction={handleMealAction}
               />
@@ -214,7 +213,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
                 icon={<Dumbbell size={18} />}
                 title="Today's Workout"
                 description={latestWorkout ? latestWorkout.title : "No workout scheduled"}
-                isCompleted={latestWorkout?.status === 'completed'}
+                status={latestWorkout?.status || 'none'}
                 color="purple"
                 onAction={handleWorkoutAction}
               />
@@ -251,6 +250,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
         {showVitalsModal && (
           <VitalsModal 
             profile={profile} 
+            currentWeight={currentWeight}
+            currentBodyFat={currentBF}
             onClose={() => setShowVitalsModal(false)} 
           />
         )}
@@ -258,12 +259,14 @@ export function Dashboard({ profile, onNavigate }: Props) {
           <MealModal 
             meal={latestMealPlan.days[0].meals[0]} 
             onClose={() => setShowMealModal(false)} 
+            onConfirm={() => handleMealAction('approve')}
           />
         )}
         {showWorkoutModal && latestWorkout && (
           <WorkoutModal 
             workout={latestWorkout} 
             onClose={() => setShowWorkoutModal(false)} 
+            onConfirm={() => handleWorkoutAction('approve')}
           />
         )}
       </AnimatePresence>
@@ -271,22 +274,24 @@ export function Dashboard({ profile, onNavigate }: Props) {
   );
 }
 
-function VitalsModal({ profile, onClose }: { profile: UserProfile, onClose: () => void }) {
-  const [weight, setWeight] = useState(profile.currentWeight || 180);
-  const [bodyFat, setBodyFat] = useState(profile.currentBodyFat || 20);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+function VitalsModal({ profile, currentWeight, currentBodyFat, onClose }: { profile: UserProfile, currentWeight: number, currentBodyFat: number, onClose: () => void }) {
+  const [weight, setWeight] = useState(currentWeight);
+  const [bodyFat, setBodyFat] = useState(currentBodyFat);
+  const [date, setDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const selectedDate = new Date(date);
-      const now = new Date();
-      selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+      const [year, month, day] = date.split('-').map(Number);
+      const selectedDate = new Date();
+      selectedDate.setFullYear(year, month - 1, day);
+      
+      const isoDate = selectedDate.toISOString();
 
       await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
-        date: selectedDate.toISOString(),
+        date: isoDate,
         weight,
         bodyFat,
       });
@@ -294,19 +299,17 @@ function VitalsModal({ profile, onClose }: { profile: UserProfile, onClose: () =
       // Recalculate target date based on new body fat
       const newTargetDate = calculateTargetDate(
         bodyFat,
-        profile.goalBodyFat,
-        profile.activityLevel
+        profile.goalBodyFat || 15,
+        profile.activityLevel || 'moderate'
       );
 
-      // Update profile with latest stats and new target date
+      // Update profile with new target date only
       await updateDoc(doc(db, 'users', profile.uid), {
-        currentWeight: weight,
-        currentBodyFat: bodyFat,
         targetDate: newTargetDate
       });
 
       // Log daily target snapshot
-      await logDailyTarget(profile.uid, { ...profile, currentWeight: weight, currentBodyFat: bodyFat, targetDate: newTargetDate }, selectedDate.toISOString());
+      await logDailyTarget(profile.uid, { ...profile, targetDate: newTargetDate }, weight, bodyFat, isoDate);
       
       onClose();
     } catch (error) {
@@ -387,7 +390,7 @@ function VitalsModal({ profile, onClose }: { profile: UserProfile, onClose: () =
   );
 }
 
-function MealModal({ meal, onClose }: { meal: Meal, onClose: () => void }) {
+function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => void, onConfirm?: () => void }) {
   return (
     <div 
       className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -437,13 +440,26 @@ function MealModal({ meal, onClose }: { meal: Meal, onClose: () => void }) {
               ))}
             </div>
           </div>
+
+          <div className="pt-4">
+            <button 
+              onClick={() => {
+                if (onConfirm) onConfirm();
+                onClose();
+              }}
+              className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 size={18} />
+              Confirm & Mark Completed
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
   );
 }
 
-function WorkoutModal({ workout, onClose }: { workout: WorkoutPlan, onClose: () => void }) {
+function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, onClose: () => void, onConfirm?: () => void }) {
   return (
     <div 
       className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -488,7 +504,7 @@ function WorkoutModal({ workout, onClose }: { workout: WorkoutPlan, onClose: () 
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           <h4 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Exercise List</h4>
           {workout.exercises.map((ex, idx) => (
             <div key={idx} className="flex items-center gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all">
@@ -506,12 +522,25 @@ function WorkoutModal({ workout, onClose }: { workout: WorkoutPlan, onClose: () 
             </div>
           ))}
         </div>
+
+        <div className="pt-4">
+          <button 
+            onClick={() => {
+              if (onConfirm) onConfirm();
+              onClose();
+            }}
+            className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 size={18} />
+            Confirm & Mark Completed
+          </button>
+        </div>
       </motion.div>
     </div>
   );
 }
 
-function TodoItem({ icon, title, description, isCompleted, color, onAction }: { icon: React.ReactNode, title: string, description: string, isCompleted: boolean, color: string, onAction: (action: 'approve' | 'deny' | 'edit') => void }) {
+function TodoItem({ icon, title, description, status, color, onAction }: { icon: React.ReactNode, title: string, description: string, status: 'completed' | 'skipped' | 'none', color: string, onAction: (action: 'approve' | 'deny' | 'edit') => void }) {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
     orange: 'bg-orange-50 text-orange-600',
@@ -525,14 +554,28 @@ function TodoItem({ icon, title, description, isCompleted, color, onAction }: { 
           {icon}
         </div>
         <div>
-          <h4 className={`font-bold ${isCompleted ? 'text-[#141414]/40 line-through' : 'text-[#141414]'}`}>{title}</h4>
+          <h4 className="font-bold text-[#141414]">{title}</h4>
           <p className="text-sm text-[#141414]/60">{description}</p>
         </div>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ActionButton icon={<Check size={16} />} color="hover:bg-green-50 hover:text-green-600" onClick={() => onAction('approve')} />
-        <ActionButton icon={<X size={16} />} color="hover:bg-red-50 hover:text-red-600" onClick={() => onAction('deny')} />
-        <ActionButton icon={<Pencil size={16} />} color="hover:bg-blue-50 hover:text-blue-600" onClick={() => onAction('edit')} />
+        <ActionButton 
+          icon={<Check size={16} />} 
+          color={status === 'completed' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50 hover:text-green-600'} 
+          isActive={status === 'completed'}
+          onClick={() => onAction('approve')} 
+        />
+        <ActionButton 
+          icon={<X size={16} />} 
+          color={status === 'skipped' ? 'bg-red-100 text-red-600' : 'hover:bg-red-50 hover:text-red-600'} 
+          isActive={status === 'skipped'}
+          onClick={() => onAction('deny')} 
+        />
+        <ActionButton 
+          icon={<Pencil size={16} />} 
+          color="hover:bg-blue-50 hover:text-blue-600" 
+          onClick={() => onAction('edit')} 
+        />
       </div>
     </div>
   );
@@ -578,11 +621,11 @@ function StatCard({ progress, label, value, subValue, color }: { progress: numbe
   );
 }
 
-function ActionButton({ icon, color, isDark = false, onClick }: { icon: React.ReactNode, color: string, isDark?: boolean, onClick?: () => void }) {
+function ActionButton({ icon, color, isDark = false, isActive = false, onClick }: { icon: React.ReactNode, color: string, isDark?: boolean, isActive?: boolean, onClick?: () => void }) {
   return (
     <button 
       onClick={onClick}
-      className={`p-2 rounded-lg transition-all ${isDark ? 'text-white/40' : 'text-[#141414]/20'} ${color}`}
+      className={`p-2 rounded-lg transition-all ${isActive ? '' : (isDark ? 'text-white/40' : 'text-[#141414]/20')} ${color}`}
     >
       {icon}
     </button>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { User } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { UserProfile, ActivityLevel, Gender } from '../types';
@@ -31,17 +31,32 @@ export function ProfileSetup({ user, onComplete }: Props) {
   };
 
   const handleSubmit = async () => {
-    const profile: UserProfile = {
-      uid: user.uid,
-      displayName: user.displayName || 'User',
-      email: user.email || '',
-      ...formData,
-      targetDate: formData.targetDate || calculateTargetDate(),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const { currentWeight, currentBodyFat, ...rest } = formData;
+      const profile: UserProfile = {
+        uid: user.uid,
+        displayName: user.displayName || 'User',
+        email: user.email || '',
+        photoURL: user.photoURL || undefined,
+        ...rest,
+        targetDate: formData.targetDate || calculateTargetDate(),
+        createdAt: new Date().toISOString(),
+      };
 
-    await setDoc(doc(db, 'users', user.uid), profile);
-    onComplete(profile);
+      await setDoc(doc(db, 'users', user.uid), profile);
+      
+      // Create initial vital log
+      await addDoc(collection(db, 'users', user.uid, 'vitals'), {
+        date: new Date().toISOString(),
+        weight: formData.currentWeight,
+        bodyFat: formData.currentBodyFat,
+      });
+
+      onComplete(profile);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      alert("Failed to save profile. Please try again.");
+    }
   };
 
   const nextStep = () => {

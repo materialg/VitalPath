@@ -5,17 +5,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
 import { auth, db, signInWithGoogle, logout } from './firebase';
 import { UserProfile, VitalLog } from './types';
 import { Dashboard } from './components/Dashboard';
 import { VitalsTracker } from './components/VitalsTracker';
 import { MealPlanner } from './components/MealPlanner';
 import { WorkoutCoach } from './components/WorkoutCoach';
+import { FoodBank } from './components/FoodBank';
 import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -37,15 +38,31 @@ export default function App() {
       }
 
       if (firebaseUser) {
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
+        setLoading(true);
+        try {
+          const docRef = doc(db, 'users', firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
           } else {
             setProfile(null);
           }
+
+          // Subscribe to real-time updates
+          unsubscribeProfile = onSnapshot(docRef, (snap) => {
+            if (snap.exists()) {
+              setProfile(snap.data() as UserProfile);
+            } else {
+              setProfile(null);
+            }
+          });
+        } catch (error) {
+          console.error("Profile loading error:", error);
+          setProfile(null);
+        } finally {
           setLoading(false);
-        });
+        }
       } else {
         setProfile(null);
         setLoading(false);
@@ -104,6 +121,7 @@ export default function App() {
       case 'dashboard': return <Dashboard profile={profile} onNavigate={setActiveTab} />;
       case 'vitals': return <VitalsTracker profile={profile} />;
       case 'meals': return <MealPlanner profile={profile} />;
+      case 'foodbank': return <FoodBank profile={profile} />;
       case 'workouts': return <WorkoutCoach profile={profile} />;
       case 'groceries': return <GroceryListView profile={profile} />;
       default: return <Dashboard profile={profile} onNavigate={setActiveTab} />;
@@ -141,27 +159,41 @@ export default function App() {
             label="Meal Plan" 
           />
           <NavItem 
+            active={activeTab === 'workouts'} 
+            onClick={() => setActiveTab('workouts')} 
+            icon={<Dumbbell size={20} />} 
+            label="Workouts" 
+          />
+          <NavItem 
             active={activeTab === 'groceries'} 
             onClick={() => setActiveTab('groceries')} 
             icon={<ShoppingCart size={20} />} 
             label="Groceries" 
           />
           <NavItem 
-            active={activeTab === 'workouts'} 
-            onClick={() => setActiveTab('workouts')} 
-            icon={<Dumbbell size={20} />} 
-            label="Workouts" 
+            active={activeTab === 'foodbank'} 
+            onClick={() => setActiveTab('foodbank')} 
+            icon={<Database size={20} />} 
+            label="Food Bank" 
           />
         </div>
 
         <div className="p-4 border-t border-[#141414]/10 space-y-2">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-[#141414]/5 group relative">
-            <div className="w-10 h-10 bg-[#141414] rounded-lg flex items-center justify-center shrink-0">
-              <UserIcon className="text-white w-5 h-5" />
+            <div className="w-10 h-10 bg-[#141414] rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+              {profile.photoURL ? (
+                <img 
+                  src={profile.photoURL} 
+                  alt={profile.displayName} 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <UserIcon className="text-white w-5 h-5" />
+              )}
             </div>
             <div className="hidden md:block flex-1 min-w-0">
               <p className="text-sm font-bold text-[#141414] truncate">{profile.displayName}</p>
-              <p className="text-[10px] text-[#141414]/40 truncate">{profile.email}</p>
             </div>
             <button 
               onClick={() => setShowSettings(true)}

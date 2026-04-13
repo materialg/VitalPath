@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { UserProfile, WorkoutPlan } from '../types';
+import { UserProfile, WorkoutPlan, VitalLog } from '../types';
 import { generateWorkoutPlan } from '../services/aiService';
 import { motion } from 'motion/react';
 import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap } from 'lucide-react';
@@ -12,9 +12,21 @@ interface Props {
 
 export function WorkoutCoach({ profile }: Props) {
   const [workout, setWorkout] = useState<WorkoutPlan | null>(null);
+  const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
+    const qVitals = query(
+      collection(db, 'users', profile.uid, 'vitals'),
+      orderBy('date', 'desc'),
+      limit(1)
+    );
+    const unsubscribeVitals = onSnapshot(qVitals, (snap) => {
+      if (!snap.empty) {
+        setLatestVital({ id: snap.docs[0].id, ...snap.docs[0].data() } as VitalLog);
+      }
+    });
+
     const q = query(
       collection(db, 'users', profile.uid, 'workouts'),
       orderBy('date', 'desc'),
@@ -25,16 +37,19 @@ export function WorkoutCoach({ profile }: Props) {
         setWorkout({ id: snap.docs[0].id, ...snap.docs[0].data() } as WorkoutPlan);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribeVitals();
+      unsubscribe();
+    };
   }, [profile.uid]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const plan = await generateWorkoutPlan(profile);
+      const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20);
       const newPlan = {
         ...plan,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('en-CA'),
       };
       await addDoc(collection(db, 'users', profile.uid, 'workouts'), newPlan);
     } catch (error) {
