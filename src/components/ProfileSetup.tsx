@@ -15,6 +15,8 @@ interface Props {
 
 export function ProfileSetup({ user, onComplete }: Props) {
   const [step, setStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     age: 30,
     height: 70, // inches
@@ -31,6 +33,11 @@ export function ProfileSetup({ user, onComplete }: Props) {
   };
 
   const handleSubmit = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setError(null);
+    console.log("Starting profile submission for user:", user.uid);
+
     try {
       const { currentWeight, currentBodyFat, ...rest } = formData;
       const profile: UserProfile = {
@@ -43,19 +50,26 @@ export function ProfileSetup({ user, onComplete }: Props) {
         createdAt: new Date().toISOString(),
       };
 
+      console.log("Saving profile document...");
       await setDoc(doc(db, 'users', user.uid), profile);
+      console.log("Profile document saved successfully.");
       
       // Create initial vital log
+      console.log("Creating initial vital log...");
       await addDoc(collection(db, 'users', user.uid, 'vitals'), {
         date: new Date().toISOString(),
         weight: formData.currentWeight,
         bodyFat: formData.currentBodyFat,
       });
+      console.log("Initial vital log created successfully.");
 
+      console.log("Calling onComplete...");
       onComplete(profile);
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      alert("Failed to save profile. Please try again.");
+    } catch (err: any) {
+      console.error("Error saving profile:", err);
+      setError(err.message || "Failed to save profile. Please check your connection and try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -206,11 +220,11 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   we suggest a target date of:
                 </p>
                 <div className="text-3xl font-black text-[#141414]">
-                  {new Date(formData.targetDate).toLocaleDateString('en-US', { 
+                  {formData.targetDate ? new Date(formData.targetDate).toLocaleDateString('en-US', { 
                     month: 'long', 
                     day: 'numeric', 
                     year: 'numeric' 
-                  })}
+                  }) : 'Calculating...'}
                 </div>
                 <p className="text-xs text-[#141414]/40">
                   This assumes a safe and sustainable body fat loss rate for your profile.
@@ -225,6 +239,16 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                 />
               </div>
+            </motion.div>
+          )}
+
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium"
+            >
+              {error}
             </motion.div>
           )}
 
@@ -246,10 +270,21 @@ export function ProfileSetup({ user, onComplete }: Props) {
             )}
             <button 
               onClick={step === 5 ? handleSubmit : nextStep}
-              className="flex-[2] py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+              disabled={isSaving}
+              className="flex-[2] py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {step === 5 ? 'Finish Setup' : 'Continue'}
-              <ArrowRight size={18} />
+              {isSaving ? (
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                />
+              ) : (
+                <>
+                  {step === 5 ? 'Finish Setup' : 'Continue'}
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -30,6 +30,7 @@ export default function App() {
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("Auth state changed:", firebaseUser ? `User logged in: ${firebaseUser.uid}` : "User logged out");
       setUser(firebaseUser);
       
       if (unsubscribeProfile) {
@@ -41,19 +42,24 @@ export default function App() {
         setLoading(true);
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
+          console.log("Fetching profile for:", firebaseUser.uid);
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
+            console.log("Profile found in Firestore.");
             setProfile(docSnap.data() as UserProfile);
           } else {
+            console.log("No profile found in Firestore.");
             setProfile(null);
           }
 
           // Subscribe to real-time updates
           unsubscribeProfile = onSnapshot(docRef, (snap) => {
             if (snap.exists()) {
+              console.log("Profile updated via snapshot.");
               setProfile(snap.data() as UserProfile);
             } else {
+              console.log("Profile deleted or missing in snapshot.");
               setProfile(null);
             }
           });
@@ -123,7 +129,6 @@ export default function App() {
       case 'meals': return <MealPlanner profile={profile} />;
       case 'foodbank': return <FoodBank profile={profile} />;
       case 'workouts': return <WorkoutCoach profile={profile} />;
-      case 'groceries': return <GroceryListView profile={profile} />;
       default: return <Dashboard profile={profile} onNavigate={setActiveTab} />;
     }
   };
@@ -163,12 +168,6 @@ export default function App() {
             onClick={() => setActiveTab('workouts')} 
             icon={<Dumbbell size={20} />} 
             label="Workouts" 
-          />
-          <NavItem 
-            active={activeTab === 'groceries'} 
-            onClick={() => setActiveTab('groceries')} 
-            icon={<ShoppingCart size={20} />} 
-            label="Groceries" 
           />
           <NavItem 
             active={activeTab === 'foodbank'} 

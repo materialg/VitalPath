@@ -292,10 +292,18 @@ CRITICAL INSTRUCTIONS:
   }
 }
 
-export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, lastWorkout?: any) {
-  const lastTitle = lastWorkout?.title || "";
-  
-  const prompt = `Generate the NEXT workout in a strict 8-day rotation:
+export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {
+  const previousPerformanceContext = previousPlan ? `
+    PREVIOUS PERFORMANCE DATA:
+    ${previousPlan.days.map((d: any) => `
+      Day: ${d.day} (${d.title})
+      Exercises:
+      ${d.exercises.map((e: any) => `- ${e.name}: Prescribed Weight: ${e.prescribedWeight || 'N/A'}, Actual Weights: ${e.setWeights?.join(', ') || 'N/A'}, Actual Reps: ${e.setReps?.join(', ') || 'N/A'}, Target Reps: ${e.reps}`).join('\n')}
+    `).join('\n')}
+  ` : '';
+
+  const prompt = `Generate a 7-day weekly workout schedule (Monday to Sunday) following a strict PPLR rotation:
+    Rotation Order:
     1. Push (Chest/Shoulders/Triceps)
     2. Pull (Back/Biceps)
     3. Legs: Posterior Chain
@@ -304,8 +312,6 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
     6. Pull (Back/Biceps)
     7. Legs: Anterior Chain
     8. Rest
-
-    The last workout was: "${lastTitle}"
 
     STRICT EXERCISE LISTS:
     - Push: Barbell Bench Press, Dumbbell Overhead Press, Dips
@@ -317,33 +323,56 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
     User Profile:
     Age: ${profile.age}, Weight: ${weight} lbs, Body Fat: ${bodyFat}%, Goal: ${profile.goalBodyFat}% BF.
 
-    Return the NEXT logical workout in the sequence. If the last was "Legs: Posterior Chain", the next is "Rest". If the last was "Rest" and the one before that was "Legs: Posterior Chain", the next is "Push".
+    ${previousPerformanceContext}
+
+    PROGRESSIVE OVERLOAD LOGIC:
+    1. If the user hit 2+ reps OVER their target for 2 consecutive workouts, INCREASE the prescribed weight by 5-10 lbs.
+    2. If performance dropped significantly (2+ reps BELOW the lower bound of the range) twice consecutively, REDUCE the weight by 10%.
+    3. Otherwise, maintain the weight.
+    4. If no previous data exists, provide appropriate starting weights based on the user's profile.
+
+    Return a 7-day plan in JSON format. The days MUST be named "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", and "Sunday".
     
-    Adjust sets and reps based on the user's goal of reaching ${profile.goalBodyFat}% body fat (usually higher reps/shorter rest for fat loss, or heavy for muscle retention).`;
+    Since this is a 7-day plan and the rotation is 8 days, start Monday with "Push" and follow the sequence.
+    
+    Adjust sets and reps based on the user's goal of reaching ${profile.goalBodyFat}% body fat.`;
 
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: prompt,
     config: {
-      systemInstruction: "You are a world-class strength coach. You MUST follow the 8-day PPLR rotation strictly. You MUST ONLY use the exercises provided for each day. For 'Rest' days, return an empty exercises array and recovery-focused notes.",
+      systemInstruction: "You are a world-class strength coach. You MUST follow the PPLR rotation strictly across the 7 days. You MUST ONLY use the exercises provided for each day. You MUST apply the progressive overload logic based on the provided previous performance data. For 'Rest' days, return an empty exercises array and recovery-focused notes.",
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
-        required: ["title", "exercises", "notes"],
+        required: ["days"],
         properties: {
-          title: { type: Type.STRING, enum: ["Push", "Pull", "Legs: Posterior Chain", "Legs: Anterior Chain", "Rest"] },
-          notes: { type: Type.STRING, description: "Coaching tips or recovery advice" },
-          exercises: {
+          days: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
-              required: ["name", "sets", "reps", "notes"],
+              required: ["day", "title", "exercises", "notes"],
               properties: {
-                name: { type: Type.STRING },
-                sets: { type: Type.NUMBER },
-                reps: { type: Type.STRING },
-                notes: { type: Type.STRING }
+                day: { type: Type.STRING },
+                title: { type: Type.STRING, enum: ["Push", "Pull", "Legs: Posterior Chain", "Legs: Anterior Chain", "Rest"] },
+                notes: { type: Type.STRING },
+                exercises: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    required: ["name", "sets", "reps", "notes", "prescribedWeight"],
+                    properties: {
+                      name: { type: Type.STRING },
+                      sets: { type: Type.NUMBER },
+                      reps: { type: Type.STRING },
+                      prescribedWeight: { type: Type.NUMBER },
+                      consecutiveHits: { type: Type.NUMBER },
+                      consecutiveDrops: { type: Type.NUMBER },
+                      notes: { type: Type.STRING }
+                    }
+                  }
+                }
               }
             }
           }

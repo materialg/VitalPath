@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { generateMealPlan, calculateDailyTargets, logDailyTarget } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X } from 'lucide-react';
+import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -16,8 +16,10 @@ export function MealPlanner({ profile }: Props) {
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  const [selectedDay, setSelectedDay] = useState(todayIdx);
+  const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeMealPlanId || null);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -46,17 +48,11 @@ export function MealPlanner({ profile }: Props) {
       const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MealPlan));
       setMealPlans(plans);
       
-      // Persistence logic:
-      // 1. If we have a stored activeMealPlanId in profile, use it
-      // 2. Otherwise, use the latest plan (plans[0])
-      setActivePlanId(prev => {
-        if (prev) return prev;
-        if (profile.activeMealPlanId && plans.some(p => p.id === profile.activeMealPlanId)) {
-          return profile.activeMealPlanId;
+      if (plans.length > 0) {
+        if (!activePlanId || !plans.some(p => p.id === activePlanId)) {
+          setActivePlanId(profile.activeMealPlanId || plans[0].id);
         }
-        if (plans.length > 0) return plans[0].id;
-        return null;
-      });
+      }
     });
 
     const qTargets = query(
@@ -90,7 +86,45 @@ export function MealPlanner({ profile }: Props) {
     });
   };
 
-  const activePlan = mealPlans.find(p => p.id === activePlanId) || null;
+  const activePlan = mealPlans.find(p => p.id === activePlanId) || mealPlans[0];
+
+  const toggleMealStatus = async (mIdx: number) => {
+    if (!activePlan || !activePlanId) return;
+
+    const updatedDays = [...activePlan.days];
+    const meals = [...updatedDays[selectedDay].meals];
+    const currentStatus = meals[mIdx].status;
+    meals[mIdx] = { 
+      ...meals[mIdx], 
+      status: currentStatus === 'completed' ? 'none' : 'completed' 
+    };
+    updatedDays[selectedDay].meals = meals;
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Failed to toggle meal status:", err);
+    }
+  };
+
+  const confirmAllDayMeals = async () => {
+    if (!activePlan || !activePlanId) return;
+
+    const updatedDays = [...activePlan.days];
+    updatedDays[selectedDay].meals = updatedDays[selectedDay].meals.map(m => ({ ...m, status: 'completed' }));
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Failed to confirm all meals:", err);
+    }
+  };
 
   const handleGenerate = async () => {
     if (foodBankItems.length === 0) {
@@ -337,9 +371,16 @@ export function MealPlanner({ profile }: Props) {
                   >
                     {activePlan?.days?.[selectedDay]?.meals?.map((meal: any, mIdx: number) => (
                       <div key={mIdx} className="group">
-                        <div className="flex items-start gap-4 p-6 rounded-2xl hover:bg-[#141414]/5 transition-all">
-                          <div className="w-12 h-12 bg-[#141414] rounded-xl flex items-center justify-center shrink-0 text-white font-bold">
-                            {mIdx + 1}
+                        <div 
+                          onClick={() => toggleMealStatus(mIdx)}
+                          className={`flex items-start gap-4 p-6 rounded-2xl transition-all cursor-pointer ${
+                            meal.status === 'completed' ? 'bg-green-50/50' : 'hover:bg-[#141414]/5'
+                          }`}
+                        >
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold transition-all ${
+                            meal.status === 'completed' ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
+                          }`}>
+                            {meal.status === 'completed' ? <Check size={20} /> : mIdx + 1}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
@@ -377,6 +418,18 @@ export function MealPlanner({ profile }: Props) {
                     ))}
                   </motion.div>
                 </AnimatePresence>
+
+                {activePlan?.days?.[selectedDay]?.meals?.some(m => m.status !== 'completed') && (
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    onClick={confirmAllDayMeals}
+                    className="w-full py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#141414]/10"
+                  >
+                    <CheckCircle2 size={18} />
+                    Confirm All Meals Completed
+                  </motion.button>
+                )}
               </div>
             </div>
           </div>

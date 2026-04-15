@@ -13,6 +13,7 @@ export interface UserProfile {
   goalBodyFat?: number;
   targetDate?: string;
   activeMealPlanId?: string;
+  activeWorkoutId?: string;
   createdAt: string;
 }
 
@@ -79,15 +80,28 @@ export interface Exercise {
   sets: number;
   reps: string;
   weight?: string;
+  setWeights?: number[];
+  setReps?: number[];
+  completedSets?: boolean[];
+  prescribedWeight?: number;
+  consecutiveHits?: number;
+  consecutiveDrops?: number;
   notes?: string;
+}
+
+export interface WorkoutDay {
+  day: string;
+  title: string;
+  exercises: Exercise[];
+  notes?: string;
+  status?: 'pending' | 'completed' | 'skipped';
 }
 
 export interface WorkoutPlan {
   id: string;
-  date: string;
-  title: string;
-  exercises: Exercise[];
-  status?: 'pending' | 'completed' | 'skipped';
+  weekStartDate: string;
+  updatedAt: string;
+  days: WorkoutDay[];
 }
 
 export interface FoodBankItem {

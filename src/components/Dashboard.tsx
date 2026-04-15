@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -44,25 +44,35 @@ export function Dashboard({ profile, onNavigate }: Props) {
       setVitals(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VitalLog)).reverse());
     });
 
-    const mealQuery = query(
-      collection(db, 'users', profile.uid, 'mealPlans'),
-      orderBy('weekStartDate', 'desc'),
-      limit(1)
-    );
+    const mealQuery = profile.activeMealPlanId 
+      ? query(collection(db, 'users', profile.uid, 'mealPlans'), where('__name__', '==', profile.activeMealPlanId))
+      : query(collection(db, 'users', profile.uid, 'mealPlans'), orderBy('updatedAt', 'desc'), limit(1));
+
     const unsubscribeMeals = onSnapshot(mealQuery, (snap) => {
       if (!snap.empty) {
         setLatestMealPlan({ id: snap.docs[0].id, ...snap.docs[0].data() } as MealPlan);
+      } else if (profile.activeMealPlanId) {
+        // Fallback if active plan not found
+        const fallbackQuery = query(collection(db, 'users', profile.uid, 'mealPlans'), orderBy('updatedAt', 'desc'), limit(1));
+        getDocs(fallbackQuery).then(s => {
+          if (!s.empty) setLatestMealPlan({ id: s.docs[0].id, ...s.docs[0].data() } as MealPlan);
+        });
       }
     });
 
-    const workoutQuery = query(
-      collection(db, 'users', profile.uid, 'workouts'),
-      orderBy('date', 'desc'),
-      limit(1)
-    );
+    const workoutQuery = profile.activeWorkoutId
+      ? query(collection(db, 'users', profile.uid, 'workouts'), where('__name__', '==', profile.activeWorkoutId))
+      : query(collection(db, 'users', profile.uid, 'workouts'), orderBy('updatedAt', 'desc'), limit(1));
+
     const unsubscribeWorkouts = onSnapshot(workoutQuery, (snap) => {
       if (!snap.empty) {
         setLatestWorkout({ id: snap.docs[0].id, ...snap.docs[0].data() } as WorkoutPlan);
+      } else if (profile.activeWorkoutId) {
+        // Fallback if active plan not found
+        const fallbackQuery = query(collection(db, 'users', profile.uid, 'workouts'), orderBy('updatedAt', 'desc'), limit(1));
+        getDocs(fallbackQuery).then(s => {
+          if (!s.empty) setLatestWorkout({ id: s.docs[0].id, ...s.docs[0].data() } as WorkoutPlan);
+        });
       }
     });
 
@@ -91,6 +101,12 @@ export function Dashboard({ profile, onNavigate }: Props) {
   
   const currentTargets = calculateDailyTargets(profile, currentWeight, currentBF);
 
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const todayName = dayNames[new Date().getDay()];
+  
+  const todayMealPlan = latestMealPlan?.days.find(d => d.day === todayName) || latestMealPlan?.days[0];
+  const todayWorkout = latestWorkout?.days.find(d => d.day === todayName) || latestWorkout?.days[0];
+
   const today = new Date().toLocaleDateString('en-CA');
   const vitalsLoggedToday = vitals.some(v => v.date.startsWith(today));
 
@@ -111,12 +127,14 @@ export function Dashboard({ profile, onNavigate }: Props) {
       setShowMealModal(true);
       return;
     }
-    if (!latestMealPlan) return;
+    if (!latestMealPlan || !todayMealPlan) return;
     
     const status = action === 'approve' ? 'completed' : 'skipped';
     const updatedDays = [...latestMealPlan.days];
-    if (updatedDays[0]?.meals[0]) {
-      updatedDays[0].meals[0].status = status;
+    const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
+    
+    if (dayIndex !== -1) {
+      updatedDays[dayIndex].meals = updatedDays[dayIndex].meals.map(m => ({ ...m, status }));
       await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
         days: updatedDays
       });
@@ -203,8 +221,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
               <TodoItem 
                 icon={<Utensils size={18} />}
                 title="Today's Meal Plan"
-                description={latestMealPlan ? latestMealPlan.days[0].meals[0].name : "No meal plan generated"}
-                status={latestMealPlan?.days[0]?.meals[0]?.status || 'none'}
+                description={todayMealPlan ? todayMealPlan.meals.map(m => m.name).join(', ') : "No meal plan generated"}
+                status={todayMealPlan?.meals.every(m => m.status === 'completed') ? 'completed' : (todayMealPlan?.meals.some(m => m.status === 'skipped') ? 'skipped' : 'none')}
                 color="orange"
                 onAction={handleMealAction}
               />
@@ -212,8 +230,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
               <TodoItem 
                 icon={<Dumbbell size={18} />}
                 title="Today's Workout"
-                description={latestWorkout ? latestWorkout.title : "No workout scheduled"}
-                status={latestWorkout?.status || 'none'}
+                description={todayWorkout ? `${todayWorkout.title}: ${todayWorkout.exercises.length} exercises` : "No workout scheduled"}
+                status={todayWorkout?.status || 'none'}
                 color="purple"
                 onAction={handleWorkoutAction}
               />
@@ -255,9 +273,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
             onClose={() => setShowVitalsModal(false)} 
           />
         )}
-        {showMealModal && latestMealPlan && (
+        {showMealModal && todayMealPlan && (
           <MealModal 
-            meal={latestMealPlan.days[0].meals[0]} 
+            meals={todayMealPlan.meals} 
+            dayName={todayMealPlan.day}
             onClose={() => setShowMealModal(false)} 
             onConfirm={() => handleMealAction('approve')}
           />
@@ -390,7 +409,9 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, onClose }: { prof
   );
 }
 
-function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => void, onConfirm?: () => void }) {
+function MealModal({ meals, dayName, onClose, onConfirm }: { meals: Meal[], dayName: string, onClose: () => void, onConfirm?: () => void }) {
+  const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
+  
   return (
     <div 
       className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -401,7 +422,7 @@ function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => vo
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
+        className="bg-white w-full max-w-3xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -409,8 +430,8 @@ function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => vo
               <Utensils size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-[#141414]">{meal.name}</h3>
-              <p className="text-[#141414]/60">{meal.calories} kcal</p>
+              <h3 className="text-2xl font-bold text-[#141414]">Today's Meals</h3>
+              <p className="text-[#141414]/60">{dayName} • {totalCalories} kcal total</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
@@ -418,28 +439,37 @@ function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => vo
           </button>
         </div>
 
-        <div className="space-y-8">
-          <div>
-            <h4 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <ChefHat size={16} />
-              Recipe / Instructions
-            </h4>
-            <p className="text-[#141414]/80 leading-relaxed bg-[#141414]/5 p-6 rounded-2xl">
-              {meal.recipe}
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-4">Ingredients</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {meal.ingredients.map((ing, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 bg-[#141414]/5 rounded-xl text-sm text-[#141414]/80">
-                  <div className="w-1.5 h-1.5 bg-[#141414]/20 rounded-full" />
-                  {ing}
+        <div className="space-y-6">
+          {meals.map((meal, mIdx) => (
+            <div key={mIdx} className="bg-[#141414]/5 p-6 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-orange-600 font-bold text-xs">
+                    {meal.name[0]}
+                  </div>
+                  <h4 className="text-lg font-bold text-[#141414]">{meal.name}</h4>
                 </div>
-              ))}
+                <span className="text-sm font-bold text-orange-600">{meal.calories} kcal</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Ingredients</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {meal.ingredients.map((ing, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5">
+                        {ing}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Instructions</h5>
+                  <p className="text-xs text-[#141414]/70 line-clamp-3">{meal.recipe}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
 
           <div className="pt-4">
             <button 
@@ -450,7 +480,7 @@ function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => vo
               className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
             >
               <CheckCircle2 size={18} />
-              Confirm & Mark Completed
+              Confirm All Meals Completed
             </button>
           </div>
         </div>
@@ -460,6 +490,10 @@ function MealModal({ meal, onClose, onConfirm }: { meal: Meal, onClose: () => vo
 }
 
 function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, onClose: () => void, onConfirm?: () => void }) {
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const todayName = dayNames[new Date().getDay()];
+  const todayWorkout = workout.days.find(d => d.day === todayName) || workout.days[0];
+
   return (
     <div 
       className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -478,8 +512,8 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
               <Dumbbell size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-[#141414]">{workout.title}</h3>
-              <p className="text-[#141414]/60">{workout.exercises.length} Exercises</p>
+              <h3 className="text-2xl font-bold text-[#141414]">{todayWorkout.title}</h3>
+              <p className="text-[#141414]/60">{todayWorkout.exercises.length} Exercises • {todayWorkout.day}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
@@ -506,21 +540,29 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
 
         <div className="space-y-4 mb-8">
           <h4 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Exercise List</h4>
-          {workout.exercises.map((ex, idx) => (
-            <div key={idx} className="flex items-center gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all">
-              <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center text-white font-bold shrink-0">
-                {idx + 1}
-              </div>
-              <div className="flex-1">
-                <h5 className="font-bold text-[#141414]">{ex.name}</h5>
-                <p className="text-sm text-[#141414]/60">{ex.notes}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
-                <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
-              </div>
+          {todayWorkout.title === 'Rest' ? (
+            <div className="p-8 bg-blue-50 rounded-2xl text-center">
+              <Zap className="text-blue-500 mx-auto mb-4" size={32} />
+              <h5 className="font-bold text-blue-900 mb-2">Rest & Recovery Day</h5>
+              <p className="text-sm text-blue-700">{todayWorkout.notes || "Focus on active recovery and mobility today."}</p>
             </div>
-          ))}
+          ) : (
+            todayWorkout.exercises.map((ex, idx) => (
+              <div key={idx} className="flex items-center gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all">
+                <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center text-white font-bold shrink-0">
+                  {idx + 1}
+                </div>
+                <div className="flex-1">
+                  <h5 className="font-bold text-[#141414]">{ex.name}</h5>
+                  <p className="text-sm text-[#141414]/60">{ex.notes}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
+                  <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="pt-4">
@@ -548,7 +590,10 @@ function TodoItem({ icon, title, description, status, color, onAction }: { icon:
   }[color as 'blue' | 'orange' | 'purple'];
 
   return (
-    <div className="flex items-center justify-between p-4 rounded-2xl border border-[#141414]/5 hover:border-[#141414]/10 transition-all group">
+    <div 
+      onClick={() => onAction('edit')}
+      className="flex items-center justify-between p-4 rounded-2xl border border-[#141414]/5 hover:border-[#141414]/10 transition-all group cursor-pointer"
+    >
       <div className="flex items-center gap-4">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClasses}`}>
           {icon}
@@ -563,18 +608,27 @@ function TodoItem({ icon, title, description, status, color, onAction }: { icon:
           icon={<Check size={16} />} 
           color={status === 'completed' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50 hover:text-green-600'} 
           isActive={status === 'completed'}
-          onClick={() => onAction('approve')} 
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction('approve');
+          }} 
         />
         <ActionButton 
           icon={<X size={16} />} 
           color={status === 'skipped' ? 'bg-red-100 text-red-600' : 'hover:bg-red-50 hover:text-red-600'} 
           isActive={status === 'skipped'}
-          onClick={() => onAction('deny')} 
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction('deny');
+          }} 
         />
         <ActionButton 
           icon={<Pencil size={16} />} 
           color="hover:bg-blue-50 hover:text-blue-600" 
-          onClick={() => onAction('edit')} 
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction('edit');
+          }} 
         />
       </div>
     </div>
@@ -621,7 +675,7 @@ function StatCard({ progress, label, value, subValue, color }: { progress: numbe
   );
 }
 
-function ActionButton({ icon, color, isDark = false, isActive = false, onClick }: { icon: React.ReactNode, color: string, isDark?: boolean, isActive?: boolean, onClick?: () => void }) {
+function ActionButton({ icon, color, isDark = false, isActive = false, onClick }: { icon: React.ReactNode, color: string, isDark?: boolean, isActive?: boolean, onClick?: (e: React.MouseEvent) => void }) {
   return (
     <button 
       onClick={onClick}
