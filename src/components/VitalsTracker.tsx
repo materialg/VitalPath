@@ -3,8 +3,19 @@ import { collection, addDoc, query, orderBy, limit, onSnapshot, deleteDoc, doc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog } from '../types';
 import { motion } from 'motion/react';
-import { Plus, Trash2, Scale, Activity, Pencil, X, Save } from 'lucide-react';
+import { Plus, Trash2, Scale, Activity, Pencil, X, Save, TrendingUp } from 'lucide-react';
 import { logDailyTarget, calculateTargetDate } from '../services/aiService';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 
 interface Props {
   profile: UserProfile;
@@ -94,6 +105,11 @@ export function VitalsTracker({ profile }: Props) {
     }
   };
 
+  const chartData = [...vitals].reverse().map(log => ({
+    ...log,
+    displayDate: new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  }));
+
   return (
     <div className="space-y-8">
       <header>
@@ -158,8 +174,116 @@ export function VitalsTracker({ profile }: Props) {
           </form>
         </div>
 
-        {/* History List */}
-        <div className="lg:col-span-2">
+        {/* Charts and History */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Charts */}
+          {vitals.length > 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm">
+                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Scale size={14} />
+                  Weight Trend
+                </h3>
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#141414" strokeOpacity={0.05} />
+                      <XAxis 
+                        dataKey="displayDate" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
+                        minTickGap={30}
+                      />
+                      <YAxis 
+                        hide 
+                        domain={['dataMin - 5', 'dataMax + 5']}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#141414', 
+                          border: 'none', 
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          color: '#fff'
+                        }}
+                        itemStyle={{ color: '#fff' }}
+                        labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="weight" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorWeight)" 
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm">
+                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Activity size={14} />
+                  Body Fat Trend
+                </h3>
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorBF" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f97316" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#141414" strokeOpacity={0.05} />
+                      <XAxis 
+                        dataKey="displayDate" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
+                        minTickGap={30}
+                      />
+                      <YAxis 
+                        hide 
+                        domain={['dataMin - 2', 'dataMax + 2']}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#141414', 
+                          border: 'none', 
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          color: '#fff'
+                        }}
+                        itemStyle={{ color: '#fff' }}
+                        labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="bodyFat" 
+                        stroke="#f97316" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorBF)" 
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* History List */}
           <div className="bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden">
             <div className="p-6 border-bottom border-[#141414]/5 flex justify-between items-center">
               <h3 className="text-xl font-bold text-[#141414]">History</h3>
@@ -171,6 +295,7 @@ export function VitalsTracker({ profile }: Props) {
                   <tr className="bg-[#141414]/5 text-[#141414]/40 text-xs uppercase tracking-widest">
                     <th className="px-6 py-4 font-bold">Date</th>
                     <th className="px-6 py-4 font-bold">Weight</th>
+                    <th className="px-6 py-4 font-bold">Weight %</th>
                     <th className="px-6 py-4 font-bold">Body Fat</th>
                     <th className="px-6 py-4 font-bold">Goal</th>
                   </tr>
@@ -186,6 +311,29 @@ export function VitalsTracker({ profile }: Props) {
                         })}
                       </td>
                       <td className="px-6 py-4 text-[#141414]">{log.weight}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-12 bg-[#141414]/5 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500" 
+                              style={{ 
+                                width: `${(() => {
+                                  const lbm = log.weight * (1 - (log.bodyFat / 100));
+                                  const targetWeight = lbm / (1 - ((profile.goalBodyFat || 15) / 100));
+                                  return Math.min(100, Math.round((targetWeight / log.weight) * 100));
+                                })()}%` 
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-[#141414]/60">
+                            {(() => {
+                              const lbm = log.weight * (1 - (log.bodyFat / 100));
+                              const targetWeight = lbm / (1 - ((profile.goalBodyFat || 15) / 100));
+                              return Math.min(100, Math.round((targetWeight / log.weight) * 100));
+                            })()}%
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-[#141414]">{log.bodyFat}%</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -204,7 +352,7 @@ export function VitalsTracker({ profile }: Props) {
                   ))}
                   {vitals.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-[#141414]/40 italic">
+                      <td colSpan={5} className="px-6 py-12 text-center text-[#141414]/40 italic">
                         No logs yet. Start by adding your first measurement.
                       </td>
                     </tr>

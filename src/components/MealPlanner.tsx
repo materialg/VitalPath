@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
-import { generateMealPlan, calculateDailyTargets, logDailyTarget } from '../services/aiService';
+import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2 } from 'lucide-react';
+import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -21,7 +21,14 @@ export function MealPlanner({ profile }: Props) {
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeMealPlanId || null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (profile.activeMealPlanId && !activePlanId) {
+      setActivePlanId(profile.activeMealPlanId);
+    }
+  }, [profile.activeMealPlanId]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<{ mIdx: number, meal: any } | null>(null);
 
   const targets = calculateDailyTargets(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20);
 
@@ -88,6 +95,25 @@ export function MealPlanner({ profile }: Props) {
 
   const activePlan = mealPlans.find(p => p.id === activePlanId) || mealPlans[0];
 
+  const handleUpdateMeal = async (mIdx: number, updatedMeal: any) => {
+    if (!activePlan || !activePlanId) return;
+
+    const updatedDays = [...activePlan.days];
+    const meals = [...updatedDays[selectedDay].meals];
+    meals[mIdx] = updatedMeal;
+    updatedDays[selectedDay].meals = meals;
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
+      setEditingMeal(null);
+    } catch (err) {
+      console.error("Failed to update meal:", err);
+    }
+  };
+
   const toggleMealStatus = async (mIdx: number) => {
     if (!activePlan || !activePlanId) return;
 
@@ -133,71 +159,18 @@ export function MealPlanner({ profile }: Props) {
     }
     setIsGenerating(true);
     setError(null);
+    console.log("Generating meal plan...");
     try {
-      const plan = await generateMealPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, foodBankItems);
-      const today = new Date().toLocaleDateString('en-CA');
-      const now = new Date().toISOString();
-      const newPlan = {
-        ...plan,
-        weekStartDate: today,
-        updatedAt: now,
-      };
-      
-      // Check for existing plan for today to avoid duplicates
-      const q = query(
-        collection(db, 'users', profile.uid, 'mealPlans'),
-        where('weekStartDate', '==', today),
-        limit(1)
+      const planId = await generateAndSaveMealPlan(
+        profile, 
+        latestVital?.weight || 180, 
+        latestVital?.bodyFat || 20, 
+        foodBankItems
       );
-      const snap = await getDocs(q);
-      
-      let planId = '';
-      if (!snap.empty) {
-        // Overwrite existing plan
-        planId = snap.docs[0].id;
-        await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', planId), newPlan);
-      } else {
-        // Save new plan
-        const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
-        planId = docRef.id;
-      }
-
-      // Persist active plan selection to profile
-      await updateDoc(doc(db, 'users', profile.uid), {
-        activeMealPlanId: planId
-      });
+      console.log("Meal plan generated successfully:", planId);
       setActivePlanId(planId);
-      
-      // Also generate/update grocery list
-      const items: any[] = [];
-      plan.days.forEach((day: any) => {
-        day.meals.forEach((meal: any) => {
-          meal.ingredients.forEach((ing: string) => {
-            if (!items.find(i => i.name === ing)) {
-              items.push({ name: ing, category: 'General', amount: 'As needed', checked: false });
-            }
-          });
-        });
-      });
-
-      const gq = query(
-        collection(db, 'users', profile.uid, 'groceryLists'),
-        where('weekStartDate', '==', today),
-        limit(1)
-      );
-      const gSnap = await getDocs(gq);
-
-      if (!gSnap.empty) {
-        await updateDoc(doc(db, 'users', profile.uid, 'groceryLists', gSnap.docs[0].id), { items });
-      } else {
-        await addDoc(collection(db, 'users', profile.uid, 'groceryLists'), {
-          weekStartDate: today,
-          items,
-        });
-      }
-
     } catch (err: any) {
-      console.error(err);
+      console.error("Meal generation failed:", err);
       setError(err.message || "Failed to generate meal plan. Please try again.");
     } finally {
       setIsGenerating(false);
@@ -214,12 +187,22 @@ export function MealPlanner({ profile }: Props) {
       </header>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl flex items-center justify-between">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Info size={20} />
             <p className="font-medium">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold">✕</button>
+          <div className="flex items-center gap-3">
+            {error.includes("timed out") && (
+              <button 
+                onClick={handleGenerate}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors"
+              >
+                Retry Generation
+              </button>
+            )}
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold p-2">✕</button>
+          </div>
         </div>
       )}
 
@@ -394,6 +377,15 @@ export function MealPlanner({ profile }: Props) {
                                 {meal.status === 'skipped' && (
                                   <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold uppercase rounded-md">Skipped</span>
                                 )}
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
+                                  }}
+                                  className="p-1.5 hover:bg-[#141414]/5 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
+                                >
+                                  <Pencil size={14} />
+                                </button>
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-bold text-[#141414]">{meal.calories || 0} kcal</p>
@@ -405,9 +397,9 @@ export function MealPlanner({ profile }: Props) {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
                               {meal.ingredients.map((ing, iIdx) => (
-                                <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60">
+                                <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
                                   {ing}
                                 </span>
                               ))}
@@ -543,6 +535,225 @@ export function MealPlanner({ profile }: Props) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Meal Modal */}
+      <AnimatePresence>
+        {editingMeal && (
+          <EditMealModal 
+            meal={editingMeal.meal}
+            foodBank={foodBankItems}
+            onClose={() => setEditingMeal(null)}
+            onSave={(updatedMeal) => handleUpdateMeal(editingMeal.mIdx, updatedMeal)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void }) {
+  const [currentMeal, setCurrentMeal] = useState(meal);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFoodBank, setShowFoodBank] = useState(false);
+
+  const filteredFoodBank = foodBank.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const calculateTotals = (ingredients: any[]) => {
+    let calories = 0, protein = 0, carbs = 0, fats = 0, fiber = 0;
+    ingredients.forEach(ing => {
+      const food = foodBank.find(f => f.name === ing.name);
+      if (food) {
+        const amount = parseFloat(ing.amount) || 0;
+        const ratio = food.servingSize > 0 ? amount / food.servingSize : 0;
+        calories += (food.calories || 0) * ratio;
+        protein += (food.protein || 0) * ratio;
+        carbs += (food.carbs || 0) * ratio;
+        fats += (food.fats || 0) * ratio;
+        fiber += (food.fiber || 0) * ratio;
+      }
+    });
+    return {
+      calories: Math.round(calories),
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fats: Math.round(fats * 10) / 10,
+      fiber: Math.round(fiber * 10) / 10,
+    };
+  };
+
+  const updateIngredientAmount = (idx: number, newAmount: string) => {
+    const newIngredients = [...currentMeal.ingredientsWithAmounts];
+    newIngredients[idx].amount = newAmount;
+    const totals = calculateTotals(newIngredients);
+    setCurrentMeal({
+      ...currentMeal,
+      ingredientsWithAmounts: newIngredients,
+      ingredients: newIngredients.map((i: any) => `${i.amount} ${i.name}`),
+      ...totals
+    });
+  };
+
+  const removeIngredient = (idx: number) => {
+    const newIngredients = currentMeal.ingredientsWithAmounts.filter((_: any, i: number) => i !== idx);
+    const totals = calculateTotals(newIngredients);
+    setCurrentMeal({
+      ...currentMeal,
+      ingredientsWithAmounts: newIngredients,
+      ingredients: newIngredients.map((i: any) => `${i.amount} ${i.name}`),
+      ...totals
+    });
+  };
+
+  const addIngredient = (food: FoodBankItem) => {
+    const newIngredients = [
+      ...currentMeal.ingredientsWithAmounts,
+      { name: food.name, amount: `${food.servingSize}${food.servingUnit}` }
+    ];
+    const totals = calculateTotals(newIngredients);
+    setCurrentMeal({
+      ...currentMeal,
+      ingredientsWithAmounts: newIngredients,
+      ingredients: newIngredients.map((i: any) => `${i.amount} ${i.name}`),
+      ...totals
+    });
+    setShowFoodBank(false);
+    setSearchQuery('');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-2xl font-bold text-[#141414]">Edit {currentMeal.name}</h3>
+            <p className="text-sm text-[#141414]/40">Customize ingredients and portions.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Calories</p>
+            <p className="text-lg font-bold text-[#141414]">{currentMeal.calories}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Protein</p>
+            <p className="text-lg font-bold text-[#141414]">{currentMeal.protein}g</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Carbs</p>
+            <p className="text-lg font-bold text-[#141414]">{currentMeal.carbs}g</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Fats</p>
+            <p className="text-lg font-bold text-[#141414]">{currentMeal.fats}g</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Fiber</p>
+            <p className="text-lg font-bold text-[#141414]">{currentMeal.fiber}g</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 custom-scrollbar">
+          {currentMeal.ingredientsWithAmounts.map((ing: any, idx: number) => {
+            const food = foodBank.find(f => f.name === ing.name);
+            return (
+              <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-[#141414]/5 rounded-2xl group">
+                <div className="flex-1">
+                  <p className="font-bold text-[#141414]">{ing.name}</p>
+                  <p className="text-xs text-[#141414]/40">
+                    {food ? `${food.calories} cal / ${food.servingSize}${food.servingUnit}` : 'Custom item'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text"
+                    value={ing.amount}
+                    onChange={(e) => updateIngredientAmount(idx, e.target.value)}
+                    className="w-24 px-3 py-2 bg-[#141414]/5 rounded-lg border-none text-sm font-bold text-center focus:ring-2 focus:ring-[#141414]"
+                  />
+                  <button 
+                    onClick={() => removeIngredient(idx)}
+                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {showFoodBank ? (
+            <div className="p-4 border-2 border-dashed border-[#141414]/10 rounded-2xl space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+                <input 
+                  autoFocus
+                  type="text"
+                  placeholder="Search food bank..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                {filteredFoodBank.map(food => (
+                  <button
+                    key={food.id}
+                    onClick={() => addIngredient(food)}
+                    className="flex items-center justify-between p-3 hover:bg-[#141414]/5 rounded-xl text-left transition-colors"
+                  >
+                    <div>
+                      <p className="font-bold text-sm text-[#141414]">{food.name}</p>
+                      <p className="text-[10px] text-[#141414]/40">{food.calories} cal / {food.servingSize}{food.servingUnit}</p>
+                    </div>
+                    <Plus size={16} className="text-[#141414]/20" />
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={() => setShowFoodBank(false)}
+                className="w-full py-2 text-sm font-bold text-[#141414]/40 hover:text-[#141414]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowFoodBank(true)}
+              className="w-full py-4 border-2 border-dashed border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
+            >
+              <Plus size={18} />
+              <span className="font-bold">Add Item from Food Bank</span>
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-4">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => onSave(currentMeal)}
+            className="flex-1 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10"
+          >
+            Save Changes
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }

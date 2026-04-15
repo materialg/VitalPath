@@ -115,4 +115,5 @@ export interface FoodBankItem {
   fats: number;
   fiber: number;
   mealTypes?: ('B' | 'L' | 'D')[];
+  hidden?: boolean;
 }

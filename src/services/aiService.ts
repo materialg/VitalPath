@@ -1,6 +1,38 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { collection, addDoc, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -123,14 +155,17 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
 }
 
 export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
-  if (foodBankItems.length === 0) {
-    throw new Error("Your Food Bank is empty. Please add items to your Food Bank before generating a meal plan.");
+  // Filter out hidden items
+  const availableItems = foodBankItems.filter(i => !i.hidden);
+
+  if (availableItems.length === 0) {
+    throw new Error("All your Food Bank items are hidden or the Food Bank is empty. Please unhide or add items before generating a meal plan.");
   }
 
   const targets = calculateDailyTargets(profile, weight, bodyFat);
   
   // Clean and deduplicate food bank items
-  const cleanFoodBank = foodBankItems.map(i => ({
+  const cleanFoodBank = availableItems.map(i => ({
     name: i.name.trim(),
     servingSize: i.servingSize,
     servingUnit: i.servingUnit,
@@ -161,10 +196,9 @@ CRITICAL INSTRUCTIONS:
    - If a food is tagged [UNIVERSAL], you can use it in any meal.
    - DO NOT put "Lunch" or "Dinner" tagged items in "Breakfast".
 3. WHOLE UNIT RULE: Items with unit "unit" MUST be used in whole number multiples of their base serving. No 0.5 eggs, no 1.2 protein bars.
-4. VARIETY MANDATE: Do not repeat the same carb or protein source in every meal. Rotate available options. For example, if you have Rice, Potatoes, and Apples, ensure they are distributed across different days and meals rather than repeating one constantly.
-5. MACRO CALCULATION: The meal-level calories and macros MUST be the exact sum of the ingredients used, calculated proportionally from the base servings provided. Calculate the exact gram amount (e.g., '142g') needed to hit the targets.
-6. MATHEMATICAL PRECISION: The sum of (Breakfast + Lunch + Dinner) calories MUST equal the Daily Target (${targets.dailyCalories}) within a +/- 20 calorie margin. If you use high-calorie whole units (like a Bagel or Egg), you MUST reduce the gram-based portions (like Chicken or Rice) in that same meal or other meals to stay under the limit.
-7. If you cannot hit the targets exactly using only the provided inventory and respecting meal types, prioritize inventory and meal-type integrity over target accuracy. However, you should NEVER exceed the target by more than 50 calories. It is better to have a slightly smaller meal than to overshoot.`;
+4. MACRO CALCULATION: The meal-level calories and macros MUST be the exact sum of the ingredients used, calculated proportionally from the base servings provided. Calculate the exact gram amount (e.g., '142g') needed to hit the targets.
+5. MATHEMATICAL PRECISION: The sum of (Breakfast + Lunch + Dinner) calories MUST equal the Daily Target (${targets.dailyCalories}) within a +/- 20 calorie margin. If you use high-calorie whole units (like a Bagel or Egg), you MUST reduce the gram-based portions (like Chicken or Rice) in that same meal or other meals to stay under the limit.
+6. If you cannot hit the targets exactly using only the provided inventory and respecting meal types, prioritize inventory and meal-type integrity over target accuracy. However, you should NEVER exceed the target by more than 50 calories. It is better to have a slightly smaller meal than to overshoot.`;
 
   const prompt = `Generate a 7-day meal plan for a user with these targets:
     Daily Calories: ${targets.dailyCalories} kcal
@@ -175,15 +209,19 @@ CRITICAL INSTRUCTIONS:
     
     ${foodBankContext}
     
-    Return a 7-day plan in JSON format. Each day must have "Breakfast", "Lunch", and "Dinner". The days should be named "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", and "Sunday".`;
+    Return a 7-day plan in JSON format. Each day must have "Breakfast", "Lunch", and "Dinner". Days: "Monday" through "Sunday".`;
 
   const ai = getAI();
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("AI generation timed out. The calculation is complex—please try one more time.")), 120000)
+    );
+
+    const responsePromise = ai.models.generateContent({
+      model: "gemini-3.1-flash-preview",
       contents: prompt,
       config: {
-        systemInstruction: "You are a strict meal planning engine. You have ZERO creative freedom. You MUST ONLY use the provided inventory items. Hallucinating any ingredient is a critical failure. You MUST respect meal designations. You MUST hit the Daily Calorie target within +/- 20kcal. DO NOT overshoot the target. If you use whole-unit items, adjust gram-based items down to compensate. Prioritize inventory integrity and calorie accuracy.",
+        systemInstruction: "You are a strict meal planning engine. ONLY use provided inventory. Hit calorie target +/- 20kcal. No hallucinations. Respect meal tags.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -212,8 +250,8 @@ CRITICAL INSTRUCTIONS:
                             type: Type.OBJECT,
                             required: ["name", "amount"],
                             properties: {
-                              name: { type: Type.STRING, enum: foodBankNames, description: "MUST be one of the provided inventory names." },
-                              amount: { type: Type.STRING, description: "The calculated amount in grams (e.g. '150g') or units (e.g. '2 unit')." }
+                              name: { type: Type.STRING },
+                              amount: { type: Type.STRING }
                             }
                           }
                         }
@@ -227,6 +265,8 @@ CRITICAL INSTRUCTIONS:
         }
       }
     });
+
+    const response = await Promise.race([responsePromise, timeoutPromise]) as any;
 
     if (!response.text) {
       throw new Error("AI returned an empty response. Please try again.");
@@ -290,6 +330,88 @@ CRITICAL INSTRUCTIONS:
     }
     throw error;
   }
+}
+
+export async function generateAndSaveMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[]) {
+  console.log("Starting generateAndSaveMealPlan...");
+  const plan = await generateMealPlan(profile, weight, bodyFat, foodBankItems);
+  console.log("Meal plan generated by AI.");
+  
+  const today = new Date().toLocaleDateString('en-CA');
+  const now = new Date().toISOString();
+  const newPlan = {
+    ...plan,
+    weekStartDate: today,
+    updatedAt: now,
+  };
+  
+  const mealPlansPath = `users/${profile.uid}/mealPlans`;
+  let planId = '';
+  
+  try {
+    // Check for existing plan for today to avoid duplicates
+    const q = query(
+      collection(db, 'users', profile.uid, 'mealPlans'),
+      where('weekStartDate', '==', today),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    
+    if (!snap.empty) {
+      // Overwrite existing plan
+      planId = snap.docs[0].id;
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', planId), newPlan);
+    } else {
+      // Save new plan
+      const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
+      planId = docRef.id;
+    }
+
+    // Persist active plan selection to profile
+    await updateDoc(doc(db, 'users', profile.uid), {
+      activeMealPlanId: planId
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, mealPlansPath);
+  }
+  
+  console.log("Meal plan saved to Firestore.");
+
+  // Also generate/update grocery list
+  const items: any[] = [];
+  plan.days.forEach((day: any) => {
+    day.meals.forEach((meal: any) => {
+      meal.ingredients.forEach((ing: string) => {
+        if (!items.find((i: any) => i.name === ing)) {
+          items.push({ name: ing, category: 'General', amount: 'As needed', checked: false });
+        }
+      });
+    });
+  });
+
+  const groceryListsPath = `users/${profile.uid}/groceryLists`;
+  try {
+    const gq = query(
+      collection(db, 'users', profile.uid, 'groceryLists'),
+      where('weekStartDate', '==', today),
+      limit(1)
+    );
+    const gSnap = await getDocs(gq);
+
+    if (!gSnap.empty) {
+      await updateDoc(doc(db, 'users', profile.uid, 'groceryLists', gSnap.docs[0].id), { items });
+    } else {
+      await addDoc(collection(db, 'users', profile.uid, 'groceryLists'), {
+        weekStartDate: today,
+        items,
+      });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, groceryListsPath);
+  }
+
+  console.log("Grocery list updated.");
+  return planId;
 }
 
 export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {

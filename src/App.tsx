@@ -16,15 +16,17 @@ import { FoodBank } from './components/FoodBank';
 import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showSettings, setShowSettings] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
@@ -40,6 +42,7 @@ export default function App() {
 
       if (firebaseUser) {
         setLoading(true);
+        setProfileError(null);
         try {
           const docRef = doc(db, 'users', firebaseUser.uid);
           console.log("Fetching profile for:", firebaseUser.uid);
@@ -58,19 +61,25 @@ export default function App() {
             if (snap.exists()) {
               console.log("Profile updated via snapshot.");
               setProfile(snap.data() as UserProfile);
+              setProfileError(null);
             } else {
               console.log("Profile deleted or missing in snapshot.");
-              setProfile(null);
+              // Only set to null if we are sure it doesn't exist (e.g. not a transient error)
+              // onSnapshot handles its own errors via the second callback
             }
+          }, (err) => {
+            console.error("Profile snapshot error:", err);
+            setProfileError("Failed to sync profile. Please check your connection.");
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error("Profile loading error:", error);
-          setProfile(null);
+          setProfileError("Failed to load profile. Please refresh the page.");
         } finally {
           setLoading(false);
         }
       } else {
         setProfile(null);
+        setProfileError(null);
         setLoading(false);
       }
     });
@@ -106,14 +115,66 @@ export default function App() {
           </div>
           <h1 className="text-3xl font-sans font-bold text-[#141414] mb-2 tracking-tight">VitalPath AI</h1>
           <p className="text-[#141414]/60 mb-8">Your personalized path to peak physical condition.</p>
+          
+          {authError && (
+            <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
+              {authError}
+            </div>
+          )}
+
           <button
-            onClick={signInWithGoogle}
+            onClick={async () => {
+              try {
+                setAuthError(null);
+                await signInWithGoogle();
+              } catch (error: any) {
+                console.error("Login error:", error);
+                if (error.code === 'auth/popup-blocked') {
+                  setAuthError("Popup blocked! Please allow popups for this site.");
+                } else if (error.code === 'auth/unauthorized-domain') {
+                  setAuthError("This domain is not authorized. Please add it to your Firebase console.");
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                  setAuthError("Login popup was closed. Please try again and complete the sign-in.");
+                } else {
+                  setAuthError(error.message || "An error occurred during login.");
+                }
+              }
+            }}
             className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-colors flex items-center justify-center gap-3"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
             Sign in with Google
           </button>
+          <p className="mt-4 text-[10px] text-[#141414]/30 uppercase tracking-widest">
+            Make sure popups are enabled in your browser
+          </p>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (profileError && !profile) {
+    return (
+      <div className="min-h-screen bg-[#E4E3E0] flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-red-100 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <X className="text-red-500 w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-[#141414] mb-2">Connection Error</h2>
+          <p className="text-[#141414]/60 mb-8">{profileError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-colors"
+          >
+            Retry Connection
+          </button>
+          <button
+            onClick={logout}
+            className="w-full mt-4 py-2 text-[#141414]/40 hover:text-[#141414] transition-colors text-sm font-medium"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     );
   }
