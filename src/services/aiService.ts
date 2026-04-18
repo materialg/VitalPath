@@ -2,6 +2,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
+export enum ThinkingLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH'
+}
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',

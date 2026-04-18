@@ -17,7 +17,7 @@ export function MealPlanner({ profile }: Props) {
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
-  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const MEAL_PLAN_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeMealPlanId || null);
@@ -308,11 +308,6 @@ export function MealPlanner({ profile }: Props) {
                 <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mt-4 lg:mt-8">Select Day</h3>
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
                   {activePlan?.days.map((day, idx) => {
-                    const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-                    const displayName = day.day.toLowerCase().includes('day') && day.day.length <= 6 
-                      ? dayNames[idx] || day.day 
-                      : day.day;
-
                     return (
                       <button
                         key={idx}
@@ -323,7 +318,7 @@ export function MealPlanner({ profile }: Props) {
                             : 'text-[#141414]/40 hover:bg-white/50'
                         }`}
                       >
-                        <span className="font-bold whitespace-nowrap lg:whitespace-normal">{displayName}</span>
+                        <span className="font-bold whitespace-nowrap lg:whitespace-normal">{MEAL_PLAN_DAYS[idx] || day.day}</span>
                         <ChevronRight size={16} className={`hidden lg:block ${selectedDay === idx ? 'opacity-100' : 'opacity-0'}`} />
                       </button>
                     );
@@ -355,40 +350,17 @@ export function MealPlanner({ profile }: Props) {
                     fiber: acc.fiber + (meal.fiber || 0),
                   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
-                  const diff = Math.abs(totals.calories - (targets?.dailyCalories || 0));
-                  const isOffTarget = diff > 50;
-                  const isOverTarget = totals.calories > (targets?.dailyCalories || 0) + 50;
-
                   return (
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 w-full">
                       <div className="flex flex-wrap gap-4 lg:gap-8">
                         <div className="relative">
-                          <MacroStat label="Daily Calories" value={`${totals.calories} kcal`} icon={<Flame className={isOverTarget ? "text-red-500" : "text-orange-500"} />} />
-                          {isOverTarget && (
-                            <span className="absolute -top-2 -right-2 flex h-4 w-4">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">!</span>
-                            </span>
-                          )}
+                          <MacroStat label="Daily Calories" value={`${totals.calories} kcal`} icon={<Flame className="text-orange-500" />} />
                         </div>
                         <MacroStat label="Protein" value={`${Math.round(totals.protein * 10) / 10}g`} />
                         <MacroStat label="Carbs" value={`${Math.round(totals.carbs * 10) / 10}g`} />
                         <MacroStat label="Fats" value={`${Math.round(totals.fats * 10) / 10}g`} />
                         <MacroStat label="Fiber" value={`${Math.round(totals.fiber * 10) / 10}g`} />
                       </div>
-
-                      {isOffTarget && (
-                        <motion.button
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          onClick={handleRebalanceDay}
-                          disabled={isRecalculating}
-                          className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 text-orange-600 rounded-xl text-xs font-bold hover:bg-orange-500/20 transition-all border border-orange-500/20"
-                        >
-                          <Zap size={14} className="fill-current" />
-                          {isRecalculating ? 'Balancing...' : 'AI Rebalance Day'}
-                        </motion.button>
-                      )}
                     </div>
                   );
                 })()}
@@ -473,12 +445,12 @@ export function MealPlanner({ profile }: Props) {
                   </motion.div>
                 </AnimatePresence>
 
-                {activePlan?.days?.[selectedDay]?.meals?.some(m => m.status !== 'completed') && (
+                {activePlan?.days?.[selectedDay]?.meals?.length > 0 && activePlan.days[selectedDay].meals.every(m => m.status === 'completed') && (
                   <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     onClick={confirmAllDayMeals}
-                    className="w-full py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#141414]/10"
+                    className="w-full py-4 bg-green-500 text-white rounded-2xl font-bold hover:bg-green-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
                   >
                     <CheckCircle2 size={18} />
                     Confirm All Meals Completed
