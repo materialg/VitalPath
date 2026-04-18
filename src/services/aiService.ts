@@ -175,17 +175,104 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
   }
 }
 
-export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
-  // Filter out hidden items
-  const availableItems = foodBankItems.filter(i => !i.hidden);
+async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[], foodBankNames: string[]) {
+  const ai = getAI();
+  const responsePromise = ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      systemInstruction: "You are a strict meal planning engine. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON.",
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        required: ["meals"],
+        properties: {
+          meals: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              required: ["name", "calories", "protein", "carbs", "fats", "fiber", "ingredientsWithAmounts"],
+              properties: {
+                name: { type: Type.STRING, enum: ["Breakfast", "Lunch", "Dinner"] },
+                calories: { type: Type.NUMBER },
+                protein: { type: Type.NUMBER },
+                carbs: { type: Type.NUMBER },
+                fats: { type: Type.NUMBER },
+                fiber: { type: Type.NUMBER },
+                ingredientsWithAmounts: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    required: ["name", "amount"],
+                    properties: {
+                      name: { type: Type.STRING },
+                      amount: { type: Type.STRING }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
 
+  const response = await responsePromise as any;
+  if (!response.text) throw new Error(`Empty response for ${dayName}`);
+  
+  const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
+  const data = JSON.parse(jsonStr);
+
+  const meals = data.meals.map((meal: any) => {
+    // Filter ingredients to ensure they exist in the food bank
+    meal.ingredientsWithAmounts = (meal.ingredientsWithAmounts || []).filter((i: any) => 
+      foodBankNames.includes(i.name)
+    );
+
+    // Map to display string
+    meal.ingredients = meal.ingredientsWithAmounts.map((i: any) => {
+      return `${i.amount} ${i.name}`;
+    });
+
+    // Recalculate meal totals based on filtered ingredients for absolute accuracy
+    let totalCal = 0, totalP = 0, totalC = 0, totalF = 0, totalFib = 0;
+    
+    meal.ingredientsWithAmounts.forEach((ing: any) => {
+      const food = cleanFoodBank.find(f => f.name === ing.name);
+      if (food) {
+        const amountNum = parseFloat(ing.amount) || 0;
+        const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
+        totalCal += (food.calories || 0) * ratio;
+        totalP += (food.protein || 0) * ratio;
+        totalC += (food.carbs || 0) * ratio;
+        totalF += (food.fats || 0) * ratio;
+        totalFib += (food.fiber || 0) * ratio;
+      }
+    });
+
+    meal.calories = Math.round(totalCal);
+    meal.protein = Math.round(totalP * 10) / 10;
+    meal.carbs = Math.round(totalC * 10) / 10;
+    meal.fats = Math.round(totalF * 10) / 10;
+    meal.fiber = Math.round(totalFib * 10) / 10;
+
+    return meal;
+  });
+
+  return { day: dayName, meals };
+}
+
+export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
+  const availableItems = foodBankItems.filter(i => !i.hidden);
   if (availableItems.length === 0) {
     throw new Error("All your Food Bank items are hidden or the Food Bank is empty. Please unhide or add items before generating a meal plan.");
   }
 
   const targets = calculateDailyTargets(profile, weight, bodyFat);
   
-  // Clean and deduplicate food bank items
   const cleanFoodBank = availableItems.map(i => ({
     name: i.name.trim(),
     servingSize: i.servingSize,
@@ -203,158 +290,43 @@ export async function generateMealPlan(profile: any, weight: number, bodyFat: nu
   const foodBankContext = `
 STRICT INVENTORY - YOU MUST ONLY USE THESE ITEMS:
 ${cleanFoodBank.map(i => {
-  const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNITS ONLY - NO FRACTIONS)' : '';
+  const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY - NO FRACTIONS)' : '';
   const tags = i.mealTypes.length > 0 ? ` [STRICTLY FOR: ${i.mealTypes.map(t => t === 'B' ? 'Breakfast' : t === 'L' ? 'Lunch' : 'Dinner').join(', ')}]` : ' [UNIVERSAL - ANY MEAL]';
   return `- ${i.name}: ${i.calories} cal, ${i.protein}g P, ${i.carbs}g C, ${i.fats}g F, ${i.fiber}g Fiber per ${i.servingSize}${i.servingUnit}${constraint}${tags}`;
 }).join('\n')}
 
 CRITICAL INSTRUCTIONS:
-1. ZERO HALLUCINATION POLICY: You are FORBIDDEN from using any food, condiment, seasoning, or ingredient not in the list above. If it's not in the list, it doesn't exist.
-2. MEAL TYPE ENFORCEMENT: 
-   - If a food is tagged [STRICTLY FOR: Breakfast], it can ONLY appear in "Breakfast".
-   - If a food is tagged [STRICTLY FOR: Lunch], it can ONLY appear in "Lunch".
-   - If a food is tagged [STRICTLY FOR: Dinner], it can ONLY appear in "Dinner".
-   - If a food is tagged [UNIVERSAL], you can use it in any meal.
-   - DO NOT put "Lunch" or "Dinner" tagged items in "Breakfast".
-3. WHOLE UNIT RULE: Items with unit "unit" MUST be used in whole number multiples of their base serving. No 0.5 eggs, no 1.2 protein bars.
-4. MACRO CALCULATION: The meal-level calories and macros MUST be the exact sum of the ingredients used, calculated proportionally from the base servings provided. Calculate the exact gram amount (e.g., '142g') needed to hit the targets.
-5. MATHEMATICAL PRECISION: The sum of (Breakfast + Lunch + Dinner) calories MUST equal the Daily Target (${targets.dailyCalories}) within a +/- 20 calorie margin. If you use high-calorie whole units (like a Bagel or Egg), you MUST reduce the gram-based portions (like Chicken or Rice) in that same meal or other meals to stay under the limit.
-6. If you cannot hit the targets exactly using only the provided inventory and respecting meal types, prioritize inventory and meal-type integrity over target accuracy. However, you should NEVER exceed the target by more than 50 calories. It is better to have a slightly smaller meal than to overshoot.
-7. MEAL BALANCE AND PROPORTION:
-   - CALORIE DISTRIBUTION: Distribute the daily calories (${targets.dailyCalories} kcal) as evenly as possible across Breakfast, Lunch, and Dinner (~33% each). Each meal should ideally be within +/- 15% of the average meal calorie count (Daily Target / 3). Avoid having a small breakfast and massive lunch/dinner unless the inventory strictly forces it.
-   - PROTEIN DISTRIBUTION: Distribute the daily protein target (${targets.macros.protein}g) as evenly as possible across all three meals (~33% each). NEVER consolidate more than 50% of the daily protein into a single meal.
-   - REASONABLE PORTIONS: Do not prescribe extreme portions of a single item (e.g., avoid >300g of meat in one meal). If more protein is needed, spread the servings across other meals or use multiple protein sources.
-   - NUTRITIONAL ARCHITECTURE: Each meal should ideally contain a protein, a carb, and a fat source from the inventory. Avoid "mono-ingredient" meals (e.g., don't have a meal that is just 500g of chicken).`;
+1. PROTEIN DISTRIBUTION: Each meal MUST have roughly 1/3 of daily protein (${targets.macros.protein}g). Max 300g meat per meal.
+2. CALORIE DISTRIBUTION: Breakfast, Lunch, and Dinner should each be roughly 33% of daily calories (${targets.dailyCalories} kcal).
+3. ZERO HALLUCINATION: Only use listed items.
+4. WHOLE UNIT: unit-based items must be integers.
+5. SUM: Meals MUST hit Daily Target +/- 20kcal.`;
 
-  const prompt = `Generate a 7-day meal plan for a user with these targets:
-    Daily Calories: ${targets.dailyCalories} kcal
-    Macros: Protein ${targets.macros.protein}g, Carbs ${targets.macros.carbs}g, Fats ${targets.macros.fats}g, Fiber ${targets.macros.fiber}g
-    
-    User Context:
-    Weight: ${weight} lbs, Body Fat: ${bodyFat}%, Goal BF: ${profile.goalBodyFat}%
-    
-    ${foodBankContext}
-    
-    Return a 7-day plan in JSON format. Each day must have "Breakfast", "Lunch", and "Dinner". Days: "Monday" through "Sunday".`;
-
-  const ai = getAI();
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  
   try {
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("AI generation timed out. The calculation is complex—please try one more time.")), 120000)
-    );
-
-    const responsePromise = ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are a strict meal planning engine. ONLY use provided inventory. Hit calorie target +/- 20kcal. No hallucinations. Respect meal tags. Distribute calories as evenly as possible across Breakfast, Lunch, and Dinner.",
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            days: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  day: { type: Type.STRING },
-                  meals: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      required: ["name", "calories", "protein", "carbs", "fats", "fiber", "ingredientsWithAmounts"],
-                      properties: {
-                        name: { type: Type.STRING, enum: ["Breakfast", "Lunch", "Dinner"] },
-                        calories: { type: Type.NUMBER },
-                        protein: { type: Type.NUMBER },
-                        carbs: { type: Type.NUMBER },
-                        fats: { type: Type.NUMBER },
-                        fiber: { type: Type.NUMBER },
-                        ingredientsWithAmounts: {
-                          type: Type.ARRAY,
-                          items: {
-                            type: Type.OBJECT,
-                            required: ["name", "amount"],
-                            properties: {
-                              name: { type: Type.STRING },
-                              amount: { type: Type.STRING }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    const response = await Promise.race([responsePromise, timeoutPromise]) as any;
-
-    if (!response.text) {
-      throw new Error("AI returned an empty response. Please try again.");
-    }
-
-    // Extract JSON from response text (handles potential markdown wrapping)
-    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
-    const plan = JSON.parse(jsonStr);
-    
-    if (!plan.days || !Array.isArray(plan.days)) {
-      throw new Error("Invalid meal plan format received from AI.");
-    }
-
-    // POST-GENERATION FAIL-SAFE: Strictly filter out any hallucinated ingredients
-    plan.days.forEach((day: any) => {
-      day.meals.forEach((meal: any) => {
-        // Filter ingredients to ensure they exist in the food bank
-        meal.ingredientsWithAmounts = (meal.ingredientsWithAmounts || []).filter((i: any) => 
-          foodBankNames.includes(i.name)
-        );
-
-        // Map to display string
-        meal.ingredients = meal.ingredientsWithAmounts.map((i: any) => {
-          return `${i.amount} ${i.name}`;
-        });
-
-        // Recalculate meal totals based on filtered ingredients for absolute accuracy
-        let totalCal = 0, totalP = 0, totalC = 0, totalF = 0, totalFib = 0;
+    const dayPromises = days.map(dayName => {
+      const prompt = `Generate a 1-day meal plan for ${dayName} with these targets:
+        Daily Calories: ${targets.dailyCalories} kcal
+        Protein: ${targets.macros.protein}g, Carbs: ${targets.macros.carbs}g, Fats: ${targets.macros.fats}g
         
-        meal.ingredientsWithAmounts.forEach((ing: any) => {
-          const food = cleanFoodBank.find(f => f.name === ing.name);
-          if (food) {
-            const amountNum = parseFloat(ing.amount) || 0;
-            const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
-            totalCal += (food.calories || 0) * ratio;
-            totalP += (food.protein || 0) * ratio;
-            totalC += (food.carbs || 0) * ratio;
-            totalF += (food.fats || 0) * ratio;
-            totalFib += (food.fiber || 0) * ratio;
-          }
-        });
-
-        meal.calories = Math.round(totalCal);
-        meal.protein = Math.round(totalP);
-        meal.carbs = Math.round(totalC);
-        meal.fats = Math.round(totalF);
-        meal.fiber = Math.round(totalFib);
-      });
+        ${foodBankContext}
+        
+        Return JSON with a "meals" array containing Breakfast, Lunch, and Dinner.`;
+        
+      return generateDay(dayName, prompt, cleanFoodBank, foodBankNames);
     });
+
+    const generatedDays = await Promise.all(dayPromises);
 
     return {
-      ...plan,
+      days: generatedDays,
       dailyCalories: targets.dailyCalories,
       macros: targets.macros
     };
   } catch (error: any) {
     console.error("Meal Plan Generation Error:", error);
-    if (error instanceof SyntaxError) {
-      throw new Error("Failed to parse AI response. The AI might have returned an invalid format. Please try again.");
-    }
-    throw error;
+    throw new Error(error.message || "Failed to generate meal plan. Please try again.");
   }
 }
 
@@ -444,23 +416,32 @@ export async function regenerateDayPlan(
   profile: any, 
   weight: number, 
   bodyFat: number, 
-  foodBankItems: any[],
-  fixedMeal: any
+  foodBankItems: any[], 
+  currentDayMeals: any[]
 ) {
   const availableItems = foodBankItems.filter(i => !i.hidden);
-  if (availableItems.length === 0) throw new Error("Food Bank is empty.");
-
   const dailyTargets = calculateDailyTargets(profile, weight, bodyFat);
   
+  const fixedMeals = currentDayMeals.filter(m => m.status === 'completed');
+  
+  const totalFixed = fixedMeals.reduce((acc, m) => ({
+    calories: acc.calories + (m.calories || 0),
+    protein: acc.protein + (m.protein || 0),
+    carbs: acc.carbs + (m.carbs || 0),
+    fats: acc.fats + (m.fats || 0),
+    fiber: acc.fiber + (m.fiber || 0),
+  }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
+
   const remainingTargets = {
-    calories: dailyTargets.dailyCalories - (fixedMeal.calories || 0),
-    protein: dailyTargets.macros.protein - (fixedMeal.protein || 0),
-    carbs: dailyTargets.macros.carbs - (fixedMeal.carbs || 0),
-    fats: dailyTargets.macros.fats - (fixedMeal.fats || 0),
-    fiber: dailyTargets.macros.fiber - (fixedMeal.fiber || 0),
+    calories: dailyTargets.dailyCalories - totalFixed.calories,
+    protein: dailyTargets.macros.protein - totalFixed.protein,
+    carbs: dailyTargets.macros.carbs - totalFixed.carbs,
+    fats: dailyTargets.macros.fats - totalFixed.fats,
+    fiber: dailyTargets.macros.fiber - totalFixed.fiber,
   };
 
-  const mealsToGenerate = ["Breakfast", "Lunch", "Dinner"].filter(m => m !== fixedMeal.name);
+  const fixedMealNames = fixedMeals.map(m => m.name);
+  const mealsToGenerate = currentDayMeals.filter(m => !fixedMealNames.includes(m.name));
 
   const cleanFoodBank = availableItems.map(i => ({
     name: i.name.trim(),
@@ -477,37 +458,37 @@ export async function regenerateDayPlan(
   const foodBankNames = Array.from(new Set(cleanFoodBank.map(i => i.name)));
 
   const foodBankContext = `
-STRICT INVENTORY - YOU MUST ONLY USE THESE ITEMS:
+STRICT INVENTORY:
 ${cleanFoodBank.map(i => {
-  const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNITS ONLY - NO FRACTIONS)' : '';
-  const tags = i.mealTypes.length > 0 ? ` [STRICTLY FOR: ${i.mealTypes.map(t => t === 'B' ? 'Breakfast' : t === 'L' ? 'Lunch' : 'Dinner').join(', ')}]` : ' [UNIVERSAL - ANY MEAL]';
+  const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY)' : '';
+  const tags = i.mealTypes.length > 0 ? ` [${i.mealTypes.map(t => t === 'B' ? 'Breakfast' : t === 'L' ? 'Lunch' : 'Dinner').join(', ')}]` : ' [ANY]';
   return `- ${i.name}: ${i.calories} cal, ${i.protein}g P, ${i.carbs}g C, ${i.fats}g F, ${i.fiber}g Fiber per ${i.servingSize}${i.servingUnit}${constraint}${tags}`;
-}).join('\n')}`;
+}).join('\n')}
+
+REMAINING TARGETS: ${remainingTargets.calories} kcal, ${remainingTargets.protein}g P.`;
 
   const prompt = `
-    The user has FIXED their ${fixedMeal.name} to the following:
-    ${fixedMeal.ingredients.join(', ')}
-    Fixed Meal Macros: ${fixedMeal.calories} cal, ${fixedMeal.protein}g P, ${fixedMeal.carbs}g C, ${fixedMeal.fats}g F.
+    FIXED:
+    ${fixedMeals.map(m => `${m.name}: ${m.ingredients.join(', ')} (${m.calories}kcal)`).join('\n')}
 
-    Remaining Daily Targets to hit with the OTHER meals:
-    Calories: ${remainingTargets.calories} kcal
-    Protein: ${remainingTargets.protein}g
-    Carbs: ${remainingTargets.carbs}g
-    Fats: ${remainingTargets.fats}g
-    
+    UNCOMPLETED MEALS (ADJUST THESE):
+    ${mealsToGenerate.map(m => `${m.name}: ${m.ingredients.join(', ')} (${m.calories}kcal)`).join('\n')}
+
+    INVOLUNTARY RULE: 
+    1. ADJUST amounts of ingredients in UNCOMPLETED meals to hit exact targets +/- 5kcal.
+    2. If a meal was recently edited (looks specific), prioritize adjusting OTHER uncompleted meals.
+    3. PRESERVE manual edits if possible. Simply change grams.
     ${foodBankContext}
-
-    Generate the following meals for this day: ${mealsToGenerate.join(', ')}.
-    The combined totals of the FIXED meal and these NEW meals MUST equal the Daily Target (${dailyTargets.dailyCalories} kcal) within +/- 20kcal.
     
-    Return a JSON object with a "meals" array containing the ${mealsToGenerate.length} regenerated meals.`;
+    Return JSON for ${mealsToGenerate.map(m => m.name).join(', ')}.`;
 
   const ai = getAI();
   const responsePromise = ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
-      systemInstruction: "You are a meal planning engine. Regenerate the requested meals to hit the remaining macro targets. ONLY use provided inventory.",
+      systemInstruction: "You are a speed-focused meal rebalancer. Adjust grams of existing ingredients first. No recipes, just amounts. Hit targets +/- 5kcal. RETURN ONLY JSON.",
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -518,7 +499,7 @@ ${cleanFoodBank.map(i => {
               type: Type.OBJECT,
               required: ["name", "calories", "protein", "carbs", "fats", "fiber", "ingredientsWithAmounts"],
               properties: {
-                name: { type: Type.STRING, enum: mealsToGenerate },
+                name: { type: Type.STRING, enum: ["Breakfast", "Lunch", "Dinner"] },
                 calories: { type: Type.NUMBER },
                 protein: { type: Type.NUMBER },
                 carbs: { type: Type.NUMBER },
@@ -548,7 +529,6 @@ ${cleanFoodBank.map(i => {
   const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
   const result = JSON.parse(jsonStr);
 
-  // Apply same filtering and recalculation logic as global generation
   result.meals.forEach((meal: any) => {
     meal.ingredientsWithAmounts = (meal.ingredientsWithAmounts || []).filter((i: any) => 
       foodBankNames.includes(i.name)
@@ -568,16 +548,19 @@ ${cleanFoodBank.map(i => {
       }
     });
     meal.calories = Math.round(totalCal);
-    meal.protein = Math.round(totalP);
-    meal.carbs = Math.round(totalC);
-    meal.fats = Math.round(totalF);
-    meal.fiber = Math.round(totalFib);
+    meal.protein = Math.round(totalP * 10) / 10;
+    meal.carbs = Math.round(totalC * 10) / 10;
+    meal.fats = Math.round(totalF * 10) / 10;
+    meal.fiber = Math.round(totalFib * 10) / 10;
   });
 
-  // Re-combine into a full day (ensuring original order: Breakfast, Lunch, Dinner)
   const fullDay = ["Breakfast", "Lunch", "Dinner"].map(name => {
-    if (name === fixedMeal.name) return fixedMeal;
-    return result.meals.find((m: any) => m.name === name);
+    const fixed = fixedMeals.find(m => m.name === name);
+    if (fixed) return fixed;
+    const generated = result.meals.find((m: any) => m.name === name);
+    if (generated) return generated;
+    // Fallback search in currentDayMeals if generation failed for some reason
+    return currentDayMeals.find(m => m.name === name);
   });
 
   return fullDay;

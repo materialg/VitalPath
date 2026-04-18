@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2 } from 'lucide-react';
+import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -99,19 +99,37 @@ export function MealPlanner({ profile }: Props) {
   const handleUpdateMeal = async (mIdx: number, updatedMeal: any) => {
     if (!activePlan || !activePlanId) return;
 
-    setIsRecalculating(true);
     setEditingMeal(null);
+    const updatedDays = [...activePlan.days];
+    updatedDays[selectedDay].meals[mIdx] = updatedMeal;
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Failed to update meal:", err);
+      setError("Failed to save meal changes. Please try again.");
+    }
+  };
+
+  const handleRebalanceDay = async () => {
+    if (!activePlan || !activePlanId) return;
+
+    setIsRecalculating(true);
+    setError(null);
 
     const updatedDays = [...activePlan.days];
+    const currentDayMeals = updatedDays[selectedDay].meals;
     
     try {
-      // Regenerate the day's other meals to stay on target
       const newDayMeals = await regenerateDayPlan(
         profile,
         latestVital?.weight || 180,
         latestVital?.bodyFat || 20,
         foodBankItems,
-        updatedMeal
+        currentDayMeals
       );
 
       updatedDays[selectedDay].meals = newDayMeals;
@@ -121,8 +139,8 @@ export function MealPlanner({ profile }: Props) {
         updatedAt: new Date().toISOString()
       });
     } catch (err) {
-      console.error("Failed to update meal and recalculate:", err);
-      setError("AI was unable to balance the remaining meals given your changes. Please try a smaller adjustment.");
+      console.error("Failed to rebalance day:", err);
+      setError("AI was unable to rebalance the day. Try adjusting your items manually or generating a new week.");
     } finally {
       setIsRecalculating(false);
     }
@@ -337,24 +355,41 @@ export function MealPlanner({ profile }: Props) {
                     fiber: acc.fiber + (meal.fiber || 0),
                   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
+                  const diff = Math.abs(totals.calories - (targets?.dailyCalories || 0));
+                  const isOffTarget = diff > 50;
                   const isOverTarget = totals.calories > (targets?.dailyCalories || 0) + 50;
 
                   return (
-                    <>
-                      <div className="relative">
-                        <MacroStat label="Daily Calories" value={`${totals.calories} kcal`} icon={<Flame className={isOverTarget ? "text-red-500" : "text-orange-500"} />} />
-                        {isOverTarget && (
-                          <span className="absolute -top-2 -right-2 flex h-4 w-4">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">!</span>
-                          </span>
-                        )}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 w-full">
+                      <div className="flex flex-wrap gap-4 lg:gap-8">
+                        <div className="relative">
+                          <MacroStat label="Daily Calories" value={`${totals.calories} kcal`} icon={<Flame className={isOverTarget ? "text-red-500" : "text-orange-500"} />} />
+                          {isOverTarget && (
+                            <span className="absolute -top-2 -right-2 flex h-4 w-4">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">!</span>
+                            </span>
+                          )}
+                        </div>
+                        <MacroStat label="Protein" value={`${Math.round(totals.protein * 10) / 10}g`} />
+                        <MacroStat label="Carbs" value={`${Math.round(totals.carbs * 10) / 10}g`} />
+                        <MacroStat label="Fats" value={`${Math.round(totals.fats * 10) / 10}g`} />
+                        <MacroStat label="Fiber" value={`${Math.round(totals.fiber * 10) / 10}g`} />
                       </div>
-                      <MacroStat label="Protein" value={`${Math.round(totals.protein * 10) / 10}g`} />
-                      <MacroStat label="Carbs" value={`${Math.round(totals.carbs * 10) / 10}g`} />
-                      <MacroStat label="Fats" value={`${Math.round(totals.fats * 10) / 10}g`} />
-                      <MacroStat label="Fiber" value={`${Math.round(totals.fiber * 10) / 10}g`} />
-                    </>
+
+                      {isOffTarget && (
+                        <motion.button
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          onClick={handleRebalanceDay}
+                          disabled={isRecalculating}
+                          className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 text-orange-600 rounded-xl text-xs font-bold hover:bg-orange-500/20 transition-all border border-orange-500/20"
+                        >
+                          <Zap size={14} className="fill-current" />
+                          {isRecalculating ? 'Balancing...' : 'AI Rebalance Day'}
+                        </motion.button>
+                      )}
+                    </div>
                   );
                 })()}
               </div>
@@ -624,7 +659,11 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
 
   const updateIngredientAmount = (idx: number, newAmount: string) => {
     const newIngredients = [...currentMeal.ingredientsWithAmounts];
-    newIngredients[idx].amount = newAmount;
+    let sanitizedAmount = newAmount;
+    if (newAmount.toLowerCase().includes('units')) {
+      sanitizedAmount = newAmount.replace(/units/gi, 'unit');
+    }
+    newIngredients[idx].amount = sanitizedAmount;
     const totals = calculateTotals(newIngredients);
     setCurrentMeal({
       ...currentMeal,
@@ -646,9 +685,11 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
   };
 
   const addIngredient = (food: FoodBankItem) => {
+    let unit = (food.servingUnit || 'unit').toLowerCase();
+    if (unit === 'units') unit = 'unit';
     const newIngredients = [
       ...currentMeal.ingredientsWithAmounts,
-      { name: food.name, amount: `${food.servingSize}${food.servingUnit}` }
+      { name: food.name, amount: `${food.servingSize} ${unit}` }
     ];
     const totals = calculateTotals(newIngredients);
     setCurrentMeal({
@@ -711,16 +752,50 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
                 <div className="flex-1">
                   <p className="font-bold text-[#141414]">{ing.name}</p>
                   <p className="text-xs text-[#141414]/40">
-                    {food ? `${food.calories} cal / ${food.servingSize}${food.servingUnit}` : 'Custom item'}
+                    {food ? `${food.calories} cal / ${food.servingSize} ${food.servingUnit || 'unit'}` : 'Custom item'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input 
-                    type="text"
-                    value={ing.amount}
-                    onChange={(e) => updateIngredientAmount(idx, e.target.value)}
-                    className="w-24 px-3 py-2 bg-[#141414]/5 rounded-lg border-none text-sm font-bold text-center focus:ring-2 focus:ring-[#141414]"
-                  />
+                  <div className="flex items-center bg-[#141414]/5 rounded-xl p-1 gap-1">
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const val = parseFloat(ing.amount) || 0;
+                        const unit = ing.amount.replace(/[\d.\s]+/g, '') || food?.servingUnit || 'unit';
+                        updateIngredientAmount(idx, `${Math.max(0, val - 1)} ${unit}`);
+                      }}
+                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
+                    >
+                      -
+                    </button>
+                    
+                    <input 
+                      type="number"
+                      value={parseFloat(ing.amount) || 0}
+                      step="1"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        let unit = (ing.amount.replace(/[\d.\s]+/g, '') || food?.servingUnit || 'unit').toLowerCase();
+                        if (unit === 'units') unit = 'unit';
+                        updateIngredientAmount(idx, `${val} ${unit}`);
+                      }}
+                      className="w-12 bg-transparent border-none text-sm font-bold text-center focus:ring-0 p-0 appearance-none"
+                    />
+
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const val = parseFloat(ing.amount) || 0;
+                        const unit = ing.amount.replace(/[\d.\s]+/g, '') || food?.servingUnit || 'unit';
+                        updateIngredientAmount(idx, `${val + 1} ${unit}`);
+                      }}
+                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
                   <button 
                     onClick={() => removeIngredient(idx)}
                     className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

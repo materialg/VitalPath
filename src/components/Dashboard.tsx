@@ -280,10 +280,27 @@ export function Dashboard({ profile, onNavigate }: Props) {
         )}
         {showMealModal && todayMealPlan && (
           <MealModal 
-            meals={todayMealPlan.meals} 
-            dayName={todayMealPlan.day}
-            onClose={() => setShowMealModal(false)} 
-            onConfirm={() => handleMealAction('approve')}
+             meals={todayMealPlan.meals} 
+             dayName={todayMealPlan.day}
+             onClose={() => setShowMealModal(false)} 
+             onConfirm={() => handleMealAction('approve')}
+             onToggleMeal={async (mIdx) => {
+               if (!latestMealPlan || !todayMealPlan) return;
+               const updatedDays = [...latestMealPlan.days];
+               const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
+               if (dayIndex !== -1) {
+                 const meals = [...updatedDays[dayIndex].meals];
+                 const currentStatus = meals[mIdx].status;
+                 meals[mIdx] = { 
+                   ...meals[mIdx], 
+                   status: currentStatus === 'completed' ? 'none' : 'completed' 
+                 };
+                 updatedDays[dayIndex].meals = meals;
+                 await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+                   days: updatedDays
+                 });
+               }
+             }}
           />
         )}
         {showWorkoutModal && latestWorkout && (
@@ -425,7 +442,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
   );
 }
 
-function MealModal({ meals, dayName, onClose, onConfirm }: { meals: Meal[], dayName: string, onClose: () => void, onConfirm?: () => void }) {
+function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void }) {
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
   
   return (
@@ -457,15 +474,23 @@ function MealModal({ meals, dayName, onClose, onConfirm }: { meals: Meal[], dayN
 
         <div className="space-y-6">
           {meals.map((meal, mIdx) => (
-            <div key={mIdx} className="bg-[#141414]/5 p-6 rounded-2xl space-y-4">
+            <div key={mIdx} className={`p-6 rounded-2xl space-y-4 transition-all ${meal.status === 'completed' ? 'bg-green-50/50 border border-green-100' : 'bg-[#141414]/5'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-orange-600 font-bold text-xs">
-                    {meal.name[0]}
-                  </div>
-                  <h4 className="text-lg font-bold text-[#141414]">{meal.name}</h4>
+                  <button 
+                    onClick={() => onToggleMeal?.(mIdx)}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-all ${
+                      meal.status === 'completed' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white text-orange-600 shadow-sm'
+                    }`}
+                  >
+                    {meal.status === 'completed' ? <Check size={16} /> : meal.name[0]}
+                  </button>
+                  <h4 className={`text-lg font-bold transition-all ${meal.status === 'completed' ? 'text-green-700' : 'text-[#141414]'}`}>{meal.name}</h4>
+                  {meal.status === 'completed' && (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">Logged</span>
+                  )}
                 </div>
-                <span className="text-sm font-bold text-orange-600">{meal.calories} kcal</span>
+                <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories} kcal</span>
               </div>
               
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
