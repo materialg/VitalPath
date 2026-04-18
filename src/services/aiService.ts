@@ -200,6 +200,7 @@ CRITICAL INSTRUCTIONS:
 5. MATHEMATICAL PRECISION: The sum of (Breakfast + Lunch + Dinner) calories MUST equal the Daily Target (${targets.dailyCalories}) within a +/- 20 calorie margin. If you use high-calorie whole units (like a Bagel or Egg), you MUST reduce the gram-based portions (like Chicken or Rice) in that same meal or other meals to stay under the limit.
 6. If you cannot hit the targets exactly using only the provided inventory and respecting meal types, prioritize inventory and meal-type integrity over target accuracy. However, you should NEVER exceed the target by more than 50 calories. It is better to have a slightly smaller meal than to overshoot.
 7. MEAL BALANCE AND PROPORTION:
+   - CALORIE DISTRIBUTION: Distribute the daily calories (${targets.dailyCalories} kcal) as evenly as possible across Breakfast, Lunch, and Dinner (~33% each). Each meal should ideally be within +/- 15% of the average meal calorie count (Daily Target / 3). Avoid having a small breakfast and massive lunch/dinner unless the inventory strictly forces it.
    - PROTEIN DISTRIBUTION: Distribute the daily protein target (${targets.macros.protein}g) as evenly as possible across all three meals (~33% each). NEVER consolidate more than 50% of the daily protein into a single meal.
    - REASONABLE PORTIONS: Do not prescribe extreme portions of a single item (e.g., avoid >300g of meat in one meal). If more protein is needed, spread the servings across other meals or use multiple protein sources.
    - NUTRITIONAL ARCHITECTURE: Each meal should ideally contain a protein, a carb, and a fat source from the inventory. Avoid "mono-ingredient" meals (e.g., don't have a meal that is just 500g of chicken).`;
@@ -225,7 +226,7 @@ CRITICAL INSTRUCTIONS:
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
-        systemInstruction: "You are a strict meal planning engine. ONLY use provided inventory. Hit calorie target +/- 20kcal. No hallucinations. Respect meal tags.",
+        systemInstruction: "You are a strict meal planning engine. ONLY use provided inventory. Hit calorie target +/- 20kcal. No hallucinations. Respect meal tags. Distribute calories as evenly as possible across Breakfast, Lunch, and Dinner.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
