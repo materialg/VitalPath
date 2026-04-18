@@ -656,7 +656,7 @@ export function FoodBank({ profile }: Props) {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-[#141414]/60">
-                      {item.servingSize}{item.servingUnit ? (item.servingUnit === 'unit' ? (item.servingSize === 1 ? ' unit' : ' units') : item.servingUnit) : ' unit'}
+                      {item.servingSize} {item.servingUnit ? (item.servingUnit === 'unit' ? (item.servingSize === 1 ? 'unit' : 'units') : item.servingUnit) : 'unit'}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700">

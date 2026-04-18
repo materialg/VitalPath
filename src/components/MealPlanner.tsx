@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
-import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan } from '../services/aiService';
+import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan, isAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Utensils, Sparkles, RotateCcw, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
 
@@ -462,7 +462,7 @@ export function MealPlanner({ profile }: Props) {
                                 const unit = (food?.servingUnit || 'unit').toLowerCase();
                                 return (
                                   <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
-                                    {val}{unit === 'unit' ? (val === 1 ? ' unit' : ' units') : unit} {food?.name || ing.name}
+                                    {val} {unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit} {food?.name || ing.name}
                                   </span>
                                 );
                               }) : meal.ingredients.map((ing: any, iIdx: number) => (
@@ -505,16 +505,29 @@ export function MealPlanner({ profile }: Props) {
                 ? "Your Food Bank is empty. Add some foods first so the AI can build your customized meal plan!"
                 : "Get a customized 7-day meal schedule tailored to your goals and available food."}
             </p>
-            <button 
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="px-8 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-[#141414]/20 mx-auto"
-            >
-              {isGenerating ? (
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
-              ) : <Sparkles size={18} />}
-              Generate Weekly Plan
-            </button>
+            
+            {!isAIConfigured() ? (
+              <div className="max-w-md mx-auto p-6 bg-orange-50 border border-orange-200 rounded-2xl text-left space-y-3">
+                <div className="flex items-center gap-3 text-orange-600">
+                  <Sparkles size={20} />
+                  <p className="font-bold">AI Features Unconfigured</p>
+                </div>
+                <p className="text-sm text-orange-800/80">
+                  Please add a valid <strong>GEMINI_API_KEY</strong> in the project settings (Settings - Secrets) to enable AI meal generation.
+                </p>
+              </div>
+            ) : (
+              <button 
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="px-8 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-[#141414]/20 mx-auto"
+              >
+                {isGenerating ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
+                ) : <Sparkles size={18} />}
+                Generate Weekly Plan
+              </button>
+            )}
           </div>
 
           {dailyTargets.length > 0 && (
@@ -684,7 +697,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
         return {
           ...ing,
           name: food.name, // Sync casing/name
-          amount: `${val}${fbUnit === 'unit' ? ' unit' : fbUnit}`
+          amount: `${val} ${fbUnit === 'unit' ? (val === 1 ? 'unit' : 'units') : fbUnit}`
         };
       }
       return ing;
@@ -709,7 +722,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
     const val = parseFloat(newAmount) || 0;
     const unit = (food?.servingUnit || 'unit').toLowerCase();
     
-    newIngredients[idx].amount = `${val}${unit === 'unit' ? ' unit' : unit}`;
+    newIngredients[idx].amount = `${val} ${unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit}`;
     newIngredients[idx].name = food?.name || ing.name; // Sync casing
     const totals = calculateTotals(newIngredients);
     setCurrentMeal({
@@ -739,7 +752,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
         const unit = food.servingUnit || 'unit';
         return { 
           name: food.name, 
-          amount: `${amountNum}${unit === 'unit' ? ' unit' : unit}` 
+          amount: `${amountNum} ${unit === 'unit' ? (amountNum === 1 ? 'unit' : 'units') : unit}` 
         };
       }
       return ing;
@@ -757,7 +770,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
     if (unit === 'units') unit = 'unit';
     const newIngredients = [
       ...currentMeal.ingredientsWithAmounts,
-      { name: food.name, amount: `${food.servingSize}${unit === 'unit' ? ' unit' : unit}` }
+      { name: food.name, amount: `${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` }
     ];
     const totals = calculateTotals(newIngredients);
     setCurrentMeal({
@@ -821,7 +834,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
                 <div className="flex-1">
                   <p className="font-bold text-[#141414]">{food?.name || ing.name}</p>
                   <p className="text-xs text-[#141414]/40">
-                    {food ? `${food.calories} cal / ${food.servingSize}${unit === 'unit' ? (food.servingSize === 1 ? ' unit' : ' units') : unit}` : 'Custom item'}
+                    {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

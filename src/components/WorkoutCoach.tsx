@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay } from '../types';
-import { generateWorkoutPlan, calculateDailyTargets } from '../services/aiService';
+import { generateWorkoutPlan, calculateDailyTargets, isAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addDays } from 'date-fns';
 import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Check, Edit2, ChevronLeft } from 'lucide-react';
@@ -458,16 +458,29 @@ export function WorkoutCoach({ profile }: Props) {
           <p className="text-[#141414]/60 max-w-md mx-auto mb-10 text-lg leading-relaxed">
             Generate a custom 7-day PPLR routine designed to help you reach your body fat goals.
           </p>
-          <button 
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="px-10 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center gap-3 mx-auto disabled:opacity-50 shadow-xl shadow-[#141414]/20"
-          >
-            {isGenerating ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={20} /></motion.div>
-            ) : <Sparkles size={20} />}
-            Generate Weekly Plan
-          </button>
+          
+          {!isAIConfigured() ? (
+            <div className="max-w-md mx-auto p-6 bg-orange-50 border border-orange-200 rounded-2xl text-left space-y-3">
+              <div className="flex items-center gap-3 text-orange-600">
+                <Sparkles size={20} />
+                <p className="font-bold text-sm">AI Features Unconfigured</p>
+              </div>
+              <p className="text-xs text-orange-800/80">
+                Please add a valid <strong>GEMINI_API_KEY</strong> in the project settings (Settings - Secrets) to enable AI workout generation.
+              </p>
+            </div>
+          ) : (
+            <button 
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="px-10 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center gap-3 mx-auto disabled:opacity-50 shadow-xl shadow-[#141414]/20"
+            >
+              {isGenerating ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={20} /></motion.div>
+              ) : <Sparkles size={20} />}
+              Generate Weekly Plan
+            </button>
+          )}
         </div>
       )}
 

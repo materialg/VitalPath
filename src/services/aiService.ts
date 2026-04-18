@@ -1,12 +1,6 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-
-export enum ThinkingLevel {
-  LOW = 'LOW',
-  MEDIUM = 'MEDIUM',
-  HIGH = 'HIGH'
-}
 
 export enum OperationType {
   CREATE = 'create',
@@ -31,8 +25,9 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const message = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: message,
     operationType: operationType as any,
     path,
     authInfo: {
@@ -48,19 +43,35 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     }
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  
+  // Provide a cleaner message for the UI
+  if (message.includes('permission-denied') || message.includes('Missing or insufficient permissions')) {
+    throw new Error("You don't have permission to perform this action. Your session might have expired.");
+  }
+  if (message.includes('quota-exceeded')) {
+    throw new Error("Firestore quota exceeded. Please try again tomorrow.");
+  }
+  
+  throw new Error(message);
 }
+
+export const isAIConfigured = () => {
+  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  return !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
+};
 
 let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
   
   if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
+    console.error("Gemini API key is missing. Checked process.env.GEMINI_API_KEY and VITE_GEMINI_API_KEY.");
     throw new Error("Gemini API key is missing. Please provide a valid GEMINI_API_KEY in the project settings (Settings > Secrets).");
   }
 
   if (!aiInstance) {
+    console.log("Initializing Gemini AI with provided key...");
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
@@ -249,7 +260,13 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
         // ALWAYS use the food bank's unit, regardless of what the AI returned
         const amountNum = parseFloat(i.amount) || 0;
         const fbUnit = food.servingUnit || 'unit';
-        const formattedAmount = `${amountNum}${fbUnit === 'unit' ? (amountNum === 1 ? ' unit' : ' units') : fbUnit}`;
+        // Add a space for readability, and handle plurals for unit
+        let formattedUnit = fbUnit;
+        if (fbUnit === 'unit') {
+          formattedUnit = amountNum === 1 ? 'unit' : 'units';
+        }
+        
+        const formattedAmount = `${amountNum} ${formattedUnit}`;
         return { ...i, name: food.name, amount: formattedAmount };
       }
       return i;
