@@ -4,10 +4,9 @@ import { db } from '../firebase';
 import { UserProfile, FoodBankItem, VitalLog } from '../types';
 import { generateAndSaveMealPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Pencil, X, Save, Search, Database, Scale, Flame, Zap, Upload, FileText, Loader2, Camera, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Save, Search, Database, Scale, Flame, Zap, Upload, FileText, Loader2, Eye, EyeOff } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { parseNutritionLabel } from '../services/aiService';
 
 interface Props {
   profile: UserProfile;
@@ -20,9 +19,7 @@ export function FoodBank({ profile }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [editingItem, setEditingItem] = useState<FoodBankItem | null>(null);
   const [formData, setFormData] = useState<any>({
     name: '',
@@ -451,38 +448,6 @@ export function FoodBank({ profile }: Props) {
     }
   };
 
-  const handleScanLabel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsScanning(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = (event.target?.result as string).split(',')[1];
-        const nutritionData = await parseNutritionLabel(base64);
-        
-        setFormData({
-          name: nutritionData.name || '',
-          servingSize: nutritionData.servingSize || 100,
-          servingUnit: nutritionData.servingUnit || 'g',
-          calories: nutritionData.calories || 0,
-          protein: nutritionData.protein || 0,
-          carbs: nutritionData.carbs || 0,
-          fats: nutritionData.fats || 0,
-          fiber: nutritionData.fiber || 0
-        });
-        setIsAdding(true);
-        setIsScanning(false);
-        if (cameraInputRef.current) cameraInputRef.current.value = '';
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Error scanning label:', error);
-      setIsScanning(false);
-    }
-  };
-
   const filteredItems = items.filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -502,14 +467,6 @@ export function FoodBank({ profile }: Props) {
             accept=".csv, .xlsx, .xls"
             className="hidden"
           />
-          <input 
-            type="file" 
-            ref={cameraInputRef}
-            onChange={handleScanLabel}
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-          />
           <button 
             onClick={() => {
               resetForm();
@@ -519,14 +476,6 @@ export function FoodBank({ profile }: Props) {
           >
             <Plus size={18} />
             Add Food
-          </button>
-          <button 
-            onClick={() => cameraInputRef.current?.click()}
-            disabled={isScanning}
-            className="flex-1 lg:flex-none px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
-            Scan Label
           </button>
           <button 
             onClick={() => fileInputRef.current?.click()}

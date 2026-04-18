@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
-import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan } from '../services/aiService';
+import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search } from 'lucide-react';
+import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2 } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -16,6 +16,7 @@ export function MealPlanner({ profile }: Props) {
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
@@ -98,19 +99,32 @@ export function MealPlanner({ profile }: Props) {
   const handleUpdateMeal = async (mIdx: number, updatedMeal: any) => {
     if (!activePlan || !activePlanId) return;
 
-    const updatedDays = [...activePlan.days];
-    const meals = [...updatedDays[selectedDay].meals];
-    meals[mIdx] = updatedMeal;
-    updatedDays[selectedDay].meals = meals;
+    setIsRecalculating(true);
+    setEditingMeal(null);
 
+    const updatedDays = [...activePlan.days];
+    
     try {
+      // Regenerate the day's other meals to stay on target
+      const newDayMeals = await regenerateDayPlan(
+        profile,
+        latestVital?.weight || 180,
+        latestVital?.bodyFat || 20,
+        foodBankItems,
+        updatedMeal
+      );
+
+      updatedDays[selectedDay].meals = newDayMeals;
+
       await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
         days: updatedDays,
         updatedAt: new Date().toISOString()
       });
-      setEditingMeal(null);
     } catch (err) {
-      console.error("Failed to update meal:", err);
+      console.error("Failed to update meal and recalculate:", err);
+      setError("AI was unable to balance the remaining meals given your changes. Please try a smaller adjustment.");
+    } finally {
+      setIsRecalculating(false);
     }
   };
 
@@ -345,7 +359,18 @@ export function MealPlanner({ profile }: Props) {
                 })()}
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-8 relative">
+                {isRecalculating && (
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center rounded-2xl animate-in fade-in duration-300">
+                    <div className="p-4 bg-[#141414] text-white rounded-2xl border border-white/10 shadow-2xl flex flex-col items-center gap-3">
+                      <Loader2 className="animate-spin text-orange-500" size={32} />
+                      <div className="text-center">
+                        <p className="font-bold">Recalculating Day Plan</p>
+                        <p className="text-[10px] text-white/40 uppercase tracking-widest">Adjusting other meals to stay on target</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`${activePlanId}-${selectedDay}`}
