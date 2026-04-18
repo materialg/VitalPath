@@ -72,13 +72,14 @@ service cloud.firestore {
 
     function isValidFoodBankItem(data) {
       return (!('name' in data) || (data.name is string && data.name.size() <= 128))
-        && (!('calories' in data) || (data.calories is number && data.calories >= 0 && data.calories <= 5000))
+        && (!('calories' in data) || (data.calories is number && data.calories >= 0 && data.calories <= 100000))
         && (!('protein' in data) || (data.protein is number && data.protein >= 0))
         && (!('carbs' in data) || (data.carbs is number && data.carbs >= 0))
         && (!('fats' in data) || (data.fats is number && data.fats >= 0))
         && (!('servingSize' in data) || (data.servingSize is number && data.servingSize >= 0))
         && (!('servingUnit' in data) || (data.servingUnit in ['g', 'oz', 'unit', 'ml']))
-        && (!('mealTypes' in data) || (data.mealTypes is list && data.mealTypes.size() <= 3));
+        && (!('mealTypes' in data) || (data.mealTypes is list && data.mealTypes.size() <= 3))
+        && (!('updatedAt' in data) || (data.updatedAt is string));
     }
 
     function isValidMealPlan(data) {
@@ -148,8 +149,7 @@ service cloud.firestore {
       match /foodBank/{itemId} {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming());
-        allow update: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming())
-          && (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['name', 'calories', 'protein', 'carbs', 'fats', 'fiber', 'servingSize', 'servingUnit', 'mealTypes', 'hidden']));
+        allow update: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming());
         allow delete: if isVerifiedOwner(userId) || isAdmin();
       }
 

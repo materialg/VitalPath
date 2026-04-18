@@ -851,7 +851,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
                       -
                     </button>
                     
-                    <div className="flex items-center gap-1 px-2">
+                    <div className="flex items-center justify-center gap-1 px-2 w-24">
                       <input 
                         type="number"
                         value={parseFloat(ing.amount) || 0}
@@ -859,9 +859,9 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
                         onChange={(e) => {
                           updateIngredientAmount(idx, e.target.value);
                         }}
-                        className="w-12 bg-transparent border-none text-sm font-bold text-center focus:ring-0 p-0 appearance-none"
+                        className="w-8 bg-transparent border-none text-sm font-bold text-right focus:ring-0 p-0 appearance-none"
                       />
-                      <span className="text-[10px] font-bold text-[#141414]/40 uppercase">
+                      <span className="text-[10px] font-bold text-[#141414]/40 uppercase flex-1 text-left ml-1">
                         {unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit}
                       </span>
                     </div>

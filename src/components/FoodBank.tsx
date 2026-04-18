@@ -85,6 +85,9 @@ export function FoodBank({ profile }: Props) {
       carbs: parseFloat(formData.carbs) || 0,
       fats: parseFloat(formData.fats) || 0,
       fiber: parseFloat(formData.fiber) || 0,
+      mealTypes: formData.mealTypes || [],
+      hidden: formData.hidden || false,
+      updatedAt: new Date().toISOString()
     };
 
     try {
@@ -151,8 +154,9 @@ export function FoodBank({ profile }: Props) {
         setIsAdding(false);
         resetForm();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      alert(`Error saving food: ${error.message || 'Unknown error'}`);
     }
   };
 
