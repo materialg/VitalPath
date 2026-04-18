@@ -132,9 +132,9 @@ export default function App() {
                 if (error.code === 'auth/popup-blocked') {
                   setAuthError("Popup blocked! Please allow popups for this site.");
                 } else if (error.code === 'auth/unauthorized-domain') {
-                  setAuthError("This domain is not authorized. Please add it to your Firebase console.");
+                  setAuthError(`Domain not authorized. Please add ${window.location.hostname} to authorized domains in Firebase Console.`);
                 } else if (error.code === 'auth/popup-closed-by-user') {
-                  setAuthError("Login popup was closed. Please try again and complete the sign-in.");
+                  setAuthError("Login popup was closed. If you're using Safari, try opening this app in a new tab using the button in the top right.");
                 } else {
                   setAuthError(error.message || "An error occurred during login.");
                 }
@@ -145,8 +145,11 @@ export default function App() {
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
             Sign in with Google
           </button>
-          <p className="mt-4 text-[10px] text-[#141414]/30 uppercase tracking-widest">
-            Make sure popups are enabled in your browser
+          <p className="mt-4 text-[10px] text-[#141414]/30 uppercase tracking-widest px-4">
+            Having trouble? Try opening this app in a **new tab** using the button in the top right.
+          </p>
+          <p className="mt-2 text-[10px] text-[#141414]/20 uppercase tracking-widest">
+            Make sure popups are enabled
           </p>
         </motion.div>
       </div>
