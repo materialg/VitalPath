@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, FoodBankItem, VitalLog } from '../types';
 import { generateAndSaveMealPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Pencil, X, Save, Search, Database, Scale, Flame, Zap, Upload, FileText, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Save, Search, Database, Scale, Flame, Zap, Upload, FileText, Loader2, Eye, EyeOff, Download } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -448,6 +448,51 @@ export function FoodBank({ profile }: Props) {
     }
   };
 
+  const handleExportCSV = () => {
+    if (items.length === 0) return;
+    
+    const exportData = items.map(({ id, ...rest }) => ({
+      Food: rest.name,
+      Serving: `${rest.servingSize}${rest.servingUnit}`,
+      Calories: rest.calories,
+      Protein: rest.protein,
+      Carbs: rest.carbs,
+      Fats: rest.fats,
+      Fiber: rest.fiber || 0,
+      MealTypes: (rest.mealTypes || []).join(',')
+    }));
+
+    const csv = Papa.unparse(exportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `food_bank_export_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportExcel = () => {
+    if (items.length === 0) return;
+
+    const exportData = items.map(({ id, ...rest }) => ({
+      Food: rest.name,
+      Serving: `${rest.servingSize}${rest.servingUnit}`,
+      Calories: rest.calories,
+      Protein: rest.protein,
+      Carbs: rest.carbs,
+      Fats: rest.fats,
+      Fiber: rest.fiber || 0,
+      MealTypes: (rest.mealTypes || []).join(',')
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "FoodBank");
+    XLSX.writeFile(workbook, `food_bank_export_${new Date().toLocaleDateString()}.xlsx`);
+  };
+
   const filteredItems = items.filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -485,6 +530,26 @@ export function FoodBank({ profile }: Props) {
             {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
             Bulk Upload
           </button>
+          <div className="flex gap-2 w-full lg:w-auto">
+            <button 
+              onClick={handleExportCSV}
+              disabled={items.length === 0}
+              className="flex-1 lg:flex-none px-4 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              title="Export to CSV"
+            >
+              <Download size={18} />
+              CSV
+            </button>
+            <button 
+              onClick={handleExportExcel}
+              disabled={items.length === 0}
+              className="flex-1 lg:flex-none px-4 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              title="Export to Excel"
+            >
+              <FileText size={18} />
+              Excel
+            </button>
+          </div>
         </div>
       </header>
 
