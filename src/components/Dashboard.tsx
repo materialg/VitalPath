@@ -382,7 +382,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
               <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
               <input 
                 type="number" 
-                step="0.1"
+                step="1"
                 value={weight}
                 onChange={e => setWeight(parseFloat(e.target.value))}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
@@ -396,7 +396,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
               <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
               <input 
                 type="number" 
-                step="0.1"
+                step="1"
                 value={bodyFat}
                 onChange={e => setBodyFat(parseFloat(e.target.value))}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"

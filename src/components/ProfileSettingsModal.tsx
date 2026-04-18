@@ -15,28 +15,41 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
   const [formData, setFormData] = useState({
     displayName: profile.displayName,
     goalBodyFat: profile.goalBodyFat || 15,
-    currentWeight: 180,
-    currentBodyFat: 20,
+    currentWeight: 0,
+    currentBodyFat: 0,
     activityLevel: profile.activityLevel || 'moderate' as ActivityLevel,
     targetDate: profile.targetDate || '',
   });
+  const [isLoaded, setIsLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchLatestVitals = async () => {
-      const vitalsQuery = query(
-        collection(db, 'users', profile.uid, 'vitals'),
-        orderBy('date', 'desc'),
-        limit(1)
-      );
-      const vitalsSnap = await getDocs(vitalsQuery);
-      if (!vitalsSnap.empty) {
-        const latest = vitalsSnap.docs[0].data() as VitalLog;
-        setFormData(prev => ({
-          ...prev,
-          currentWeight: latest.weight,
-          currentBodyFat: latest.bodyFat || prev.currentBodyFat
-        }));
+      try {
+        const vitalsQuery = query(
+          collection(db, 'users', profile.uid, 'vitals'),
+          orderBy('date', 'desc'),
+          limit(1)
+        );
+        const vitalsSnap = await getDocs(vitalsQuery);
+        if (!vitalsSnap.empty) {
+          const latest = vitalsSnap.docs[0].data() as VitalLog;
+          setFormData(prev => ({
+            ...prev,
+            currentWeight: latest.weight,
+            currentBodyFat: latest.bodyFat || 20
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            currentWeight: 180,
+            currentBodyFat: 20
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching vitals:", error);
+      } finally {
+        setIsLoaded(true);
       }
     };
     fetchLatestVitals();
@@ -44,6 +57,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLoaded) return;
     setIsSubmitting(true);
     try {
       // Fetch latest vitals for accurate calculation
@@ -77,6 +91,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
       await updateDoc(doc(db, 'users', profile.uid), {
         ...rest,
         targetDate: newTargetDate,
+        updatedAt: new Date().toISOString()
       });
       onClose();
     } catch (error) {
@@ -126,7 +141,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6" noValidate>
           <div className="space-y-2">
             <label className="text-sm font-medium text-[#141414]/60">Display Name</label>
             <div className="relative">
@@ -146,7 +161,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
               <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
               <input 
                 type="number" 
-                step="0.1"
+                step="1"
                 value={formData.goalBodyFat}
                 onChange={e => setFormData({ ...formData, goalBodyFat: parseFloat(e.target.value) })}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
@@ -175,7 +190,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
                 <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
                 <input 
                   type="number" 
-                  step="0.1"
+                  step="1"
                   value={formData.currentBodyFat}
                   onChange={e => setFormData({ ...formData, currentBodyFat: parseFloat(e.target.value) })}
                   className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
@@ -208,11 +223,16 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
               <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Suggested Target Date</p>
             </div>
             <p className="text-xl font-black text-[#141414]">
-              {new Date(currentTargetDate).toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric', 
-                year: 'numeric' 
-              })}
+              {(() => {
+                const date = new Date(currentTargetDate);
+                return isNaN(date.getTime()) 
+                  ? 'Calculating...' 
+                  : date.toLocaleDateString('en-US', { 
+                      month: 'long', 
+                      day: 'numeric', 
+                      year: 'numeric' 
+                    });
+              })()}
             </p>
             <p className="text-[10px] text-[#141414]/40 mt-1">
               Recalculated based on your current stats.

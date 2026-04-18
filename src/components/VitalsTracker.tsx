@@ -54,10 +54,15 @@ export function VitalsTracker({ profile }: Props) {
 
     setIsSubmitting(true);
     try {
+      if (!date) throw new Error('Date is required');
       // Parse the date string as local time to avoid timezone shifts
       const [year, month, day] = date.split('-').map(Number);
+      if (isNaN(year) || isNaN(month) || isNaN(day)) throw new Error('Invalid date selected');
+      
       const selectedDate = new Date();
       selectedDate.setFullYear(year, month - 1, day);
+      
+      if (isNaN(selectedDate.getTime())) throw new Error('Invalid time value');
       
       const isoDate = selectedDate.toISOString();
 
@@ -143,7 +148,7 @@ export function VitalsTracker({ profile }: Props) {
                   <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
                   <input 
                     type="number" 
-                    step="0.1"
+                    step="1"
                     value={weight}
                     onChange={e => setWeight(parseFloat(e.target.value))}
                     className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
@@ -157,7 +162,7 @@ export function VitalsTracker({ profile }: Props) {
                   <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
                   <input 
                     type="number" 
-                    step="0.1"
+                    step="1"
                     value={bodyFat}
                     onChange={e => setBodyFat(parseFloat(e.target.value))}
                     className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"

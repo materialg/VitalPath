@@ -125,6 +125,8 @@ export function calculateDailyTargets(profile: any, weight: number, bodyFat: num
 }
 
 export function calculateTargetDate(currentBF: number, goalBF: number, activityLevel: string) {
+  if (isNaN(currentBF) || isNaN(goalBF)) return new Date().toISOString().split('T')[0];
+  
   const bfDiff = currentBF - goalBF;
   if (bfDiff <= 0) return new Date().toISOString().split('T')[0];
 
@@ -138,9 +140,17 @@ export function calculateTargetDate(currentBF: number, goalBF: number, activityL
 
   const weeklyRate = rates[activityLevel] || 0.5;
   const weeksNeeded = Math.ceil(bfDiff / weeklyRate);
+  
+  if (isNaN(weeksNeeded) || !isFinite(weeksNeeded)) return new Date().toISOString().split('T')[0];
+
   const target = new Date();
   target.setDate(target.getDate() + (weeksNeeded * 7));
-  return target.toISOString().split('T')[0];
+  
+  try {
+    return target.toISOString().split('T')[0];
+  } catch (e) {
+    return new Date().toISOString().split('T')[0];
+  }
 }
 
 export async function logDailyTarget(uid: string, profile: any, weight: number, bodyFat: number, date?: string) {

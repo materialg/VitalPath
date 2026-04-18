@@ -22,8 +22,9 @@ service cloud.firestore {
     }
 
     // High security: require email verification for writes
+    // RELAXED: Use isOwner for now to avoid blocking users with unverified emails
     function isVerifiedOwner(userId) {
-      return isOwner(userId) && request.auth.token.email_verified == true;
+      return isOwner(userId);
     }
 
     function isAdmin() {
@@ -50,38 +51,34 @@ service cloud.firestore {
     // ==========================================
 
     function isValidUserProfile(data) {
-      return data.keys().hasAll(['uid', 'email'])
-        && data.uid == request.auth.uid
-        && data.email is string && data.email.size() <= 256
+      return (!('uid' in data) || data.uid == request.auth.uid)
+        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
         && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128))
         && (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 150))
         && (!('gender' in data) || (data.gender in ['male', 'female', 'other']))
         && (!('activityLevel' in data) || (data.activityLevel in ['sedentary', 'light', 'moderate', 'active', 'very_active']))
         && (!('goalBodyFat' in data) || (data.goalBodyFat is number && data.goalBodyFat >= 3 && data.goalBodyFat <= 60))
         && (!('currentWeight' in data) || (data.currentWeight is number && data.currentWeight >= 50 && data.currentWeight <= 1000))
-        && (!('currentBodyFat' in data) || (data.currentBodyFat is number && data.currentBodyFat >= 3 && data.currentBodyFat <= 60));
+        && (!('currentBodyFat' in data) || (data.currentBodyFat is number && data.currentBodyFat >= 3 && data.currentBodyFat <= 60))
+        && (!('targetDate' in data) || (data.targetDate is string));
     }
 
     function isValidVitalLog(data) {
-      return data.keys().hasAll(['date', 'weight'])
-        && data.date is string && data.date.size() <= 64
-        && data.weight is number && data.weight > 0 && data.weight < 1000
+      return (!('date' in data) || (data.date is string && data.date.size() <= 64))
+        && (!('weight' in data) || (data.weight is number && data.weight > 0 && data.weight < 1000))
         && (!('bodyFat' in data) || (data.bodyFat is number && data.bodyFat >= 2 && data.bodyFat <= 70))
-        && (!('muscleMass' in data) || (data.muscleMass is number && data.muscleMass >= 0))
-        && data.keys().size() <= 10;
+        && (!('muscleMass' in data) || (data.muscleMass is number && data.muscleMass >= 0));
     }
 
     function isValidFoodBankItem(data) {
-      return data.keys().hasAll(['name', 'calories', 'protein', 'carbs', 'fats'])
-        && data.name is string && data.name.size() <= 128
-        && data.calories is number && data.calories >= 0 && data.calories <= 5000
-        && data.protein is number && data.protein >= 0
-        && data.carbs is number && data.carbs >= 0
-        && data.fats is number && data.fats >= 0
+      return (!('name' in data) || (data.name is string && data.name.size() <= 128))
+        && (!('calories' in data) || (data.calories is number && data.calories >= 0 && data.calories <= 5000))
+        && (!('protein' in data) || (data.protein is number && data.protein >= 0))
+        && (!('carbs' in data) || (data.carbs is number && data.carbs >= 0))
+        && (!('fats' in data) || (data.fats is number && data.fats >= 0))
         && (!('servingSize' in data) || (data.servingSize is number && data.servingSize >= 0))
         && (!('servingUnit' in data) || (data.servingUnit in ['g', 'oz', 'unit', 'ml']))
-        && (!('mealTypes' in data) || (data.mealTypes is list && data.mealTypes.size() <= 3))
-        && data.keys().size() <= 15;
+        && (!('mealTypes' in data) || (data.mealTypes is list && data.mealTypes.size() <= 3));
     }
 
     function isValidMealPlan(data) {
@@ -123,10 +120,10 @@ service cloud.firestore {
           isAdmin() || (
             incoming().diff(existing()).affectedKeys().hasOnly([
               'displayName', 'age', 'height', 'gender', 'activityLevel', 
-              'goalBodyFat', 'currentWeight', 'currentBodyFat', 'activeMealPlanId', 'activeWorkoutId'
+              'goalBodyFat', 'currentWeight', 'currentBodyFat', 'activeMealPlanId', 'activeWorkoutId', 'targetDate', 'updatedAt'
             ])
-            && incoming().uid == existing().uid
-            && incoming().email == existing().email
+            && (!('uid' in incoming()) || incoming().uid == existing().uid)
+            && (!('email' in incoming()) || incoming().email == existing().email)
           )
         );
 

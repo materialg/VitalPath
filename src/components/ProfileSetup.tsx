@@ -156,6 +156,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <label className="text-sm font-medium text-[#141414]/60">Current Weight (lbs)</label>
                   <input 
                     type="number" 
+                    step="1"
                     value={formData.currentWeight}
                     onChange={e => setFormData({ ...formData, currentWeight: parseFloat(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
@@ -193,6 +194,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <label className="text-sm font-medium text-[#141414]/60">Current Body Fat (%)</label>
                   <input 
                     type="number" 
+                    step="1"
                     value={formData.currentBodyFat}
                     onChange={e => setFormData({ ...formData, currentBodyFat: parseFloat(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
@@ -202,6 +204,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <label className="text-sm font-medium text-[#141414]/60">Target Body Fat (%)</label>
                   <input 
                     type="number" 
+                    step="1"
                     value={formData.goalBodyFat}
                     onChange={e => setFormData({ ...formData, goalBodyFat: parseFloat(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
