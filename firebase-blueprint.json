@@ -129,6 +129,24 @@
         "tdee": { "type": "number" },
         "dailyDeficit": { "type": "number" }
       }
+    },
+    "FoodBankItem": {
+      "title": "Food Bank Item",
+      "description": "Stores individual food items and their macros.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "servingSize": { "type": "number" },
+        "servingUnit": { "type": "string", "enum": ["g", "oz", "unit", "ml"] },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbs": { "type": "number" },
+        "fats": { "type": "number" },
+        "fiber": { "type": "number" },
+        "mealTypes": { "type": "array", "items": { "type": "string", "enum": ["B", "L", "D"] } },
+        "hidden": { "type": "boolean" }
+      },
+      "required": ["name", "calories", "protein", "carbs", "fats"]
     }
   },
   "firestore": {
@@ -155,6 +173,10 @@
     "/users/{userId}/dailyTargets/{targetId}": {
       "schema": "DailyTarget",
       "description": "Historical daily target snapshots"
+    },
+    "/users/{userId}/foodBank/{itemId}": {
+      "schema": "FoodBankItem",
+      "description": "User's personal food bank inventory"
     }
   }
 }

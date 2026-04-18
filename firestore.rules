@@ -3,20 +3,187 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // ==========================================
+    // 0. GLOBAL SAFETY NET
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
     }
 
+    // ==========================================
+    // PHASE 3: PRIMITIVE HELPERS
+    // ==========================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // High security: require email verification for writes
+    function isVerifiedOwner(userId) {
+      return isOwner(userId) && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "victor@materialg.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ==========================================
+    // VALIDATION BLUEPRINTS
+    // ==========================================
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email'])
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128))
+        && (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 150))
+        && (!('gender' in data) || (data.gender in ['male', 'female', 'other']))
+        && (!('activityLevel' in data) || (data.activityLevel in ['sedentary', 'light', 'moderate', 'active', 'very_active']))
+        && (!('goalBodyFat' in data) || (data.goalBodyFat is number && data.goalBodyFat >= 3 && data.goalBodyFat <= 60))
+        && (!('currentWeight' in data) || (data.currentWeight is number && data.currentWeight >= 50 && data.currentWeight <= 1000))
+        && (!('currentBodyFat' in data) || (data.currentBodyFat is number && data.currentBodyFat >= 3 && data.currentBodyFat <= 60));
+    }
+
+    function isValidVitalLog(data) {
+      return data.keys().hasAll(['date', 'weight'])
+        && data.date is string && data.date.size() <= 64
+        && data.weight is number && data.weight > 0 && data.weight < 1000
+        && (!('bodyFat' in data) || (data.bodyFat is number && data.bodyFat >= 2 && data.bodyFat <= 70))
+        && (!('muscleMass' in data) || (data.muscleMass is number && data.muscleMass >= 0))
+        && data.keys().size() <= 10;
+    }
+
+    function isValidFoodBankItem(data) {
+      return data.keys().hasAll(['name', 'calories', 'protein', 'carbs', 'fats'])
+        && data.name is string && data.name.size() <= 128
+        && data.calories is number && data.calories >= 0 && data.calories <= 5000
+        && data.protein is number && data.protein >= 0
+        && data.carbs is number && data.carbs >= 0
+        && data.fats is number && data.fats >= 0
+        && (!('servingSize' in data) || (data.servingSize is number && data.servingSize >= 0))
+        && (!('servingUnit' in data) || (data.servingUnit in ['g', 'oz', 'unit', 'ml']))
+        && (!('mealTypes' in data) || (data.mealTypes is list && data.mealTypes.size() <= 3))
+        && data.keys().size() <= 15;
+    }
+
+    function isValidMealPlan(data) {
+      return data.keys().hasAll(['weekStartDate', 'days'])
+        && data.weekStartDate is string
+        && data.days is list && data.days.size() <= 7;
+    }
+
+    function isValidWorkoutPlan(data) {
+      return data.keys().hasAll(['day', 'title', 'exercises'])
+        && data.day is string && data.day.size() <= 20
+        && data.title is string && data.title.size() <= 100
+        && data.exercises is list && data.exercises.size() <= 30;
+    }
+
+    function isValidGroceryList(data) {
+      return data.keys().hasAll(['weekStartDate', 'items'])
+        && data.items is list && data.items.size() <= 200;
+    }
+
+    function isValidDailyTarget(data) {
+      return data.keys().hasAll(['date', 'dailyCalories', 'macros'])
+        && data.dailyCalories is number && data.dailyCalories > 0
+        && data.macros is map;
+    }
+
+    // ==========================================
+    // 4. RESOURCE MATCHES
+    // ==========================================
+
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
-      
-      match /{allSubcollections=**} {
-        allow read, write: if isOwner(userId);
+      // Profile
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin(); // Users can't list profiles
+      allow create: if isVerifiedOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isVerifiedOwner(userId) 
+        && isValidUserProfile(incoming())
+        && (
+          isAdmin() || (
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'age', 'height', 'gender', 'activityLevel', 
+              'goalBodyFat', 'currentWeight', 'currentBodyFat', 'activeMealPlanId', 'activeWorkoutId'
+            ])
+            && incoming().uid == existing().uid
+            && incoming().email == existing().email
+          )
+        );
+
+      // Vitals
+      match /vitals/{vitalId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(vitalId) && isValidVitalLog(incoming());
+        allow update: if isVerifiedOwner(userId) && isValidId(vitalId) && isValidVitalLog(incoming())
+          && (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['weight', 'bodyFat', 'muscleMass', 'date']));
+        allow delete: if isVerifiedOwner(userId) || isAdmin();
       }
+
+      // Meal Plans
+      match /mealPlans/{planId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(planId) && isValidMealPlan(incoming());
+        allow update: if isVerifiedOwner(userId) && isValidId(planId) && isValidMealPlan(incoming());
+        allow delete: if isVerifiedOwner(userId) || isAdmin();
+      }
+
+      // Food Bank
+      match /foodBank/{itemId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming());
+        allow update: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming())
+          && (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['name', 'calories', 'protein', 'carbs', 'fats', 'fiber', 'servingSize', 'servingUnit', 'mealTypes', 'hidden']));
+        allow delete: if isVerifiedOwner(userId) || isAdmin();
+      }
+
+      // Grocery Lists
+      match /groceryLists/{listId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(listId) && isValidGroceryList(incoming());
+        allow update: if isVerifiedOwner(userId) && isValidId(listId) && isValidGroceryList(incoming());
+        allow delete: if isVerifiedOwner(userId) || isAdmin();
+      }
+
+      // Workouts
+      match /workouts/{workoutId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(workoutId) && isValidWorkoutPlan(incoming());
+        allow update: if isVerifiedOwner(userId) && isValidId(workoutId) && isValidWorkoutPlan(incoming());
+        allow delete: if isVerifiedOwner(userId) || isAdmin();
+      }
+
+      // Daily Targets
+      match /dailyTargets/{targetId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(targetId) && isValidDailyTarget(incoming());
+        allow update: if isAdmin(); // Users shouldn't need to update snapshots
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via console
     }
   }
 }
