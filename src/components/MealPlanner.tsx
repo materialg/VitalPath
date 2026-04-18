@@ -4,13 +4,21 @@ import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, Sparkles, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
+import { Utensils, Sparkles, RotateCcw, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
 }
 
 export function MealPlanner({ profile }: Props) {
+  const cleanName = (name: string) => name?.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || '';
+
+  const findFoodItem = (name: string) => {
+    const cleaned = cleanName(name);
+    if (!cleaned) return null;
+    return foodBankItems.sort((a, b) => (b.hidden ? -1 : 1)).find(f => cleanName(f.name) === cleaned);
+  };
+
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [dailyTargets, setDailyTargets] = useState<any[]>([]);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
@@ -293,17 +301,6 @@ export function MealPlanner({ profile }: Props) {
           {/* Day Selector */}
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
-              <button 
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="w-full px-6 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#141414]/10"
-              >
-                {isGenerating ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
-                ) : <Sparkles size={18} />}
-                {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
-              </button>
-
               <div className="flex flex-col gap-4">
                 <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mt-4 lg:mt-8">Select Day</h3>
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
@@ -351,16 +348,43 @@ export function MealPlanner({ profile }: Props) {
                   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
                   return (
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 w-full">
-                      <div className="flex flex-wrap gap-4 lg:gap-8">
-                        <div className="relative">
-                          <MacroStat label="Daily Calories" value={`${totals.calories} kcal`} icon={<Flame className="text-orange-500" />} />
-                        </div>
-                        <MacroStat label="Protein" value={`${Math.round(totals.protein * 10) / 10}g`} />
-                        <MacroStat label="Carbs" value={`${Math.round(totals.carbs * 10) / 10}g`} />
-                        <MacroStat label="Fats" value={`${Math.round(totals.fats * 10) / 10}g`} />
-                        <MacroStat label="Fiber" value={`${Math.round(totals.fiber * 10) / 10}g`} />
+                    <div className="flex items-center justify-between w-full mb-12">
+                      {/* fire icon */}
+                      <div className="w-12 h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
+                        <Flame size={24} className="text-orange-500" />
                       </div>
+
+                      {/* centers macro summary */}
+                      <div className="flex-1 flex justify-around items-start px-2 lg:px-6">
+                        {[
+                          { label: 'Daily Calories', value: `${Math.round(totals.calories)} kcal` },
+                          { label: 'Protein', value: `${Math.round(totals.protein)}g` },
+                          { label: 'Carbs', value: `${Math.round(totals.carbs)}g` },
+                          { label: 'Fats', value: `${Math.round(totals.fats)}g` },
+                          { label: 'Fiber', value: `${Math.round(totals.fiber)}g` }
+                        ].map((stat, i) => (
+                          <div key={i} className="text-center">
+                            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{stat.label}</p>
+                            <p className="text-xl lg:text-2xl font-black text-[#141414] whitespace-nowrap">{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* replay icon */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRebalanceDay();
+                        }}
+                        disabled={isRecalculating}
+                        className="w-12 h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0 group/regen transition-all hover:bg-[#141414]/10 disabled:opacity-30"
+                        title="Regenerate Day"
+                      >
+                        <RotateCcw 
+                          size={24} 
+                          className={`transition-all ${isRecalculating ? 'animate-spin text-orange-500' : 'text-[#141414]/20 group-hover/regen:text-orange-500'}`} 
+                        />
+                      </button>
                     </div>
                   );
                 })()}
@@ -422,17 +446,26 @@ export function MealPlanner({ profile }: Props) {
                                 </button>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-bold text-[#141414]">{meal.calories || 0} kcal</p>
+                                <p className="text-sm font-bold text-[#141414]">{Math.round(meal.calories || 0)} kcal</p>
                                 <div className="flex gap-2 text-[10px] font-medium text-[#141414]/40">
-                                  <span>P: {meal.protein || 0}g</span>
-                                  <span>C: {meal.carbs || 0}g</span>
-                                  <span>F: {meal.fats || 0}g</span>
-                                  <span>Fib: {meal.fiber || 0}g</span>
+                                  <span>P: {Math.round(meal.protein || 0)}g</span>
+                                  <span>C: {Math.round(meal.carbs || 0)}g</span>
+                                  <span>F: {Math.round(meal.fats || 0)}g</span>
+                                  <span>Fib: {Math.round(meal.fiber || 0)}g</span>
                                 </div>
                               </div>
                             </div>
                             <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                              {meal.ingredients.map((ing, iIdx) => (
+                              {meal.ingredientsWithAmounts ? meal.ingredientsWithAmounts.map((ing: any, iIdx: number) => {
+                                const food = findFoodItem(ing.name);
+                                const val = parseFloat(ing.amount) || 0;
+                                const unit = (food?.servingUnit || 'unit').toLowerCase();
+                                return (
+                                  <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
+                                    {val}{unit === 'unit' ? (val === 1 ? ' unit' : ' units') : unit} {food?.name || ing.name}
+                                  </span>
+                                );
+                              }) : meal.ingredients.map((ing: any, iIdx: number) => (
                                 <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
                                   {ing}
                                 </span>
@@ -606,10 +639,21 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const cleanName = (name: string) => name?.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || '';
+
+  const findFoodItem = (name: string) => {
+    const cleaned = cleanName(name);
+    if (!cleaned) return null;
+    // Prioritize non-hidden items
+    return foodBank
+      .sort((a, b) => (a.hidden === b.hidden ? 0 : a.hidden ? 1 : -1))
+      .find(f => cleanName(f.name) === cleaned);
+  };
+
   const calculateTotals = (ingredients: any[]) => {
     let calories = 0, protein = 0, carbs = 0, fats = 0, fiber = 0;
     ingredients.forEach(ing => {
-      const food = foodBank.find(f => f.name === ing.name);
+      const food = findFoodItem(ing.name);
       if (food) {
         const amount = parseFloat(ing.amount) || 0;
         const ratio = food.servingSize > 0 ? amount / food.servingSize : 0;
@@ -629,13 +673,44 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
     };
   };
 
+  useEffect(() => {
+    // Auto-sync with Food Bank on mount to catch unit/name discrepancies
+    const syncedIngredients = currentMeal.ingredientsWithAmounts.map((ing: any) => {
+      const food = findFoodItem(ing.name);
+      if (food) {
+        const val = parseFloat(ing.amount) || 0;
+        const fbUnit = (food.servingUnit || 'unit').toLowerCase();
+        // Force the unit from the food bank over whatever is currently in the meal amount string
+        return {
+          ...ing,
+          name: food.name, // Sync casing/name
+          amount: `${val}${fbUnit === 'unit' ? ' unit' : fbUnit}`
+        };
+      }
+      return ing;
+    });
+
+    const hasChanged = JSON.stringify(syncedIngredients) !== JSON.stringify(currentMeal.ingredientsWithAmounts);
+    if (hasChanged) {
+      const totals = calculateTotals(syncedIngredients);
+      setCurrentMeal({
+        ...currentMeal,
+        ingredientsWithAmounts: syncedIngredients,
+        ingredients: syncedIngredients.map((i: any) => `${i.amount} ${i.name}`),
+        ...totals
+      });
+    }
+  }, []);
+
   const updateIngredientAmount = (idx: number, newAmount: string) => {
     const newIngredients = [...currentMeal.ingredientsWithAmounts];
-    let sanitizedAmount = newAmount;
-    if (newAmount.toLowerCase().includes('units')) {
-      sanitizedAmount = newAmount.replace(/units/gi, 'unit');
-    }
-    newIngredients[idx].amount = sanitizedAmount;
+    const ing = newIngredients[idx];
+    const food = findFoodItem(ing.name);
+    const val = parseFloat(newAmount) || 0;
+    const unit = (food?.servingUnit || 'unit').toLowerCase();
+    
+    newIngredients[idx].amount = `${val}${unit === 'unit' ? ' unit' : unit}`;
+    newIngredients[idx].name = food?.name || ing.name; // Sync casing
     const totals = calculateTotals(newIngredients);
     setCurrentMeal({
       ...currentMeal,
@@ -656,12 +731,33 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
     });
   };
 
+  const handleSave = () => {
+    const finalIngredients = currentMeal.ingredientsWithAmounts.map((ing: any) => {
+      const food = findFoodItem(ing.name);
+      if (food) {
+        const amountNum = parseFloat(ing.amount) || 0;
+        const unit = food.servingUnit || 'unit';
+        return { 
+          name: food.name, 
+          amount: `${amountNum}${unit === 'unit' ? ' unit' : unit}` 
+        };
+      }
+      return ing;
+    });
+
+    onSave({
+      ...currentMeal,
+      ingredientsWithAmounts: finalIngredients,
+      ingredients: finalIngredients.map((i: any) => `${i.amount} ${i.name}`)
+    });
+  };
+
   const addIngredient = (food: FoodBankItem) => {
     let unit = (food.servingUnit || 'unit').toLowerCase();
     if (unit === 'units') unit = 'unit';
     const newIngredients = [
       ...currentMeal.ingredientsWithAmounts,
-      { name: food.name, amount: `${food.servingSize} ${unit}` }
+      { name: food.name, amount: `${food.servingSize}${unit === 'unit' ? ' unit' : unit}` }
     ];
     const totals = calculateTotals(newIngredients);
     setCurrentMeal({
@@ -718,13 +814,14 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
 
         <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 custom-scrollbar">
           {currentMeal.ingredientsWithAmounts.map((ing: any, idx: number) => {
-            const food = foodBank.find(f => f.name === ing.name);
+            const food = findFoodItem(ing.name);
+            const unit = (food?.servingUnit || 'unit').toLowerCase();
             return (
               <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-[#141414]/5 rounded-2xl group">
                 <div className="flex-1">
-                  <p className="font-bold text-[#141414]">{ing.name}</p>
+                  <p className="font-bold text-[#141414]">{food?.name || ing.name}</p>
                   <p className="text-xs text-[#141414]/40">
-                    {food ? `${food.calories} cal / ${food.servingSize} ${food.servingUnit || 'unit'}` : 'Custom item'}
+                    {food ? `${food.calories} cal / ${food.servingSize}${unit === 'unit' ? (food.servingSize === 1 ? ' unit' : ' units') : unit}` : 'Custom item'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -734,34 +831,34 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
                       onClick={(e) => {
                         e.stopPropagation();
                         const val = parseFloat(ing.amount) || 0;
-                        const unit = ing.amount.replace(/[\d.\s]+/g, '') || food?.servingUnit || 'unit';
-                        updateIngredientAmount(idx, `${Math.max(0, val - 1)} ${unit}`);
+                        updateIngredientAmount(idx, `${Math.max(0, val - 1)}`);
                       }}
                       className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
                     >
                       -
                     </button>
                     
-                    <input 
-                      type="number"
-                      value={parseFloat(ing.amount) || 0}
-                      step="1"
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        let unit = (ing.amount.replace(/[\d.\s]+/g, '') || food?.servingUnit || 'unit').toLowerCase();
-                        if (unit === 'units') unit = 'unit';
-                        updateIngredientAmount(idx, `${val} ${unit}`);
-                      }}
-                      className="w-12 bg-transparent border-none text-sm font-bold text-center focus:ring-0 p-0 appearance-none"
-                    />
+                    <div className="flex items-center gap-1 px-2">
+                      <input 
+                        type="number"
+                        value={parseFloat(ing.amount) || 0}
+                        step="1"
+                        onChange={(e) => {
+                          updateIngredientAmount(idx, e.target.value);
+                        }}
+                        className="w-12 bg-transparent border-none text-sm font-bold text-center focus:ring-0 p-0 appearance-none"
+                      />
+                      <span className="text-[10px] font-bold text-[#141414]/40 uppercase">
+                        {unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit}
+                      </span>
+                    </div>
 
                     <button 
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         const val = parseFloat(ing.amount) || 0;
-                        const unit = ing.amount.replace(/[\d.\s]+/g, '') || food?.servingUnit || 'unit';
-                        updateIngredientAmount(idx, `${val + 1} ${unit}`);
+                        updateIngredientAmount(idx, `${val + 1}`);
                       }}
                       className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
                     >
@@ -833,7 +930,7 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
             Cancel
           </button>
           <button 
-            onClick={() => onSave(currentMeal)}
+            onClick={handleSave}
             className="flex-1 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10"
           >
             Save Changes
@@ -844,14 +941,4 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
   );
 }
 
-function MacroStat({ label, value, icon }: { label: string, value: string, icon?: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      {icon && <div className="w-8 h-8 rounded-lg bg-[#141414]/5 flex items-center justify-center">{icon}</div>}
-      <div>
-        <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">{label}</p>
-        <p className="text-lg font-bold text-[#141414]">{value}</p>
-      </div>
-    </div>
-  );
-}
+

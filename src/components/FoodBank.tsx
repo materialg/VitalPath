@@ -77,7 +77,9 @@ export function FoodBank({ profile }: Props) {
     e.preventDefault();
     const dataToSave = {
       ...formData,
+      name: formData.name.trim(),
       servingSize: parseFloat(formData.servingSize) || 0,
+      servingUnit: formData.servingUnit || 'unit',
       calories: parseInt(formData.calories) || 0,
       protein: parseFloat(formData.protein) || 0,
       carbs: parseFloat(formData.carbs) || 0,
@@ -654,7 +656,7 @@ export function FoodBank({ profile }: Props) {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-[#141414]/60">
-                      {item.servingSize}{item.servingUnit !== 'unit' ? item.servingUnit : ''}
+                      {item.servingSize}{item.servingUnit ? (item.servingUnit === 'unit' ? (item.servingSize === 1 ? ' unit' : ' units') : item.servingUnit) : ' unit'}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700">
@@ -670,7 +672,10 @@ export function FoodBank({ profile }: Props) {
                         <button 
                           onClick={() => {
                             setEditingItem(item);
-                            setFormData({ ...item });
+                            setFormData({ 
+                              ...item,
+                              servingUnit: item.servingUnit || 'unit'
+                            });
                           }}
                           className="p-2 hover:bg-[#141414]/5 rounded-lg text-[#141414]/40 hover:text-[#141414]"
                         >

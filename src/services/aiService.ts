@@ -232,11 +232,23 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
   const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
   const data = JSON.parse(jsonStr);
 
+  const cleanName = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
   const meals = data.meals.map((meal: any) => {
     // Filter ingredients to ensure they exist in the food bank
     meal.ingredientsWithAmounts = (meal.ingredientsWithAmounts || []).filter((i: any) => 
-      foodBankNames.includes(i.name)
-    );
+      foodBankNames.some(name => cleanName(name) === cleanName(i.name))
+    ).map((i: any) => {
+      const food = cleanFoodBank.find(f => cleanName(f.name) === cleanName(i.name));
+      if (food) {
+        // ALWAYS use the food bank's unit, regardless of what the AI returned
+        const amountNum = parseFloat(i.amount) || 0;
+        const fbUnit = food.servingUnit || 'unit';
+        const formattedAmount = `${amountNum}${fbUnit === 'unit' ? (amountNum === 1 ? ' unit' : ' units') : fbUnit}`;
+        return { ...i, name: food.name, amount: formattedAmount };
+      }
+      return i;
+    });
 
     // Map to display string
     meal.ingredients = meal.ingredientsWithAmounts.map((i: any) => {
@@ -247,7 +259,7 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
     let totalCal = 0, totalP = 0, totalC = 0, totalF = 0, totalFib = 0;
     
     meal.ingredientsWithAmounts.forEach((ing: any) => {
-      const food = cleanFoodBank.find(f => f.name === ing.name);
+      const food = cleanFoodBank.find(f => cleanName(f.name) === cleanName(ing.name));
       if (food) {
         const amountNum = parseFloat(ing.amount) || 0;
         const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
@@ -425,11 +437,16 @@ export async function regenerateDayPlan(
   foodBankItems: any[], 
   currentDayMeals: any[]
 ) {
-  const availableItems = foodBankItems.filter(i => !i.hidden);
+  const cleanName = (n: string) => n?.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || '';
   const dailyTargets = calculateDailyTargets(profile, weight, bodyFat);
   
+  // 1. Identify "fixed" vs "flexible" meals
   const fixedMeals = currentDayMeals.filter(m => m.status === 'completed');
+  const mealsToRebalance = currentDayMeals.filter(m => m.status !== 'completed');
   
+  if (mealsToRebalance.length === 0) return currentDayMeals;
+
+  // 2. Calculate what's already consumed
   const totalFixed = fixedMeals.reduce((acc, m) => ({
     calories: acc.calories + (m.calories || 0),
     protein: acc.protein + (m.protein || 0),
@@ -438,138 +455,97 @@ export async function regenerateDayPlan(
     fiber: acc.fiber + (m.fiber || 0),
   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
+  // 3. Targets for the remaining meals
   const remainingTargets = {
-    calories: dailyTargets.dailyCalories - totalFixed.calories,
-    protein: dailyTargets.macros.protein - totalFixed.protein,
-    carbs: dailyTargets.macros.carbs - totalFixed.carbs,
-    fats: dailyTargets.macros.fats - totalFixed.fats,
-    fiber: dailyTargets.macros.fiber - totalFixed.fiber,
+    calories: Math.max(0, dailyTargets.dailyCalories - totalFixed.calories),
+    protein: Math.max(0, dailyTargets.macros.protein - totalFixed.protein),
+    carbs: Math.max(0, dailyTargets.macros.carbs - totalFixed.carbs),
+    fats: Math.max(0, dailyTargets.macros.fats - totalFixed.fats),
+    fiber: Math.max(0, dailyTargets.macros.fiber - totalFixed.fiber),
   };
 
-  const fixedMealNames = fixedMeals.map(m => m.name);
-  const mealsToGenerate = currentDayMeals.filter(m => !fixedMealNames.includes(m.name));
+  const targetPerMeal = {
+    calories: remainingTargets.calories / mealsToRebalance.length,
+    protein: remainingTargets.protein / mealsToRebalance.length,
+    carbs: remainingTargets.carbs / mealsToRebalance.length,
+    fats: remainingTargets.fats / mealsToRebalance.length,
+    fiber: remainingTargets.fiber / mealsToRebalance.length,
+  };
 
-  const cleanFoodBank = availableItems.map(i => ({
-    name: i.name.trim(),
-    servingSize: i.servingSize,
-    servingUnit: i.servingUnit,
-    calories: i.calories,
-    protein: i.protein,
-    carbs: i.carbs,
-    fats: i.fats,
-    fiber: i.fiber,
-    mealTypes: i.mealTypes || []
-  }));
+  // 4. Rebalance each internal meal mathematically (Near Instant)
+  const availableItems = foodBankItems.filter(i => !i.hidden);
+    const rebalancedMeals = mealsToRebalance.map(meal => {
+      const ingredients = (meal.ingredientsWithAmounts || []).map((ing: any) => {
+        const food = availableItems.find(f => cleanName(f.name) === cleanName(ing.name));
+        if (!food) return ing;
   
-  const foodBankNames = Array.from(new Set(cleanFoodBank.map(i => i.name)));
-
-  const foodBankContext = `
-STRICT INVENTORY:
-${cleanFoodBank.map(i => {
-  const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY)' : '';
-  const tags = i.mealTypes.length > 0 ? ` [${i.mealTypes.map(t => t === 'B' ? 'Breakfast' : t === 'L' ? 'Lunch' : 'Dinner').join(', ')}]` : ' [ANY]';
-  return `- ${i.name}: ${i.calories} cal, ${i.protein}g P, ${i.carbs}g C, ${i.fats}g F, ${i.fiber}g Fiber per ${i.servingSize}${i.servingUnit}${constraint}${tags}`;
-}).join('\n')}
-
-REMAINING TARGETS: ${remainingTargets.calories} kcal, ${remainingTargets.protein}g P.`;
-
-  const prompt = `
-    FIXED:
-    ${fixedMeals.map(m => `${m.name}: ${m.ingredients.join(', ')} (${m.calories}kcal)`).join('\n')}
-
-    UNCOMPLETED MEALS (ADJUST THESE):
-    ${mealsToGenerate.map(m => `${m.name}: ${m.ingredients.join(', ')} (${m.calories}kcal)`).join('\n')}
-
-    INVOLUNTARY RULE: 
-    1. ADJUST amounts of ingredients in UNCOMPLETED meals to hit exact targets +/- 5kcal.
-    2. If a meal was recently edited (looks specific), prioritize adjusting OTHER uncompleted meals.
-    3. PRESERVE manual edits if possible. Simply change grams.
-    ${foodBankContext}
-    
-    Return JSON for ${mealsToGenerate.map(m => m.name).join(', ')}.`;
-
-  const ai = getAI();
-  const responsePromise = ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      systemInstruction: "You are a speed-focused meal rebalancer. Adjust grams of existing ingredients first. No recipes, just amounts. Hit targets +/- 5kcal. RETURN ONLY JSON.",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          meals: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              required: ["name", "calories", "protein", "carbs", "fats", "fiber", "ingredientsWithAmounts"],
-              properties: {
-                name: { type: Type.STRING, enum: ["Breakfast", "Lunch", "Dinner"] },
-                calories: { type: Type.NUMBER },
-                protein: { type: Type.NUMBER },
-                carbs: { type: Type.NUMBER },
-                fats: { type: Type.NUMBER },
-                fiber: { type: Type.NUMBER },
-                ingredientsWithAmounts: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    required: ["name", "amount"],
-                    properties: {
-                      name: { type: Type.STRING },
-                      amount: { type: Type.STRING }
-                    }
-                  }
-                }
-              }
-            }
-          }
+        // Calculate ratio based on priority: Protein > Calories
+        let ratio = 1.0;
+        
+        // Determine how much this ingredient contributes to protein vs calories
+        const proteinDensity = food.protein / (food.calories || 1);
+        const isProteinSource = proteinDensity > 0.1; // roughly >10g per 100cal
+  
+        if (isProteinSource && targetPerMeal.protein > 0) {
+          // Adjust primarily for protein
+          ratio = (targetPerMeal.protein * 0.4) / (food.protein || 1); 
+        } else {
+          // Adjust for calories
+          ratio = (targetPerMeal.calories * 0.3) / (food.calories || 1);
         }
-      }
-    }
-  });
+  
+        // Keep it within sane bounds (20% to 500% of original)
+        const currentAmount = parseFloat(ing.amount) || food.servingSize;
+        let newAmount = currentAmount * ratio;
+        
+        // Safety bounds
+        if (food.servingUnit === 'unit') {
+          newAmount = Math.max(1, Math.round(newAmount));
+        } else {
+          newAmount = Math.max(10, Math.round(newAmount));
+        }
+  
+        const fbUnit = food.servingUnit || 'unit';
+        return {
+          ...ing,
+          name: food.name, // Ensure casing matches food bank
+          amount: `${newAmount}${fbUnit === 'unit' ? (newAmount === 1 ? ' unit' : ' units') : fbUnit}`
+        };
+      });
 
-  const response = await responsePromise as any;
-  const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
-  const result = JSON.parse(jsonStr);
-
-  result.meals.forEach((meal: any) => {
-    meal.ingredientsWithAmounts = (meal.ingredientsWithAmounts || []).filter((i: any) => 
-      foodBankNames.includes(i.name)
-    );
-    meal.ingredients = meal.ingredientsWithAmounts.map((i: any) => `${i.amount} ${i.name}`);
-    let totalCal = 0, totalP = 0, totalC = 0, totalF = 0, totalFib = 0;
-    meal.ingredientsWithAmounts.forEach((ing: any) => {
-      const food = cleanFoodBank.find(f => f.name === ing.name);
+    // Recalculate Totals for the meal locally
+    let cal = 0, p = 0, c = 0, f = 0, fib = 0;
+    ingredients.forEach((ing: any) => {
+      const food = availableItems.find(fi => cleanName(fi.name) === cleanName(ing.name));
       if (food) {
-        const amountNum = parseFloat(ing.amount) || 0;
-        const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
-        totalCal += (food.calories || 0) * ratio;
-        totalP += (food.protein || 0) * ratio;
-        totalC += (food.carbs || 0) * ratio;
-        totalF += (food.fats || 0) * ratio;
-        totalFib += (food.fiber || 0) * ratio;
+        const amt = parseFloat(ing.amount) || 0;
+        const r = amt / (food.servingSize || 1);
+        cal += (food.calories || 0) * r;
+        p += (food.protein || 0) * r;
+        c += (food.carbs || 0) * r;
+        f += (food.fats || 0) * r;
+        fib += (food.fiber || 0) * r;
       }
     });
-    meal.calories = Math.round(totalCal);
-    meal.protein = Math.round(totalP * 10) / 10;
-    meal.carbs = Math.round(totalC * 10) / 10;
-    meal.fats = Math.round(totalF * 10) / 10;
-    meal.fiber = Math.round(totalFib * 10) / 10;
+
+    return {
+      ...meal,
+      ingredientsWithAmounts: ingredients,
+      ingredients: ingredients.map((i: any) => `${i.amount} ${i.name}`),
+      calories: Math.round(cal),
+      protein: Math.round(p * 10) / 10,
+      carbs: Math.round(c * 10) / 10,
+      fats: Math.round(f * 10) / 10,
+      fiber: Math.round(fib * 10) / 10
+    };
   });
 
-  const fullDay = ["Breakfast", "Lunch", "Dinner"].map(name => {
-    const fixed = fixedMeals.find(m => m.name === name);
-    if (fixed) return fixed;
-    const generated = result.meals.find((m: any) => m.name === name);
-    if (generated) return generated;
-    // Fallback search in currentDayMeals if generation failed for some reason
-    return currentDayMeals.find(m => m.name === name);
+  // 5. Build final day plan
+  return ["Breakfast", "Lunch", "Dinner"].map(name => {
+    return fixedMeals.find(m => m.name === name) || 
+           rebalancedMeals.find(m => m.name === name) || 
+           currentDayMeals.find(m => m.name === name);
   });
-
-  return fullDay;
 }
 
 export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {
