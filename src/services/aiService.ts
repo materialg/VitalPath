@@ -54,8 +54,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  
+  if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
+    throw new Error("Gemini API key is missing. Please provide a valid GEMINI_API_KEY in the project settings (Settings > Secrets).");
+  }
+
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY || '';
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
