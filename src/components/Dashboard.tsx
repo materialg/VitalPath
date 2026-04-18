@@ -119,11 +119,15 @@ export function Dashboard({ profile, onNavigate }: Props) {
   };
 
   const handleMealAction = async (action: 'approve' | 'deny' | 'edit') => {
+    if (!latestMealPlan || !todayMealPlan) {
+      onNavigate('meals');
+      return;
+    }
+
     if (action === 'edit') {
       setShowMealModal(true);
       return;
     }
-    if (!latestMealPlan || !todayMealPlan) return;
     
     const status = action === 'approve' ? 'completed' : 'skipped';
     const updatedDays = [...latestMealPlan.days];
@@ -138,11 +142,15 @@ export function Dashboard({ profile, onNavigate }: Props) {
   };
 
   const handleWorkoutAction = async (action: 'approve' | 'deny' | 'edit') => {
+    if (!latestWorkout) {
+      onNavigate('workouts');
+      return;
+    }
+
     if (action === 'edit') {
       setShowWorkoutModal(true);
       return;
     }
-    if (!latestWorkout) return;
     
     const status = action === 'approve' ? 'completed' : 'skipped';
     await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), {

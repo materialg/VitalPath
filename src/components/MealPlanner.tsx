@@ -461,8 +461,20 @@ export function MealPlanner({ profile }: Props) {
             </div>
             <h3 className="text-2xl font-bold text-[#141414] mb-2">No Weekly Plan Yet</h3>
             <p className="text-[#141414]/60 max-w-md mx-auto mb-8">
-              Click "Generate Weekly Plan" to get a customized 7-day meal schedule.
+              {foodBankItems.length === 0 
+                ? "Your Food Bank is empty. Add some foods first so the AI can build your customized meal plan!"
+                : "Get a customized 7-day meal schedule tailored to your goals and available food."}
             </p>
+            <button 
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="px-8 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-[#141414]/20 mx-auto"
+            >
+              {isGenerating ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
+              ) : <Sparkles size={18} />}
+              Generate Weekly Plan
+            </button>
           </div>
 
           {dailyTargets.length > 0 && (
