@@ -198,7 +198,11 @@ CRITICAL INSTRUCTIONS:
 3. WHOLE UNIT RULE: Items with unit "unit" MUST be used in whole number multiples of their base serving. No 0.5 eggs, no 1.2 protein bars.
 4. MACRO CALCULATION: The meal-level calories and macros MUST be the exact sum of the ingredients used, calculated proportionally from the base servings provided. Calculate the exact gram amount (e.g., '142g') needed to hit the targets.
 5. MATHEMATICAL PRECISION: The sum of (Breakfast + Lunch + Dinner) calories MUST equal the Daily Target (${targets.dailyCalories}) within a +/- 20 calorie margin. If you use high-calorie whole units (like a Bagel or Egg), you MUST reduce the gram-based portions (like Chicken or Rice) in that same meal or other meals to stay under the limit.
-6. If you cannot hit the targets exactly using only the provided inventory and respecting meal types, prioritize inventory and meal-type integrity over target accuracy. However, you should NEVER exceed the target by more than 50 calories. It is better to have a slightly smaller meal than to overshoot.`;
+6. If you cannot hit the targets exactly using only the provided inventory and respecting meal types, prioritize inventory and meal-type integrity over target accuracy. However, you should NEVER exceed the target by more than 50 calories. It is better to have a slightly smaller meal than to overshoot.
+7. MEAL BALANCE AND PROPORTION:
+   - PROTEIN DISTRIBUTION: Distribute the daily protein target (${targets.macros.protein}g) as evenly as possible across all three meals (~33% each). NEVER consolidate more than 50% of the daily protein into a single meal.
+   - REASONABLE PORTIONS: Do not prescribe extreme portions of a single item (e.g., avoid >300g of meat in one meal). If more protein is needed, spread the servings across other meals or use multiple protein sources.
+   - NUTRITIONAL ARCHITECTURE: Each meal should ideally contain a protein, a carb, and a fat source from the inventory. Avoid "mono-ingredient" meals (e.g., don't have a meal that is just 500g of chicken).`;
 
   const prompt = `Generate a 7-day meal plan for a user with these targets:
     Daily Calories: ${targets.dailyCalories} kcal
@@ -218,7 +222,7 @@ CRITICAL INSTRUCTIONS:
     );
 
     const responsePromise = ai.models.generateContent({
-      model: "gemini-3.1-flash-preview",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         systemInstruction: "You are a strict meal planning engine. ONLY use provided inventory. Hit calorie target +/- 20kcal. No hallucinations. Respect meal tags.",
@@ -461,7 +465,7 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
 
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: "gemini-3-pro-preview",
     contents: prompt,
     config: {
       systemInstruction: "You are a world-class strength coach. You MUST follow the PPLR rotation strictly across the 7 days. You MUST ONLY use the exercises provided for each day. You MUST apply the progressive overload logic based on the provided previous performance data. For 'Rest' days, return an empty exercises array and recovery-focused notes.",

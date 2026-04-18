@@ -108,18 +108,14 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const todayWorkout = latestWorkout?.days.find(d => d.day === todayName) || latestWorkout?.days[0];
 
   const today = new Date().toLocaleDateString('en-CA');
-  const vitalsLoggedToday = vitals.some(v => v.date.startsWith(today));
+  const todayEntry = vitals.find(v => v.date.startsWith(today));
+  const vitalsLoggedToday = !!todayEntry;
 
   const bfProgress = profile.goalBodyFat && currentBF ? Math.min(100, Math.round((profile.goalBodyFat / currentBF) * 100)) : 0;
 
   const handleVitalsAction = (action: 'approve' | 'deny' | 'edit') => {
-    if (action === 'edit' || (action === 'approve' && vitalsLoggedToday)) {
-      onNavigate('vitals');
-      return;
-    }
-    if (action === 'approve') {
-      setShowVitalsModal(true);
-    }
+    if (action === 'deny') return;
+    setShowVitalsModal(true);
   };
 
   const handleMealAction = async (action: 'approve' | 'deny' | 'edit') => {
@@ -156,12 +152,12 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Welcome back, {profile.displayName.split(' ')[0]}</h1>
-          <p className="text-[#141414]/60">Here's your progress towards your {profile.goalBodyFat}% body fat goal.</p>
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="text-center lg:text-left">
+          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Welcome back, {profile.displayName.split(' ')[0]}</h1>
+          <p className="text-[#141414]/60 text-sm lg:text-base">Here's your progress towards your {profile.goalBodyFat}% body fat goal.</p>
         </div>
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-[#141414]/5 shadow-sm">
+        <div className="flex items-center justify-center lg:justify-start gap-3 bg-white p-2 rounded-2xl border border-[#141414]/5 shadow-sm">
           <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
             <Calendar className="text-[#141414]/40" size={20} />
           </div>
@@ -268,8 +264,9 @@ export function Dashboard({ profile, onNavigate }: Props) {
         {showVitalsModal && (
           <VitalsModal 
             profile={profile} 
-            currentWeight={currentWeight}
-            currentBodyFat={currentBF}
+            currentWeight={todayEntry?.weight || currentWeight}
+            currentBodyFat={todayEntry?.bodyFat || currentBF}
+            existingId={todayEntry?.id}
             onClose={() => setShowVitalsModal(false)} 
           />
         )}
@@ -293,7 +290,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
   );
 }
 
-function VitalsModal({ profile, currentWeight, currentBodyFat, onClose }: { profile: UserProfile, currentWeight: number, currentBodyFat: number, onClose: () => void }) {
+function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClose }: { profile: UserProfile, currentWeight: number, currentBodyFat: number, existingId?: string, onClose: () => void }) {
   const [weight, setWeight] = useState(currentWeight);
   const [bodyFat, setBodyFat] = useState(currentBodyFat);
   const [date, setDate] = useState(new Date().toLocaleDateString('en-CA'));
@@ -309,11 +306,19 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, onClose }: { prof
       
       const isoDate = selectedDate.toISOString();
 
-      await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
-        date: isoDate,
-        weight,
-        bodyFat,
-      });
+      if (existingId) {
+        await updateDoc(doc(db, 'users', profile.uid, 'vitals', existingId), {
+          date: isoDate,
+          weight,
+          bodyFat,
+        });
+      } else {
+        await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
+          date: isoDate,
+          weight,
+          bodyFat,
+        });
+      }
 
       // Recalculate target date based on new body fat
       const newTargetDate = calculateTargetDate(
@@ -348,10 +353,13 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, onClose }: { prof
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl border border-[#141414]/5"
+        className="bg-white w-full max-w-md p-6 lg:p-8 rounded-3xl shadow-2xl border border-[#141414]/5"
       >
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-bold text-[#141414]">Log Vitals</h3>
+          <h3 className="text-2xl font-bold text-[#141414] flex items-center gap-2">
+            <Plus size={24} />
+            New Entry
+          </h3>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
             <X size={20} />
           </button>
@@ -422,7 +430,7 @@ function MealModal({ meals, dayName, onClose, onConfirm }: { meals: Meal[], dayN
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-3xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
+        className="bg-white w-full max-w-3xl p-6 lg:p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -452,10 +460,10 @@ function MealModal({ meals, dayName, onClose, onConfirm }: { meals: Meal[], dayN
                 <span className="text-sm font-bold text-orange-600">{meal.calories} kcal</span>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                 <div>
                   <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Ingredients</h5>
-                  <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth no-scrollbar">
                     {meal.ingredients.map((ing, idx) => (
                       <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5 whitespace-nowrap">
                         {ing}
@@ -465,7 +473,7 @@ function MealModal({ meals, dayName, onClose, onConfirm }: { meals: Meal[], dayN
                 </div>
                 <div>
                   <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Instructions</h5>
-                  <p className="text-xs text-[#141414]/70 line-clamp-3">{meal.recipe}</p>
+                  <p className="text-xs text-[#141414]/70 line-clamp-4 md:line-clamp-3">{meal.recipe}</p>
                 </div>
               </div>
             </div>
@@ -504,7 +512,7 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-3xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
+        className="bg-white w-full max-w-3xl p-6 lg:p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -548,19 +556,21 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
             </div>
           ) : (
             todayWorkout.exercises.map((ex, idx) => (
-              <div key={idx} className="flex items-center gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all">
-                <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center text-white font-bold shrink-0">
-                  {idx + 1}
-                </div>
-                <div className="flex-1">
-                  <h5 className="font-bold text-[#141414]">{ex.name}</h5>
-                  <p className="text-sm text-[#141414]/60">{ex.notes}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
-                  <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
-                </div>
-              </div>
+        <div className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center text-white font-bold shrink-0">
+              {idx + 1}
+            </div>
+            <div>
+              <h5 className="font-bold text-[#141414]">{ex.name}</h5>
+              <p className="text-xs lg:text-sm text-[#141414]/60">{ex.notes}</p>
+            </div>
+          </div>
+          <div className="text-left md:text-right pl-14 md:pl-0">
+            <p className="font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
+            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
+          </div>
+        </div>
             ))
           )}
         </div>

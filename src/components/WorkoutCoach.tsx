@@ -235,7 +235,7 @@ export function WorkoutCoach({ profile }: Props) {
             <h2 className="text-xl font-bold">Training Target</h2>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-8">
             <TargetStat label="Frequency" value="5-6 Days" subValue="PPLR Split" icon={<Dumbbell className="text-blue-400" />} />
             <TargetStat label="Intensity" value="RPE 8-9" subValue="High Effort" icon={<Zap className="text-yellow-400" />} />
             <TargetStat label="Duration" value="45-60m" subValue="Per Session" icon={<Clock className="text-purple-400" />} />
@@ -261,26 +261,28 @@ export function WorkoutCoach({ profile }: Props) {
                 {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
               </button>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mb-4 mt-8">Select Day</h3>
-                {activePlan?.days.map((day, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedDay(idx)}
-                    className={`w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                      selectedDay === idx 
-                        ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]' 
-                        : 'text-[#141414]/40 hover:bg-white/50'
-                    }`}
-                  >
-                    <span className="font-bold">{day.day}</span>
-                    <ChevronRight size={16} className={selectedDay === idx ? 'opacity-100' : 'opacity-0'} />
-                  </button>
-                ))}
+              <div className="flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mt-4 lg:mt-8">Select Day</h3>
+                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
+                  {activePlan?.days.map((day, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedDay(idx)}
+                      className={`shrink-0 lg:w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
+                        selectedDay === idx 
+                          ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]' 
+                          : 'text-[#141414]/40 hover:bg-white/50'
+                      }`}
+                    >
+                      <span className="font-bold whitespace-nowrap lg:whitespace-normal">{day.day}</span>
+                      <ChevronRight size={16} className={`hidden lg:block ${selectedDay === idx ? 'opacity-100' : 'opacity-0'}`} />
+                    </button>
+                  ))}
+                </div>
                 
                 <button
                   onClick={() => setIsHistoryOpen(true)}
-                  className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-white/50 mt-4 border border-dashed border-[#141414]/10"
+                  className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-white/50 border border-dashed border-[#141414]/10"
                 >
                   <span className="font-bold text-sm">View History</span>
                   <Calendar size={18} />
@@ -291,7 +293,7 @@ export function WorkoutCoach({ profile }: Props) {
 
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
+            <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h3 className="text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>

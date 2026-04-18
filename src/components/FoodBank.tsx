@@ -21,8 +21,6 @@ export function FoodBank({ profile }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-  const [regenError, setRegenError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [editingItem, setEditingItem] = useState<FoodBankItem | null>(null);
@@ -115,25 +113,7 @@ export function FoodBank({ profile }: Props) {
         });
 
         if (planAffected) {
-          setIsRegenerating(true);
-          setRegenError(null);
-          try {
-            // Get current items and apply the update locally for the regeneration call
-            const updatedItemsList = items.map(i => i.id === itemToUpdate.id ? { ...i, ...dataToSave } as FoodBankItem : i);
-            const availableItems = updatedItemsList.filter(i => !i.hidden);
-
-            await generateAndSaveMealPlan(
-              profile,
-              latestVital?.weight || 180,
-              latestVital?.bodyFat || 20,
-              availableItems
-            );
-          } catch (err: any) {
-            console.error("Failed to regenerate plan after edit:", err);
-            setRegenError(err.message || "Failed to update meal plan. Please try regenerating manually in the Meal Planner.");
-          } finally {
-            setIsRegenerating(false);
-          }
+          console.log("Meal plan affected by edit. User should regenerate manually if needed.");
         }
 
         // Sync name changes in grocery lists
@@ -189,7 +169,6 @@ export function FoodBank({ profile }: Props) {
       const batch = writeBatch(db);
       let hasChanges = false;
 
-      let anyPlanAffected = false;
       snap.docs.forEach(planDoc => {
         const plan = planDoc.data();
         let planChanged = false;
@@ -200,7 +179,6 @@ export function FoodBank({ profile }: Props) {
             const hasItem = meal.ingredientsWithAmounts?.some((ing: any) => ing.name === itemToDelete.name);
             if (hasItem) {
               planChanged = true;
-              anyPlanAffected = true;
               const filteredIngs = meal.ingredientsWithAmounts.filter((ing: any) => ing.name !== itemToDelete.name);
               return {
                 ...meal,
@@ -220,26 +198,6 @@ export function FoodBank({ profile }: Props) {
 
       if (hasChanges) {
         await batch.commit();
-      }
-
-      // If the active plan was affected by deletion, trigger a full regeneration
-      if (anyPlanAffected) {
-        setIsRegenerating(true);
-        setRegenError(null);
-        try {
-          const availableItems = items.filter(i => i.id !== id && !i.hidden);
-          await generateAndSaveMealPlan(
-            profile,
-            latestVital?.weight || 180,
-            latestVital?.bodyFat || 20,
-            availableItems
-          );
-        } catch (err: any) {
-          console.error("Failed to automatically regenerate meal plan after single deletion:", err);
-          setRegenError(err.message || "Failed to update meal plan after deletion.");
-        } finally {
-          setIsRegenerating(false);
-        }
       }
 
       // Sync with grocery lists
@@ -279,7 +237,6 @@ export function FoodBank({ profile }: Props) {
     const snap = await getDocs(mealPlansRef);
     let hasMealPlanChanges = false;
 
-    let anyPlanAffected = false;
     snap.docs.forEach(planDoc => {
       const plan = planDoc.data();
       let planChanged = false;
@@ -294,7 +251,6 @@ export function FoodBank({ profile }: Props) {
 
           if (filteredIngs.length !== originalCount) {
             planChanged = true;
-            anyPlanAffected = true;
             return {
               ...meal,
               ingredientsWithAmounts: filteredIngs,
@@ -312,26 +268,6 @@ export function FoodBank({ profile }: Props) {
     });
 
     await batch.commit();
-
-    // If the active plan was affected by deletion, trigger a full regeneration
-    if (anyPlanAffected) {
-      setIsRegenerating(true);
-      setRegenError(null);
-      try {
-        const availableItems = items.filter(i => !selectedIds.has(i.id) && !i.hidden);
-        await generateAndSaveMealPlan(
-          profile,
-          latestVital?.weight || 180,
-          latestVital?.bodyFat || 20,
-          availableItems
-        );
-      } catch (err: any) {
-        console.error("Failed to automatically regenerate meal plan after deletion:", err);
-        setRegenError(err.message || "Failed to update meal plan after deletion.");
-      } finally {
-        setIsRegenerating(false);
-      }
-    }
 
     // Sync with grocery lists
     const groceryListsRef = collection(db, 'users', profile.uid, 'groceryLists');
@@ -379,7 +315,6 @@ export function FoodBank({ profile }: Props) {
       const mealPlansRef = collection(db, 'users', profile.uid, 'mealPlans');
       const snap = await getDocs(mealPlansRef);
       
-      let anyPlanAffected = false;
       snap.docs.forEach(planDoc => {
         const plan = planDoc.data();
         let planChanged = false;
@@ -394,7 +329,6 @@ export function FoodBank({ profile }: Props) {
 
             if (filteredIngs.length !== originalCount) {
               planChanged = true;
-              anyPlanAffected = true;
               return {
                 ...meal,
                 ingredientsWithAmounts: filteredIngs,
@@ -412,28 +346,6 @@ export function FoodBank({ profile }: Props) {
 
       // Commit the removals first
       await batch.commit();
-
-      // If the active plan was affected, trigger a full regeneration to fill the gaps
-      if (anyPlanAffected) {
-        setIsRegenerating(true);
-        setRegenError(null);
-        try {
-          // Get the updated food bank items (excluding the ones we just hid)
-          const availableItems = items.filter(i => !selectedIds.has(i.id) && !i.hidden);
-          
-          await generateAndSaveMealPlan(
-            profile,
-            latestVital?.weight || 180,
-            latestVital?.bodyFat || 20,
-            availableItems
-          );
-        } catch (err: any) {
-          console.error("Failed to automatically regenerate meal plan:", err);
-          setRegenError(err.message || "Failed to update meal plan after hiding items.");
-        } finally {
-          setIsRegenerating(false);
-        }
-      }
     } else {
       await batch.commit();
     }
@@ -577,12 +489,12 @@ export function FoodBank({ profile }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Food Bank</h1>
-          <p className="text-[#141414]/60">Store your favorite foods and their macros for personalized meal planning.</p>
+          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Food Bank</h1>
+          <p className="text-[#141414]/60 text-sm lg:text-base">Store your favorite foods and their macros for personalized meal planning.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 lg:gap-3">
           <input 
             type="file" 
             ref={fileInputRef}
@@ -603,7 +515,7 @@ export function FoodBank({ profile }: Props) {
               resetForm();
               setIsAdding(true);
             }}
-            className="px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center gap-2"
+            className="flex-1 lg:flex-none px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
           >
             <Plus size={18} />
             Add Food
@@ -611,7 +523,7 @@ export function FoodBank({ profile }: Props) {
           <button 
             onClick={() => cameraInputRef.current?.click()}
             disabled={isScanning}
-            className="px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="flex-1 lg:flex-none px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isScanning ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
             Scan Label
@@ -619,7 +531,7 @@ export function FoodBank({ profile }: Props) {
           <button 
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="w-full lg:w-auto px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
             Bulk Upload
@@ -637,34 +549,6 @@ export function FoodBank({ profile }: Props) {
           className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-[#141414]/5 shadow-sm focus:ring-2 focus:ring-[#141414] transition-all"
         />
       </div>
-
-      <AnimatePresence>
-        {isRegenerating && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="p-4 bg-[#141414] text-white rounded-2xl flex items-center justify-center gap-3 shadow-lg"
-          >
-            <Loader2 size={20} className="animate-spin text-orange-500" />
-            <p className="font-bold">Regenerating meal plan to reflect changes...</p>
-          </motion.div>
-        )}
-        {regenError && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="p-4 bg-red-500 text-white rounded-2xl flex items-center justify-between gap-3 shadow-lg"
-          >
-            <div className="flex items-center gap-3">
-              <Plus className="rotate-45" size={20} />
-              <p className="font-bold">{regenError}</p>
-            </div>
-            <button onClick={() => setRegenError(null)} className="font-bold">✕</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden">
         {selectedIds.size > 0 && (

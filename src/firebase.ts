@@ -4,8 +4,11 @@ import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+// Initialize Firestore with explicit check for database ID
+const firestoreDatabaseId = firebaseConfig.firestoreDatabaseId || '(default)';
+export const db = getFirestore(app, firestoreDatabaseId === '(default)' ? undefined : firestoreDatabaseId);
 
 // Set persistence to local (persistent across tabs and sessions)
 setPersistence(auth, browserLocalPersistence).catch((error) => {

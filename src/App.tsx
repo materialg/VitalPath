@@ -195,14 +195,14 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#E4E3E0] flex">
-      {/* Sidebar */}
-      <nav className="w-20 md:w-64 bg-white border-r border-[#141414]/10 flex flex-col">
+    <div className="min-h-screen bg-[#E4E3E0] flex flex-col md:flex-row">
+      {/* Sidebar - Desktop Only */}
+      <nav className="hidden md:flex w-64 bg-white border-r border-[#141414]/10 flex-col shrink-0 h-screen sticky top-0">
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-[#141414] rounded-lg flex items-center justify-center shrink-0">
             <Activity className="text-white w-5 h-5" />
           </div>
-          <span className="font-sans font-bold text-[#141414] hidden md:block tracking-tight">VitalPath</span>
+          <span className="font-sans font-bold text-[#141414] tracking-tight text-xl">VitalPath</span>
         </div>
 
         <div className="flex-1 px-3 space-y-1">
@@ -268,13 +268,48 @@ export default function App() {
             className="w-full p-3 flex items-center gap-3 text-[#141414]/60 hover:text-[#141414] hover:bg-[#141414]/5 rounded-xl transition-all"
           >
             <LogOut size={20} />
-            <span className="hidden md:block font-medium">Logout</span>
+            <span className="font-medium">Logout</span>
           </button>
         </div>
       </nav>
 
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-6 left-4 right-4 bg-white/80 backdrop-blur-xl border border-[#141414]/10 rounded-2xl shadow-2xl z-50 flex items-center justify-around p-2">
+        <MobileNavItem 
+          active={activeTab === 'dashboard'} 
+          onClick={() => setActiveTab('dashboard')} 
+          icon={<LayoutDashboard size={20} />} 
+        />
+        <MobileNavItem 
+          active={activeTab === 'vitals'} 
+          onClick={() => setActiveTab('vitals')} 
+          icon={<Activity size={20} />} 
+        />
+        <MobileNavItem 
+          active={activeTab === 'meals'} 
+          onClick={() => setActiveTab('meals')} 
+          icon={<Utensils size={20} />} 
+        />
+        <MobileNavItem 
+          active={activeTab === 'workouts'} 
+          onClick={() => setActiveTab('workouts')} 
+          icon={<Dumbbell size={20} />} 
+        />
+        <MobileNavItem 
+          active={activeTab === 'foodbank'} 
+          onClick={() => setActiveTab('foodbank')} 
+          icon={<Database size={20} />} 
+        />
+        <button 
+          onClick={() => setShowSettings(true)}
+          className="p-3 text-[#141414]/40"
+        >
+          <Settings size={20} />
+        </button>
+      </nav>
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-32 md:pb-8">
         <div className="max-w-6xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
@@ -313,11 +348,32 @@ function NavItem({ active, onClick, icon, label }: { active: boolean, onClick: (
       }`}
     >
       {icon}
-      <span className="hidden md:block font-medium">{label}</span>
+      <span className="font-medium">{label}</span>
       {active && (
         <motion.div 
           layoutId="active-pill"
-          className="ml-auto w-1.5 h-1.5 bg-white rounded-full hidden md:block"
+          className="ml-auto w-1.5 h-1.5 bg-white rounded-full"
+        />
+      )}
+    </button>
+  );
+}
+
+function MobileNavItem({ active, onClick, icon }: { active: boolean, onClick: () => void, icon: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`p-3 rounded-xl relative transition-all ${
+        active 
+          ? 'text-[#141414]' 
+          : 'text-[#141414]/30 hover:text-[#141414]'
+      }`}
+    >
+      {icon}
+      {active && (
+        <motion.div 
+          layoutId="active-pill-mobile"
+          className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#141414] rounded-full"
         />
       )}
     </button>

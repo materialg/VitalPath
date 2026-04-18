@@ -113,54 +113,56 @@ export function VitalsTracker({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Vitals Tracker</h1>
-        <p className="text-[#141414]/60">Log your daily measurements to track your progress.</p>
+        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Vitals Tracker</h1>
+        <p className="text-[#141414]/60 text-sm lg:text-base">Log your daily measurements to track your progress.</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Log Form */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Top Row: New Entry & History */}
         <div className="lg:col-span-1">
-          <form onSubmit={handleAddLog} className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm space-y-6">
-            <h3 className="text-xl font-bold text-[#141414] flex items-center gap-2">
-              <Plus size={20} />
-              New Entry
-            </h3>
+          <form onSubmit={handleAddLog} className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm space-y-6 lg:h-[560px] flex flex-col justify-between">
+            <div className="space-y-6">
+              <h3 className="text-xl font-bold text-[#141414] flex items-center gap-2">
+                <Plus size={20} />
+                New Entry
+              </h3>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#141414]/60">Date</label>
-              <input 
-                type="date" 
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full px-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#141414]/60">Weight (lbs)</label>
-              <div className="relative">
-                <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#141414]/60">Date</label>
                 <input 
-                  type="number" 
-                  step="0.1"
-                  value={weight}
-                  onChange={e => setWeight(parseFloat(e.target.value))}
-                  className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  type="date" 
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                 />
               </div>
-            </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#141414]/60">Weight (lbs)</label>
+                <div className="relative">
+                  <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={weight}
+                    onChange={e => setWeight(parseFloat(e.target.value))}
+                    className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[#141414]/60">Body Fat (%)</label>
-              <div className="relative">
-                <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-                <input 
-                  type="number" 
-                  step="0.1"
-                  value={bodyFat}
-                  onChange={e => setBodyFat(parseFloat(e.target.value))}
-                  className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#141414]/60">Body Fat (%)</label>
+                <div className="relative">
+                  <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={bodyFat}
+                    onChange={e => setBodyFat(parseFloat(e.target.value))}
+                    className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -174,17 +176,95 @@ export function VitalsTracker({ profile }: Props) {
           </form>
         </div>
 
-        {/* Charts and History */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Charts */}
-          {vitals.length > 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm">
-                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-6 flex items-center gap-2">
+        {/* History List */}
+        <div className="md:col-span-1 lg:col-span-2 bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden flex flex-col h-[500px] lg:h-[560px]">
+          <div className="p-6 border-b border-[#141414]/5 flex justify-between items-center shrink-0">
+            <h3 className="text-xl font-bold text-[#141414]">History</h3>
+            <span className="text-xs font-bold text-[#141414]/40 uppercase tracking-widest">{vitals.length} Entries</span>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-10 bg-white">
+                <tr className="bg-[#141414]/5 text-[#141414]/40 text-xs uppercase tracking-widest">
+                  <th className="px-6 py-4 font-bold">Date</th>
+                  <th className="px-6 py-4 font-bold">Weight</th>
+                  <th className="px-6 py-4 font-bold">Weight %</th>
+                  <th className="px-6 py-4 font-bold">Body Fat</th>
+                  <th className="px-6 py-4 font-bold">Goal</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#141414]/5">
+                {vitals.map((log) => (
+                  <tr key={log.id} className="hover:bg-[#141414]/5 transition-colors group">
+                    <td className="px-6 py-4 font-medium text-[#141414]">
+                      {new Date(log.date).toLocaleDateString('en-US', { 
+                        month: '2-digit', 
+                        day: '2-digit', 
+                        year: '2-digit' 
+                      })}
+                    </td>
+                    <td className="px-6 py-4 text-[#141414]">{log.weight}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-[#141414]/5 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500" 
+                            style={{ 
+                              width: `${(() => {
+                                const lbm = log.weight * (1 - (log.bodyFat / 100));
+                                const targetWeight = lbm / (1 - ((profile.goalBodyFat || 15) / 100));
+                                return Math.min(100, Math.round((targetWeight / log.weight) * 100));
+                              })()}%` 
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-[#141414]/60">
+                          {(() => {
+                            const lbm = log.weight * (1 - (log.bodyFat / 100));
+                            const targetWeight = lbm / (1 - ((profile.goalBodyFat || 15) / 100));
+                            return Math.min(100, Math.round((targetWeight / log.weight) * 100));
+                          })()}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-[#141414]">{log.bodyFat}%</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-[#141414]/5 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-orange-500" 
+                            style={{ width: `${profile.goalBodyFat && log.bodyFat ? Math.min(100, Math.round((profile.goalBodyFat / log.bodyFat) * 100)) : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-[#141414]/60">
+                          {profile.goalBodyFat && log.bodyFat ? Math.min(100, Math.round((profile.goalBodyFat / log.bodyFat) * 100)) : 0}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {vitals.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-[#141414]/40 italic">
+                      No logs yet. Start by adding your first measurement.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Charts Row - Full Width below */}
+        <div className="md:col-span-2 lg:col-span-3">
+          {vitals.length > 1 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm h-full">
+                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-8 flex items-center gap-2">
                   <Scale size={14} />
                   Weight Trend
                 </h3>
-                <div className="h-[200px] w-full">
+                <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
@@ -230,12 +310,12 @@ export function VitalsTracker({ profile }: Props) {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm">
-                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm h-full">
+                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-8 flex items-center gap-2">
                   <Activity size={14} />
                   Body Fat Trend
                 </h3>
-                <div className="h-[200px] w-full">
+                <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
@@ -281,86 +361,13 @@ export function VitalsTracker({ profile }: Props) {
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="bg-white p-12 rounded-3xl border border-[#141414]/5 shadow-sm text-center">
+              <TrendingUp className="mx-auto text-[#141414]/10 mb-4" size={48} />
+              <h3 className="text-lg font-bold text-[#141414] mb-2">Trends will appear here</h3>
+              <p className="text-[#141414]/60 max-w-sm mx-auto">Log at least two measurements to start seeing your progress over time.</p>
+            </div>
           )}
-
-          {/* History List */}
-          <div className="bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden">
-            <div className="p-6 border-bottom border-[#141414]/5 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-[#141414]">History</h3>
-              <span className="text-xs font-bold text-[#141414]/40 uppercase tracking-widest">{vitals.length} Entries</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-[#141414]/5 text-[#141414]/40 text-xs uppercase tracking-widest">
-                    <th className="px-6 py-4 font-bold">Date</th>
-                    <th className="px-6 py-4 font-bold">Weight</th>
-                    <th className="px-6 py-4 font-bold">Weight %</th>
-                    <th className="px-6 py-4 font-bold">Body Fat</th>
-                    <th className="px-6 py-4 font-bold">Goal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#141414]/5">
-                  {vitals.map((log) => (
-                    <tr key={log.id} className="hover:bg-[#141414]/5 transition-colors group">
-                      <td className="px-6 py-4 font-medium text-[#141414]">
-                        {new Date(log.date).toLocaleDateString('en-US', { 
-                          month: '2-digit', 
-                          day: '2-digit', 
-                          year: '2-digit' 
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-[#141414]">{log.weight}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-12 bg-[#141414]/5 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-blue-500" 
-                              style={{ 
-                                width: `${(() => {
-                                  const lbm = log.weight * (1 - (log.bodyFat / 100));
-                                  const targetWeight = lbm / (1 - ((profile.goalBodyFat || 15) / 100));
-                                  return Math.min(100, Math.round((targetWeight / log.weight) * 100));
-                                })()}%` 
-                              }}
-                            />
-                          </div>
-                          <span className="text-xs font-bold text-[#141414]/60">
-                            {(() => {
-                              const lbm = log.weight * (1 - (log.bodyFat / 100));
-                              const targetWeight = lbm / (1 - ((profile.goalBodyFat || 15) / 100));
-                              return Math.min(100, Math.round((targetWeight / log.weight) * 100));
-                            })()}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-[#141414]">{log.bodyFat}%</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-12 bg-[#141414]/5 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-orange-500" 
-                              style={{ width: `${profile.goalBodyFat && log.bodyFat ? Math.min(100, Math.round((profile.goalBodyFat / log.bodyFat) * 100)) : 0}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-bold text-[#141414]/60">
-                            {profile.goalBodyFat && log.bodyFat ? Math.min(100, Math.round((profile.goalBodyFat / log.bodyFat) * 100)) : 0}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {vitals.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-[#141414]/40 italic">
-                        No logs yet. Start by adding your first measurement.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
 
