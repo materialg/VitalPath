@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
-import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan, isAIConfigured } from '../services/aiService';
+import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Utensils, Sparkles, RotateCcw, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
 
@@ -25,6 +25,7 @@ export function MealPlanner({ profile }: Props) {
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
   const MEAL_PLAN_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
@@ -84,6 +85,9 @@ export function MealPlanner({ profile }: Props) {
     const unsubscribeFoodBank = onSnapshot(qFoodBank, (snap) => {
       setFoodBankItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FoodBankItem)));
     });
+
+    // Check AI status
+    checkIsAIConfigured().then(setIsAIReady);
 
     return () => {
       unsubscribeVitals();
@@ -506,7 +510,7 @@ export function MealPlanner({ profile }: Props) {
                 : "Get a customized 7-day meal schedule tailored to your goals and available food."}
             </p>
             
-            {!isAIConfigured() ? (
+            {isAIReady === false ? (
               <div className="max-w-md mx-auto p-6 bg-orange-50 border border-orange-200 rounded-2xl text-left space-y-3">
                 <div className="flex items-center gap-3 text-orange-600">
                   <Sparkles size={20} />
@@ -519,7 +523,7 @@ export function MealPlanner({ profile }: Props) {
             ) : (
               <button 
                 onClick={handleGenerate}
-                disabled={isGenerating}
+                disabled={isGenerating || isAIReady === null}
                 className="px-8 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-[#141414]/20 mx-auto"
               >
                 {isGenerating ? (

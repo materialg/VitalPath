@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay } from '../types';
-import { generateWorkoutPlan, calculateDailyTargets, isAIConfigured } from '../services/aiService';
+import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addDays } from 'date-fns';
 import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Check, Edit2, ChevronLeft } from 'lucide-react';
@@ -23,6 +23,7 @@ export function WorkoutCoach({ profile }: Props) {
   const [selectedHistoryDay, setSelectedHistoryDay] = useState<{ date: Date, workout: WorkoutDay } | null>(null);
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!profile.uid) return;
@@ -59,6 +60,10 @@ export function WorkoutCoach({ profile }: Props) {
       unsubscribePlans();
     };
   }, [profile.uid, activePlanId]);
+
+  useEffect(() => {
+    checkIsAIConfigured().then(setIsAIReady);
+  }, []);
 
   const activePlan = workoutPlans.find(p => p.id === activePlanId) || workoutPlans[0];
   const targets = latestVital ? calculateDailyTargets(profile, latestVital.weight, latestVital.bodyFat) : null;
@@ -459,7 +464,7 @@ export function WorkoutCoach({ profile }: Props) {
             Generate a custom 7-day PPLR routine designed to help you reach your body fat goals.
           </p>
           
-          {!isAIConfigured() ? (
+          {isAIReady === false ? (
             <div className="max-w-md mx-auto p-6 bg-orange-50 border border-orange-200 rounded-2xl text-left space-y-3">
               <div className="flex items-center gap-3 text-orange-600">
                 <Sparkles size={20} />
@@ -472,7 +477,7 @@ export function WorkoutCoach({ profile }: Props) {
           ) : (
             <button 
               onClick={handleGenerate}
-              disabled={isGenerating}
+              disabled={isGenerating || isAIReady === null}
               className="px-10 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center gap-3 mx-auto disabled:opacity-50 shadow-xl shadow-[#141414]/20"
             >
               {isGenerating ? (

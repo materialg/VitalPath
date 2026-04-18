@@ -1,4 +1,3 @@
-import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
@@ -44,7 +43,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   
-  // Provide a cleaner message for the UI
   if (message.includes('permission-denied') || message.includes('Missing or insufficient permissions')) {
     throw new Error("You don't have permission to perform this action. Your session might have expired.");
   }
@@ -55,26 +53,34 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(message);
 }
 
-export const isAIConfigured = () => {
-  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  return !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
+// Check if AI is configured on the server
+export const checkIsAIConfigured = async (): Promise<boolean> => {
+  try {
+    const res = await fetch('/api/ai/configured');
+    if (!res.ok) return false;
+    const { configured } = await res.json();
+    return configured;
+  } catch (err) {
+    console.error("Failed to check AI config:", err);
+    return false;
+  }
 };
 
-let aiInstance: GoogleGenAI | null = null;
+// Internal helper to call the backend proxy
+async function callAI(model: string, contents: any, config: any) {
+  const res = await fetch('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, contents, config })
+  });
 
-function getAI() {
-  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  
-  if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
-    console.error("Gemini API key is missing. Checked process.env.GEMINI_API_KEY and VITE_GEMINI_API_KEY.");
-    throw new Error("Gemini API key is missing. Please provide a valid GEMINI_API_KEY in the project settings (Settings > Secrets).");
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `AI request failed with status ${res.status}`);
   }
 
-  if (!aiInstance) {
-    console.log("Initializing Gemini AI with provided key...");
-    aiInstance = new GoogleGenAI({ apiKey });
-  }
-  return aiInstance;
+  const data = await res.json();
+  return data.text;
 }
 
 export function calculateDailyTargets(profile: any, weight: number, bodyFat: number) {
@@ -197,12 +203,26 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
   }
 }
 
+export enum Type {
+  OBJECT = "object",
+  ARRAY = "array",
+  STRING = "string",
+  NUMBER = "number",
+  INTEGER = "integer",
+  BOOLEAN = "boolean"
+}
+
+export enum ThinkingLevel {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high"
+}
+
 async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[], foodBankNames: string[]) {
-  const ai = getAI();
-  const responsePromise = ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
+  const text = await callAI(
+    "gemini-3-flash-preview",
+    prompt,
+    {
       systemInstruction: "You are a strict meal planning engine. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON.",
       thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
       responseMimeType: "application/json",
@@ -239,13 +259,12 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
         }
       }
     }
-  });
+  );
 
-  const response = await responsePromise as any;
-  if (!response.text) throw new Error(`Empty response for ${dayName}`);
+  if (!text) throw new Error(`Empty response for ${dayName}`);
   
-  const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? jsonMatch[0] : text;
   const data = JSON.parse(jsonStr);
 
   const cleanName = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
@@ -497,28 +516,25 @@ export async function regenerateDayPlan(
   // 4. Rebalance each internal meal mathematically (Near Instant)
   const availableItems = foodBankItems.filter(i => !i.hidden);
     const rebalancedMeals = mealsToRebalance.map(meal => {
+      // Calculate current calories of the meal to determine the scaling factor needed to hit target
+      let currentMealCals = 0;
+      (meal.ingredientsWithAmounts || []).forEach((ing: any) => {
+        const food = availableItems.find(f => cleanName(f.name) === cleanName(ing.name));
+        if (food) {
+          const amountNum = parseFloat(ing.amount) || food.servingSize;
+          const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
+          currentMealCals += (food.calories || 0) * ratio;
+        }
+      });
+
+      // Scaling factor to hit the exact calorie goal for this meal while keeping proportions
+      const scalingFactor = currentMealCals > 0 ? targetPerMeal.calories / currentMealCals : 1.0;
       const ingredients = (meal.ingredientsWithAmounts || []).map((ing: any) => {
         const food = availableItems.find(f => cleanName(f.name) === cleanName(ing.name));
         if (!food) return ing;
   
-        // Calculate ratio based on priority: Protein > Calories
-        let ratio = 1.0;
-        
-        // Determine how much this ingredient contributes to protein vs calories
-        const proteinDensity = food.protein / (food.calories || 1);
-        const isProteinSource = proteinDensity > 0.1; // roughly >10g per 100cal
-  
-        if (isProteinSource && targetPerMeal.protein > 0) {
-          // Adjust primarily for protein
-          ratio = (targetPerMeal.protein * 0.4) / (food.protein || 1); 
-        } else {
-          // Adjust for calories
-          ratio = (targetPerMeal.calories * 0.3) / (food.calories || 1);
-        }
-  
-        // Keep it within sane bounds (20% to 500% of original)
         const currentAmount = parseFloat(ing.amount) || food.servingSize;
-        let newAmount = currentAmount * ratio;
+        let newAmount = currentAmount * scalingFactor;
         
         // Safety bounds
         if (food.servingUnit === 'unit') {
@@ -615,11 +631,10 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
     
     Adjust sets and reps based on the user's goal of reaching ${profile.goalBodyFat}% body fat.`;
 
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
-    contents: prompt,
-    config: {
+  const text = await callAI(
+    "gemini-3-pro-preview",
+    prompt,
+    {
       systemInstruction: "You are a world-class strength coach. You MUST follow the PPLR rotation strictly across the 7 days. You MUST ONLY use the exercises provided for each day. You MUST apply the progressive overload logic based on the provided previous performance data. For 'Rest' days, return an empty exercises array and recovery-focused notes.",
       responseMimeType: "application/json",
       responseSchema: {
@@ -657,7 +672,7 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
         }
       }
     }
-  });
+  );
 
-  return JSON.parse(response.text);
+  return JSON.parse(text);
 }
