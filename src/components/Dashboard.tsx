@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal } from '../types';
+import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History } from 'lucide-react';
+import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search } from 'lucide-react';
 import { logDailyTarget, calculateTargetDate, calculateDailyTargets } from '../services/aiService';
 
 interface Props {
@@ -19,6 +19,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<{ mIdx: number; meal: Meal } | null>(null);
+  const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
 
   const quotes = [
     { text: "Discipline equals freedom.", author: "Jocko Willink" },
@@ -76,10 +78,16 @@ export function Dashboard({ profile, onNavigate }: Props) {
       }
     });
 
+    const foodBankQuery = query(collection(db, 'users', profile.uid, 'foodBank'));
+    const unsubscribeFoodBank = onSnapshot(foodBankQuery, (snap) => {
+      setFoodBankItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FoodBankItem)));
+    });
+
     return () => {
       unsubscribeVitals();
       unsubscribeMeals();
       unsubscribeWorkouts();
+      unsubscribeFoodBank();
     };
   }, [profile.uid]);
 
@@ -110,52 +118,53 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const today = new Date().toLocaleDateString('en-CA');
   const todayEntry = vitals.find(v => v.date.startsWith(today));
   const vitalsLoggedToday = !!todayEntry;
-
   const bfProgress = profile.goalBodyFat && currentBF ? Math.min(100, Math.round((profile.goalBodyFat / currentBF) * 100)) : 0;
 
-  const handleVitalsAction = (action: 'approve' | 'deny' | 'edit') => {
-    if (action === 'deny') return;
-    setShowVitalsModal(true);
-  };
-
-  const handleMealAction = async (action: 'approve' | 'deny' | 'edit') => {
-    if (!latestMealPlan || !todayMealPlan) {
-      onNavigate('meals');
-      return;
-    }
-
-    if (action === 'edit') {
-      setShowMealModal(true);
-      return;
-    }
-    
-    const status = action === 'approve' ? 'completed' : 'skipped';
+  const handleMealStatusToggle = async (mIdx: number) => {
+    if (!latestMealPlan || !todayMealPlan) return;
     const updatedDays = [...latestMealPlan.days];
     const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
-    
     if (dayIndex !== -1) {
-      updatedDays[dayIndex].meals = updatedDays[dayIndex].meals.map(m => ({ ...m, status }));
+      const meals = [...updatedDays[dayIndex].meals];
+      const currentStatus = meals[mIdx].status;
+      meals[mIdx] = { 
+        ...meals[mIdx], 
+        status: currentStatus === 'completed' ? 'none' : 'completed' 
+      };
+      updatedDays[dayIndex].meals = meals;
       await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
-        days: updatedDays
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
       });
     }
   };
 
-  const handleWorkoutAction = async (action: 'approve' | 'deny' | 'edit') => {
-    if (!latestWorkout) {
-      onNavigate('workouts');
-      return;
+  const handleUpdateMeal = async (mIdx: number, updatedMeal: any) => {
+    if (!latestMealPlan || !todayMealPlan) return;
+    setEditingMeal(null);
+    const updatedDays = [...latestMealPlan.days];
+    const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
+    if (dayIndex !== -1) {
+      updatedDays[dayIndex].meals[mIdx] = updatedMeal;
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
     }
+  };
 
-    if (action === 'edit') {
-      setShowWorkoutModal(true);
-      return;
+  const handleWorkoutToggle = async () => {
+    if (!latestWorkout || !todayWorkout) return;
+    const updatedDays = [...latestWorkout.days];
+    const dayIndex = updatedDays.findIndex(d => d.day === todayWorkout.day);
+    if (dayIndex !== -1) {
+      const currentStatus = updatedDays[dayIndex].status;
+      updatedDays[dayIndex].status = currentStatus === 'completed' ? 'none' : 'completed';
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
     }
-    
-    const status = action === 'approve' ? 'completed' : 'skipped';
-    await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), {
-      status
-    });
   };
 
   return (
@@ -219,25 +228,46 @@ export function Dashboard({ profile, onNavigate }: Props) {
                 description={vitalsLoggedToday ? "Vitals logged for today" : "Weight and body fat entry needed"}
                 status={vitalsLoggedToday ? 'completed' : 'none'}
                 color="blue"
-                onAction={handleVitalsAction}
+                onAction={(action) => {
+                  if (action === 'approve') setShowVitalsModal(true);
+                  if (action === 'edit') setShowVitalsModal(true);
+                }}
               />
               
-              <TodoItem 
-                icon={<Utensils size={18} />}
-                title="Today's Meal Plan"
-                description={todayMealPlan ? todayMealPlan.meals.map(m => m.name).join(', ') : "No meal plan generated"}
-                status={todayMealPlan?.meals.every(m => m.status === 'completed') ? 'completed' : (todayMealPlan?.meals.some(m => m.status === 'skipped') ? 'skipped' : 'none')}
-                color="orange"
-                onAction={handleMealAction}
-              />
+              {todayMealPlan ? todayMealPlan.meals.map((meal, mIdx) => (
+                <TodoItem 
+                  key={`meal-${mIdx}`}
+                  icon={<Utensils size={18} />}
+                  title={meal.name}
+                  description={`${meal.calories} kcal • ${meal.ingredients.join(', ')}`}
+                  status={meal.status || 'none'}
+                  color="orange"
+                  onAction={(action) => {
+                    if (action === 'approve') handleMealStatusToggle(mIdx);
+                    if (action === 'edit') setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
+                  }}
+                />
+              )) : (
+                <TodoItem 
+                  icon={<Utensils size={18} />}
+                  title="Today's Meal Plan"
+                  description="No meal plan generated"
+                  status="none"
+                  color="orange"
+                  onAction={() => onNavigate('meals')}
+                />
+              )}
 
               <TodoItem 
                 icon={<Dumbbell size={18} />}
-                title="Today's Workout"
-                description={todayWorkout ? `${todayWorkout.title}: ${todayWorkout.exercises.length} exercises` : "No workout scheduled"}
+                title={todayWorkout ? todayWorkout.title : "Today's Workout"}
+                description={todayWorkout ? `${todayWorkout.exercises.length} exercises` : "No workout scheduled"}
                 status={todayWorkout?.status || 'none'}
                 color="purple"
-                onAction={handleWorkoutAction}
+                onAction={(action) => {
+                  if (action === 'approve') handleWorkoutToggle();
+                  if (action === 'edit') setShowWorkoutModal(true);
+                }}
               />
             </div>
           </div>
@@ -283,7 +313,18 @@ export function Dashboard({ profile, onNavigate }: Props) {
              meals={todayMealPlan.meals} 
              dayName={todayMealPlan.day}
              onClose={() => setShowMealModal(false)} 
-             onConfirm={() => handleMealAction('approve')}
+             onConfirm={async () => {
+               if (!latestMealPlan || !todayMealPlan) return;
+               const updatedDays = [...latestMealPlan.days];
+               const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
+               if (dayIndex !== -1) {
+                 updatedDays[dayIndex].meals = updatedDays[dayIndex].meals.map(m => ({ ...m, status: 'completed' }));
+                 await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+                   days: updatedDays,
+                   updatedAt: new Date().toISOString()
+                 });
+               }
+             }}
              onToggleMeal={async (mIdx) => {
                if (!latestMealPlan || !todayMealPlan) return;
                const updatedDays = [...latestMealPlan.days];
@@ -307,7 +348,15 @@ export function Dashboard({ profile, onNavigate }: Props) {
           <WorkoutModal 
             workout={latestWorkout} 
             onClose={() => setShowWorkoutModal(false)} 
-            onConfirm={() => handleWorkoutAction('approve')}
+            onConfirm={() => handleWorkoutToggle()}
+          />
+        )}
+        {editingMeal && (
+          <EditMealModal 
+             meal={editingMeal.meal}
+             foodBank={foodBankItems}
+             onClose={() => setEditingMeal(null)}
+             onSave={(updatedMeal) => handleUpdateMeal(editingMeal.mIdx, updatedMeal)}
           />
         )}
       </AnimatePresence>
@@ -625,44 +674,59 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
   );
 }
 
-function TodoItem({ icon, title, description, status, color, onAction }: { icon: React.ReactNode, title: string, description: string, status: 'completed' | 'skipped' | 'none', color: string, onAction: (action: 'approve' | 'deny' | 'edit') => void }) {
+interface TodoItemProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  status: 'completed' | 'skipped' | 'none' | 'pending';
+  color: string;
+  onAction: (action: 'approve' | 'deny' | 'edit') => void;
+}
+
+const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, color, onAction }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
     orange: 'bg-orange-50 text-orange-600',
     purple: 'bg-purple-50 text-purple-600'
   }[color as 'blue' | 'orange' | 'purple'];
 
+  const isCompleted = status === 'completed';
+
   return (
     <div 
-      onClick={() => onAction('edit')}
-      className="flex items-center justify-between p-4 rounded-2xl border border-[#141414]/5 hover:border-[#141414]/10 transition-all group cursor-pointer"
+      onClick={() => onAction('approve')}
+      className={`flex items-center justify-between p-4 rounded-2xl border transition-all group cursor-pointer ${
+        isCompleted ? 'bg-green-50/50 border-green-100' : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
+      }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClasses}`}>
-          {icon}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+          isCompleted ? 'bg-green-500 text-white' : colorClasses
+        }`}>
+          {isCompleted ? <Check size={20} /> : icon}
         </div>
         <div>
-          <h4 className="font-bold text-[#141414]">{title}</h4>
-          <p className="text-sm text-[#141414]/60">{description}</p>
+          <div className="flex items-center gap-2">
+            <h4 className={`font-bold transition-all ${
+              isCompleted ? 'text-green-900/40 line-through' : 'text-[#141414]'
+            }`}>{title}</h4>
+            {isCompleted && (
+              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md shadow-sm">Completed</span>
+            )}
+          </div>
+          <p className={`text-sm transition-all ${
+            isCompleted ? 'text-green-900/30' : 'text-[#141414]/60'
+          }`}>{description}</p>
         </div>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <ActionButton 
-          icon={<Check size={16} />} 
-          color={status === 'completed' ? 'bg-green-100 text-green-600' : 'hover:bg-green-50 hover:text-green-600'} 
-          isActive={status === 'completed'}
+          icon={isCompleted ? <RotateCcw size={16} /> : <Check size={16} />} 
+          color={isCompleted ? 'hover:bg-green-100 text-green-600' : 'hover:bg-green-50 hover:text-green-600'} 
+          isActive={isCompleted}
           onClick={(e) => {
             e.stopPropagation();
             onAction('approve');
-          }} 
-        />
-        <ActionButton 
-          icon={<X size={16} />} 
-          color={status === 'skipped' ? 'bg-red-100 text-red-600' : 'hover:bg-red-50 hover:text-red-600'} 
-          isActive={status === 'skipped'}
-          onClick={(e) => {
-            e.stopPropagation();
-            onAction('deny');
           }} 
         />
         <ActionButton 
@@ -674,6 +738,232 @@ function TodoItem({ icon, title, description, status, color, onAction }: { icon:
           }} 
         />
       </div>
+    </div>
+  );
+}
+
+function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void }) {
+  const [currentMeal, setCurrentMeal] = useState(meal);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFoodBank, setShowFoodBank] = useState(false);
+
+  const filteredFoodBank = foodBank.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const cleanName = (name: string) => name?.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || '';
+
+  const findFoodItem = (name: string) => {
+    const cleaned = cleanName(name);
+    if (!cleaned) return null;
+    return foodBank
+      .sort((a, b) => (a.hidden === b.hidden ? 0 : a.hidden ? 1 : -1))
+      .find(f => cleanName(f.name) === cleaned);
+  };
+
+  const calculateTotals = (ingredients: any[]) => {
+    let calories = 0, protein = 0, carbs = 0, fats = 0, fiber = 0;
+    ingredients.forEach(ing => {
+      const food = findFoodItem(ing.name);
+      if (food) {
+        const amount = parseFloat(ing.amount) || 0;
+        const ratio = food.servingSize > 0 ? amount / food.servingSize : 0;
+        calories += (food.calories || 0) * ratio;
+        protein += (food.protein || 0) * ratio;
+        carbs += (food.carbs || 0) * ratio;
+        fats += (food.fats || 0) * ratio;
+        fiber += (food.fiber || 0) * ratio;
+      }
+    });
+    return {
+      calories: Math.round(calories),
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fats: Math.round(fats * 10) / 10,
+      fiber: Math.round(fiber * 10) / 10
+    };
+  };
+
+  const updateIngredientAmount = (idx: number, newAmount: string) => {
+    const newIngredients = [...currentMeal.ingredientsWithAmounts];
+    const ing = newIngredients[idx];
+    const food = findFoodItem(ing.name);
+    const val = parseFloat(newAmount) || 0;
+    const unit = (food?.servingUnit || 'unit').toLowerCase();
+    
+    newIngredients[idx].amount = `${val} ${unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit}`;
+    newIngredients[idx].name = food?.name || ing.name;
+    const totals = calculateTotals(newIngredients);
+    setCurrentMeal({
+      ...currentMeal,
+      ingredientsWithAmounts: newIngredients,
+      ingredients: newIngredients.map((i: any) => `${i.amount} ${i.name}`),
+      ...totals
+    });
+  };
+
+  const removeIngredient = (idx: number) => {
+    const newIngredients = currentMeal.ingredientsWithAmounts.filter((_: any, i: number) => i !== idx);
+    const totals = calculateTotals(newIngredients);
+    setCurrentMeal({
+      ...currentMeal,
+      ingredientsWithAmounts: newIngredients,
+      ingredients: newIngredients.map((i: any) => `${i.amount} ${i.name}`),
+      ...totals
+    });
+  };
+
+  const handleSave = () => {
+    onSave(currentMeal);
+  };
+
+  const addIngredient = (food: FoodBankItem) => {
+    let unit = (food.servingUnit || 'unit').toLowerCase();
+    if (unit === 'units') unit = 'unit';
+    const newIngredients = [
+      ...currentMeal.ingredientsWithAmounts || [],
+      { name: food.name, amount: `${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` }
+    ];
+    const totals = calculateTotals(newIngredients);
+    setCurrentMeal({
+      ...currentMeal,
+      ingredientsWithAmounts: newIngredients,
+      ingredients: newIngredients.map((i: any) => `${i.amount} ${i.name}`),
+      ...totals
+    });
+    setShowFoodBank(false);
+    setSearchQuery('');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-2xl font-bold text-[#141414]">Edit {currentMeal.name}</h3>
+            <p className="text-sm text-[#141414]/40">Customize ingredients and portions.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-5 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
+          {[
+            { label: 'Calories', val: currentMeal.calories, unit: '' },
+            { label: 'Protein', val: currentMeal.protein, unit: 'g' },
+            { label: 'Carbs', val: currentMeal.carbs, unit: 'g' },
+            { label: 'Fats', val: currentMeal.fats, unit: 'g' },
+            { label: 'Fiber', val: currentMeal.fiber, unit: 'g' }
+          ].map((s, i) => (
+            <div key={i} className="text-center">
+              <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{s.label}</p>
+              <p className="text-lg font-bold text-[#141414]">{s.val}{s.unit}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
+          {(currentMeal.ingredientsWithAmounts || []).map((ing: any, idx: number) => {
+            const food = findFoodItem(ing.name);
+            const unit = (food?.servingUnit || 'unit').toLowerCase();
+            return (
+              <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-[#141414]/5 rounded-2xl group">
+                <div className="flex-1">
+                  <p className="font-bold text-[#141414]">{food?.name || ing.name}</p>
+                  <p className="text-xs text-[#141414]/40">
+                    {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-[#141414]/5 rounded-xl p-1 gap-1">
+                    <button 
+                      onClick={() => updateIngredientAmount(idx, (parseFloat(ing.amount) - (food?.servingSize || 1)).toString())}
+                      className="w-8 h-8 rounded-lg hover:bg-white transition-colors flex items-center justify-center text-[#141414]"
+                    >-</button>
+                    <input 
+                      type="number"
+                      value={parseFloat(ing.amount) || 0}
+                      onChange={(e) => updateIngredientAmount(idx, e.target.value)}
+                      className="w-16 bg-transparent border-none text-center font-bold text-sm focus:ring-0 p-0"
+                    />
+                    <button 
+                      onClick={() => updateIngredientAmount(idx, (parseFloat(ing.amount) + (food?.servingSize || 1)).toString())}
+                      className="w-8 h-8 rounded-lg hover:bg-white transition-colors flex items-center justify-center text-[#141414]"
+                    >+</button>
+                  </div>
+                  <button onClick={() => removeIngredient(idx)} className="p-2 text-red-400 hover:text-red-600 transition-colors">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="space-y-4">
+          <div className="relative">
+            <button 
+              onClick={() => setShowFoodBank(!showFoodBank)}
+              className="w-full py-4 px-6 bg-[#141414]/5 text-[#141414] rounded-xl font-medium flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-2">
+                <PlusCircle size={20} className="text-[#141414]/40 group-hover:text-[#141414]" />
+                Add Ingredient from Food Bank
+              </div>
+              <Activity size={18} className="text-[#141414]/20" />
+            </button>
+
+            <AnimatePresence>
+              {showFoodBank && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute bottom-full left-0 right-0 mb-4 bg-white rounded-3xl shadow-2xl border border-[#141414]/10 p-4 z-50 overflow-hidden flex flex-col max-h-[400px]"
+                >
+                  <div className="relative mb-4">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+                    <input 
+                      type="text"
+                      placeholder="Search food bank..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                    />
+                  </div>
+                  <div className="flex-1 overflow-y-auto space-y-1 pr-2">
+                    {filteredFoodBank.map(food => (
+                      <button 
+                        key={food.id}
+                        onClick={() => addIngredient(food)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-[#141414]/5 rounded-xl transition-colors text-left"
+                      >
+                        <div>
+                          <p className="font-bold text-[#141414]">{food.name}</p>
+                          <p className="text-xs text-[#141414]/40">{food.calories} cal / {food.servingSize}{food.servingUnit}</p>
+                        </div>
+                        <Plus size={18} className="text-[#141414]/20" />
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="flex gap-4">
+            <button onClick={onClose} className="flex-1 py-4 px-6 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all">Cancel</button>
+            <button onClick={handleSave} className="flex-[2] py-4 px-6 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all">Save Changes</button>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

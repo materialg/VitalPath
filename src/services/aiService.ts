@@ -514,49 +514,54 @@ export async function regenerateDayPlan(
   };
 
   // 4. Rebalance each internal meal mathematically (Near Instant)
-  const availableItems = foodBankItems.filter(i => !i.hidden);
-    const rebalancedMeals = mealsToRebalance.map(meal => {
-      // Calculate current calories of the meal to determine the scaling factor needed to hit target
-      let currentMealCals = 0;
-      (meal.ingredientsWithAmounts || []).forEach((ing: any) => {
-        const food = availableItems.find(f => cleanName(f.name) === cleanName(ing.name));
-        if (food) {
-          const amountNum = parseFloat(ing.amount) || food.servingSize;
-          const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
-          currentMealCals += (food.calories || 0) * ratio;
-        }
-      });
+  const rebalancedMeals = mealsToRebalance.map(meal => {
+    // Calculate current calories and macros of the meal to determine the scaling factor.
+    // We include ALL items from the food bank, even hidden ones, if they are already in the meal.
+    let currentMealCals = 0;
+    (meal.ingredientsWithAmounts || []).forEach((ing: any) => {
+      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
+      if (food) {
+        const amountNum = parseFloat(ing.amount.toString().replace(/,/g, '')) || food.servingSize;
+        const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
+        currentMealCals += (food.calories || 0) * ratio;
+      }
+    });
 
-      // Scaling factor to hit the exact calorie goal for this meal while keeping proportions
-      const scalingFactor = currentMealCals > 0 ? targetPerMeal.calories / currentMealCals : 1.0;
-      const ingredients = (meal.ingredientsWithAmounts || []).map((ing: any) => {
-        const food = availableItems.find(f => cleanName(f.name) === cleanName(ing.name));
-        if (!food) return ing;
-  
-        const currentAmount = parseFloat(ing.amount) || food.servingSize;
-        let newAmount = currentAmount * scalingFactor;
-        
-        // Safety bounds
-        if (food.servingUnit === 'unit') {
-          newAmount = Math.max(1, Math.round(newAmount));
-        } else {
-          newAmount = Math.max(10, Math.round(newAmount));
-        }
-  
-        const fbUnit = food.servingUnit || 'unit';
-        return {
-          ...ing,
-          name: food.name, // Ensure casing matches food bank
-          amount: `${newAmount}${fbUnit === 'unit' ? (newAmount === 1 ? ' unit' : ' units') : fbUnit}`
-        };
-      });
+    // Scaling factor to hit the exact calorie goal for this meal while keeping proportions
+    const scalingFactor = currentMealCals > 0 ? targetPerMeal.calories / currentMealCals : 1.0;
+
+    const ingredients = (meal.ingredientsWithAmounts || []).map((ing: any) => {
+      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
+      if (!food) return ing;
+
+      const currentAmount = parseFloat(ing.amount.toString().replace(/,/g, '')) || food.servingSize;
+      let newAmount = currentAmount * scalingFactor;
+
+      // Safety bounds - removed the 10g floor for precision
+      if (food.servingUnit === 'unit') {
+        newAmount = Math.max(1, Math.round(newAmount * 10) / 10);
+      } else {
+        newAmount = Math.max(1, Math.round(newAmount));
+      }
+
+      const fbUnit = food.servingUnit || 'unit';
+      const amountStr = fbUnit === 'unit' 
+        ? `${newAmount}${newAmount === 1 ? ' unit' : ' units'}`
+        : `${newAmount}${fbUnit}`;
+
+      return {
+        ...ing,
+        name: food.name,
+        amount: amountStr
+      };
+    });
 
     // Recalculate Totals for the meal locally
     let cal = 0, p = 0, c = 0, f = 0, fib = 0;
     ingredients.forEach((ing: any) => {
-      const food = availableItems.find(fi => cleanName(fi.name) === cleanName(ing.name));
+      const food = foodBankItems.find(fi => cleanName(fi.name) === cleanName(ing.name));
       if (food) {
-        const amt = parseFloat(ing.amount) || 0;
+        const amt = parseFloat(ing.amount.replace(/,/g, '')) || 0;
         const r = amt / (food.servingSize || 1);
         cal += (food.calories || 0) * r;
         p += (food.protein || 0) * r;
