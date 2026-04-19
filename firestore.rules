@@ -35,7 +35,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     function incoming() {
@@ -55,19 +55,26 @@ service cloud.firestore {
         && (!('email' in data) || (data.email is string && data.email.size() <= 256))
         && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128))
         && (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 150))
+        && (!('height' in data) || (data.height is number && data.height >= 0 && data.height <= 300))
         && (!('gender' in data) || (data.gender in ['male', 'female', 'other']))
         && (!('activityLevel' in data) || (data.activityLevel in ['sedentary', 'light', 'moderate', 'active', 'very_active']))
         && (!('goalBodyFat' in data) || (data.goalBodyFat is number && data.goalBodyFat >= 3 && data.goalBodyFat <= 60))
         && (!('currentWeight' in data) || (data.currentWeight is number && data.currentWeight >= 50 && data.currentWeight <= 1000))
         && (!('currentBodyFat' in data) || (data.currentBodyFat is number && data.currentBodyFat >= 3 && data.currentBodyFat <= 60))
-        && (!('targetDate' in data) || (data.targetDate is string));
+        && (!('targetDate' in data) || (data.targetDate is string))
+        && (!('activeMealPlanId' in data) || (data.activeMealPlanId is string || data.activeMealPlanId == null))
+        && (!('activeWorkoutId' in data) || (data.activeWorkoutId is string || data.activeWorkoutId == null))
+        && (!('photoURL' in data) || (data.photoURL is string || data.photoURL == null))
+        && (!('createdAt' in data) || (data.createdAt is string))
+        && (!('updatedAt' in data) || (data.updatedAt is string));
     }
 
     function isValidVitalLog(data) {
       return (!('date' in data) || (data.date is string && data.date.size() <= 64))
         && (!('weight' in data) || (data.weight is number && data.weight > 0 && data.weight < 1000))
-        && (!('bodyFat' in data) || (data.bodyFat is number && data.bodyFat >= 2 && data.bodyFat <= 70))
-        && (!('muscleMass' in data) || (data.muscleMass is number && data.muscleMass >= 0));
+        && (!('bodyFat' in data) || (data.bodyFat is number && data.bodyFat >= 0 && data.bodyFat <= 100))
+        && (!('muscleMass' in data) || (data.muscleMass is number && data.muscleMass >= 0))
+        && (!('updatedAt' in data) || (data.updatedAt is string));
     }
 
     function isValidFoodBankItem(data) {
@@ -85,14 +92,13 @@ service cloud.firestore {
     function isValidMealPlan(data) {
       return data.keys().hasAll(['weekStartDate', 'days'])
         && data.weekStartDate is string
-        && data.days is list && data.days.size() <= 7;
+        && data.days is list && data.days.size() <= 14;
     }
 
     function isValidWorkoutPlan(data) {
-      return data.keys().hasAll(['day', 'title', 'exercises'])
-        && data.day is string && data.day.size() <= 20
-        && data.title is string && data.title.size() <= 100
-        && data.exercises is list && data.exercises.size() <= 30;
+      return data.keys().hasAll(['weekStartDate', 'days'])
+        && data.weekStartDate is string
+        && data.days is list && data.days.size() <= 14;
     }
 
     function isValidGroceryList(data) {
@@ -112,28 +118,15 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Profile
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin(); // Users can't list profiles
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isVerifiedOwner(userId) && isValidUserProfile(incoming());
-      allow update: if isVerifiedOwner(userId) 
-        && isValidUserProfile(incoming())
-        && (
-          isAdmin() || (
-            incoming().diff(existing()).affectedKeys().hasOnly([
-              'displayName', 'age', 'height', 'gender', 'activityLevel', 
-              'goalBodyFat', 'currentWeight', 'currentBodyFat', 'activeMealPlanId', 'activeWorkoutId', 'targetDate', 'updatedAt'
-            ])
-            && (!('uid' in incoming()) || incoming().uid == existing().uid)
-            && (!('email' in incoming()) || incoming().email == existing().email)
-          )
-        );
+      allow update: if isVerifiedOwner(userId) && isValidUserProfile(incoming());
 
       // Vitals
       match /vitals/{vitalId} {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isVerifiedOwner(userId) && isValidId(vitalId) && isValidVitalLog(incoming());
-        allow update: if isVerifiedOwner(userId) && isValidId(vitalId) && isValidVitalLog(incoming())
-          && (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['weight', 'bodyFat', 'muscleMass', 'date']));
+        allow update: if isVerifiedOwner(userId) && isValidVitalLog(incoming());
         allow delete: if isVerifiedOwner(userId) || isAdmin();
       }
 

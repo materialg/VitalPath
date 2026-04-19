@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search } from 'lucide-react';
+import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
 import { logDailyTarget, calculateTargetDate, calculateDailyTargets } from '../services/aiService';
 
 interface Props {
@@ -115,8 +115,19 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const todayMealPlan = latestMealPlan?.days.find(d => d.day === todayName) || latestMealPlan?.days[0];
   const todayWorkout = latestWorkout?.days.find(d => d.day === todayName) || latestWorkout?.days[0];
 
-  const today = new Date().toLocaleDateString('en-CA');
-  const todayEntry = vitals.find(v => v.date.startsWith(today));
+  const isToday = (dateString: string) => {
+    try {
+      const d = new Date(dateString);
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() &&
+             d.getMonth() === now.getMonth() &&
+             d.getDate() === now.getDate();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const todayEntry = vitals.find(v => isToday(v.date));
   const vitalsLoggedToday = !!todayEntry;
   const bfProgress = profile.goalBodyFat && currentBF ? Math.min(100, Math.round((profile.goalBodyFat / currentBF) * 100)) : 0;
 
@@ -153,6 +164,25 @@ export function Dashboard({ profile, onNavigate }: Props) {
     }
   };
 
+  const handleAllMealsToggle = async () => {
+    if (!latestMealPlan || !todayMealPlan) return;
+    const updatedDays = [...latestMealPlan.days];
+    const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
+    if (dayIndex !== -1) {
+      const meals = [...updatedDays[dayIndex].meals];
+      const areAllCompleted = meals.every(m => m.status === 'completed');
+      const newStatus = areAllCompleted ? 'none' : 'completed';
+      
+      const newMeals = meals.map(m => ({ ...m, status: newStatus }));
+      updatedDays[dayIndex].meals = newMeals;
+      
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  };
+
   const handleWorkoutToggle = async () => {
     if (!latestWorkout || !todayWorkout) return;
     const updatedDays = [...latestWorkout.days];
@@ -164,6 +194,25 @@ export function Dashboard({ profile, onNavigate }: Props) {
         days: updatedDays,
         updatedAt: new Date().toISOString()
       });
+    }
+  };
+
+  const handleVitalsToggle = async () => {
+    if (vitalsLoggedToday) {
+      if (todayEntry) {
+        await deleteDoc(doc(db, 'users', profile.uid, 'vitals', todayEntry.id));
+      }
+    } else {
+      const isoDate = new Date().toISOString();
+      await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
+        date: isoDate,
+        weight: currentWeight,
+        bodyFat: currentBF,
+        createdAt: isoDate,
+        updatedAt: isoDate
+      });
+      // Also updates targets and logs snapshot
+      await logDailyTarget(profile.uid, profile, currentWeight, currentBF, isoDate);
     }
   };
 
@@ -229,25 +278,24 @@ export function Dashboard({ profile, onNavigate }: Props) {
                 status={vitalsLoggedToday ? 'completed' : 'none'}
                 color="blue"
                 onAction={(action) => {
-                  if (action === 'approve') setShowVitalsModal(true);
-                  if (action === 'edit') setShowVitalsModal(true);
+                  if (action === 'approve') handleVitalsToggle();
+                  if (action === 'view') setShowVitalsModal(true);
                 }}
               />
               
-              {todayMealPlan ? todayMealPlan.meals.map((meal, mIdx) => (
+              {todayMealPlan ? (
                 <TodoItem 
-                  key={`meal-${mIdx}`}
                   icon={<Utensils size={18} />}
-                  title={meal.name}
-                  description={`${meal.calories} kcal • ${meal.ingredients.join(', ')}`}
-                  status={meal.status || 'none'}
+                  title="Daily Meals"
+                  description={todayMealPlan.meals.map(m => m.name).join(', ')}
+                  status={todayMealPlan.meals.every(m => m.status === 'completed') ? 'completed' : 'none'}
                   color="orange"
                   onAction={(action) => {
-                    if (action === 'approve') handleMealStatusToggle(mIdx);
-                    if (action === 'edit') setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
+                    if (action === 'approve') handleAllMealsToggle();
+                    if (action === 'view') setShowMealModal(true);
                   }}
                 />
-              )) : (
+              ) : (
                 <TodoItem 
                   icon={<Utensils size={18} />}
                   title="Today's Meal Plan"
@@ -266,7 +314,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
                 color="purple"
                 onAction={(action) => {
                   if (action === 'approve') handleWorkoutToggle();
-                  if (action === 'edit') setShowWorkoutModal(true);
+                  if (action === 'view') setShowWorkoutModal(true);
                 }}
               />
             </div>
@@ -301,6 +349,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       <AnimatePresence>
         {showVitalsModal && (
           <VitalsModal 
+            key="vitals-modal"
             profile={profile} 
             currentWeight={todayEntry?.weight || currentWeight}
             currentBodyFat={todayEntry?.bodyFat || currentBF}
@@ -310,6 +359,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
         )}
         {showMealModal && todayMealPlan && (
           <MealModal 
+             key="meal-modal"
              meals={todayMealPlan.meals} 
              dayName={todayMealPlan.day}
              onClose={() => setShowMealModal(false)} 
@@ -338,7 +388,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
                  };
                  updatedDays[dayIndex].meals = meals;
                  await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
-                   days: updatedDays
+                   days: updatedDays,
+                   updatedAt: new Date().toISOString()
                  });
                }
              }}
@@ -346,6 +397,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
         )}
         {showWorkoutModal && latestWorkout && (
           <WorkoutModal 
+            key="workout-modal"
             workout={latestWorkout} 
             onClose={() => setShowWorkoutModal(false)} 
             onConfirm={() => handleWorkoutToggle()}
@@ -353,6 +405,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
         )}
         {editingMeal && (
           <EditMealModal 
+             key="edit-meal-modal"
              meal={editingMeal.meal}
              foodBank={foodBankItems}
              onClose={() => setEditingMeal(null)}
@@ -364,7 +417,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
   );
 }
 
-function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClose }: { profile: UserProfile, currentWeight: number, currentBodyFat: number, existingId?: string, onClose: () => void }) {
+function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClose }: { profile: UserProfile, currentWeight: number, currentBodyFat: number, existingId?: string, onClose: () => void, key?: React.Key }) {
   const [weight, setWeight] = useState(currentWeight);
   const [bodyFat, setBodyFat] = useState(currentBodyFat);
   const [date, setDate] = useState(new Date().toLocaleDateString('en-CA'));
@@ -374,9 +427,11 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Create a date object that represents the selected day at current local time
+      // to avoid jumping to the next/previous day when converted to ISO
       const [year, month, day] = date.split('-').map(Number);
-      const selectedDate = new Date();
-      selectedDate.setFullYear(year, month - 1, day);
+      const now = new Date();
+      const selectedDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
       
       const isoDate = selectedDate.toISOString();
 
@@ -385,12 +440,15 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
           date: isoDate,
           weight,
           bodyFat,
+          updatedAt: new Date().toISOString()
         });
       } else {
         await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
           date: isoDate,
           weight,
           bodyFat,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
       }
 
@@ -491,7 +549,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
   );
 }
 
-function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void }) {
+function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, key?: React.Key }) {
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
   
   return (
@@ -539,23 +597,19 @@ function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals
                     <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">Logged</span>
                   )}
                 </div>
-                <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories} kcal</span>
+                <div className="flex items-center gap-4">
+                  <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories} kcal</span>
+                </div>
               </div>
               
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                <div>
-                  <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Ingredients</h5>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth no-scrollbar">
-                    {meal.ingredients.map((ing, idx) => (
-                      <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5 whitespace-nowrap">
-                        {ing}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Instructions</h5>
-                  <p className="text-xs text-[#141414]/70 line-clamp-4 md:line-clamp-3">{meal.recipe}</p>
+              <div className="space-y-2">
+                <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Ingredients</h5>
+                <div className="flex flex-wrap gap-2">
+                  {meal.ingredients.map((ing, idx) => (
+                    <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5">
+                      {ing}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -579,7 +633,7 @@ function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals
   );
 }
 
-function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, onClose: () => void, onConfirm?: () => void }) {
+function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, onClose: () => void, onConfirm?: () => void, key?: React.Key }) {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const todayName = dayNames[new Date().getDay()];
   const todayWorkout = workout.days.find(d => d.day === todayName) || workout.days[0];
@@ -638,7 +692,10 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
             </div>
           ) : (
             todayWorkout.exercises.map((ex, idx) => (
-        <div className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all">
+              <div 
+                key={`ex-${idx}-${ex.name}`}
+                className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all"
+              >
           <div className="flex items-center gap-4 flex-1">
             <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center text-white font-bold shrink-0">
               {idx + 1}
@@ -680,10 +737,11 @@ interface TodoItemProps {
   description: string;
   status: 'completed' | 'skipped' | 'none' | 'pending';
   color: string;
-  onAction: (action: 'approve' | 'deny' | 'edit') => void;
+  onAction: (action: 'approve' | 'deny' | 'view') => void;
+  showViewAction?: boolean;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, color, onAction }) => {
+const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, color, onAction, showViewAction = true }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
     orange: 'bg-orange-50 text-orange-600',
@@ -694,8 +752,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, c
 
   return (
     <div 
-      onClick={() => onAction('approve')}
-      className={`flex items-center justify-between p-4 rounded-2xl border transition-all group cursor-pointer ${
+      className={`flex items-center justify-between p-4 rounded-2xl border transition-all group ${
         isCompleted ? 'bg-green-50/50 border-green-100' : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
       }`}
     >
@@ -721,28 +778,29 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, c
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <ActionButton 
-          icon={isCompleted ? <RotateCcw size={16} /> : <Check size={16} />} 
-          color={isCompleted ? 'hover:bg-green-100 text-green-600' : 'hover:bg-green-50 hover:text-green-600'} 
-          isActive={isCompleted}
+          icon={<Check size={16} />} 
+          color={isCompleted ? "bg-green-500 text-white shadow-lg shadow-green-100" : "hover:bg-green-50 text-green-600"} 
           onClick={(e) => {
             e.stopPropagation();
             onAction('approve');
           }} 
         />
-        <ActionButton 
-          icon={<Pencil size={16} />} 
-          color="hover:bg-blue-50 hover:text-blue-600" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onAction('edit');
-          }} 
-        />
+        {showViewAction && (
+          <ActionButton 
+            icon={<Eye size={16} />} 
+            color="hover:bg-[#141414]/5 text-[#141414]/60" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction('view');
+            }} 
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void }) {
+function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void, key?: React.Key }) {
   const [currentMeal, setCurrentMeal] = useState(meal);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFoodBank, setShowFoodBank] = useState(false);

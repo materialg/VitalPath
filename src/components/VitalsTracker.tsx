@@ -42,11 +42,23 @@ export function VitalsTracker({ profile }: Props) {
     return () => unsubscribe();
   }, [profile.uid]);
 
+  const isToday = (dateString: string, targetDateStr: string) => {
+    try {
+      const d = new Date(dateString);
+      const [year, month, day] = targetDateStr.split('-').map(Number);
+      return d.getFullYear() === year &&
+             d.getMonth() === month - 1 &&
+             d.getDate() === day;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const handleAddLog = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Check if an entry for this date already exists in the current list
-    const existingEntry = vitals.find(v => v.date.startsWith(date));
+    const existingEntry = vitals.find(v => isToday(v.date, date));
     if (existingEntry) {
       setEditingLog(existingEntry);
       return;
@@ -55,14 +67,10 @@ export function VitalsTracker({ profile }: Props) {
     setIsSubmitting(true);
     try {
       if (!date) throw new Error('Date is required');
-      // Parse the date string as local time to avoid timezone shifts
+      // Create a date object that represents the selected day at current local time
       const [year, month, day] = date.split('-').map(Number);
-      if (isNaN(year) || isNaN(month) || isNaN(day)) throw new Error('Invalid date selected');
-      
-      const selectedDate = new Date();
-      selectedDate.setFullYear(year, month - 1, day);
-      
-      if (isNaN(selectedDate.getTime())) throw new Error('Invalid time value');
+      const now = new Date();
+      const selectedDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
       
       const isoDate = selectedDate.toISOString();
 
@@ -70,6 +78,8 @@ export function VitalsTracker({ profile }: Props) {
         date: isoDate,
         weight,
         bodyFat,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
 
       // Recalculate target date based on new body fat
