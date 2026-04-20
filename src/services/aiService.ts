@@ -203,7 +203,7 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
 
 async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[], foodBankNames: string[]) {
   const text = await callAI(
-    "gemini-3-flash-preview",
+    "gemini-2.5-flash",
     prompt,
     {
       systemInstruction: "You are a strict meal planning engine. Return exactly 3 meals in this order with these exact names: \"Breakfast\", \"Lunch\", \"Dinner\". Do NOT add adjectives or dish names to the meal name field. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON. IMPORTANT: Use whole numbers (integers) ONLY for items with unit-based serving sizes.",
@@ -424,7 +424,7 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
     Return JSON with "days" array.`;
 
   const text = await callAI(
-    "gemini-3.1-pro-preview",
+    "gemini-2.5-pro",
     prompt,
     {
       systemInstruction: "You are a strength coach. Return JSON. Days: Monday-Sunday. Title: Push, Pull, Legs, or Rest.",
