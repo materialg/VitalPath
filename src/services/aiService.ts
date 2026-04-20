@@ -273,6 +273,7 @@ export async function generateWorkoutPlan(profile: any, weight: number, bodyFat:
     prompt,
     {
       systemInstruction: "You are a strength coach. Return JSON. Days: Monday-Sunday. Title: Push, Pull, Legs, or Rest.",
+      thinkingBudget: 1024,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
