@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { GoogleGenAI, Type } from "@google/genai";
 import { stripUndefined } from './mealSanitizer';
 import { composeDay } from './mealComposer';
+import { aiGenerate } from './aiMealGenerator';
 
 export enum OperationType {
   CREATE = 'create',
@@ -77,7 +78,8 @@ async function callAI(model: string, prompt: string, config: any) {
       prompt,
       systemInstruction: config.systemInstruction,
       responseMimeType: config.responseMimeType,
-      responseSchema: config.responseSchema
+      responseSchema: config.responseSchema,
+      thinkingBudget: config.thinkingBudget,
     })
   });
 
@@ -89,6 +91,8 @@ async function callAI(model: string, prompt: string, config: any) {
   const data = await response.json();
   return data.text;
 }
+
+export { callAI };
 
 export function calculateDailyTargets(profile: any, weight: number, bodyFat: number) {
   if (!profile || !weight || !profile.height || !profile.age) {
@@ -204,7 +208,14 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
 export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
   const targets = calculateDailyTargets(profile, weight, bodyFat);
   const daysLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const days = daysLabels.map(dayName => composeDay(dayName, targets, foodBankItems));
+
+  let days;
+  try {
+    days = await aiGenerate(targets, foodBankItems, daysLabels);
+  } catch (err) {
+    console.warn('[generateMealPlan] AI path failed, falling back to deterministic composer:', err);
+    days = daysLabels.map(dayName => composeDay(dayName, targets, foodBankItems));
+  }
 
   return {
     days,
@@ -236,7 +247,15 @@ export async function regenerateDayPlan(profile: any, weight: number, bodyFat: n
   if (!hasPending) return currentDayMeals;
 
   const targets = calculateDailyTargets(profile, weight, bodyFat);
-  const dayResult = composeDay("Regenerated", targets, foodBankItems);
+
+  let dayResult;
+  try {
+    const [aiDay] = await aiGenerate(targets, foodBankItems, ['Today']);
+    dayResult = aiDay;
+  } catch (err) {
+    console.warn('[regenerateDayPlan] AI path failed, falling back to deterministic composer:', err);
+    dayResult = composeDay('Today', targets, foodBankItems);
+  }
 
   return currentDayMeals.map((original, idx) => {
     if (original?.status === 'completed') return original;

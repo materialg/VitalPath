@@ -86,6 +86,7 @@ service cloud.firestore {
         && (!('servingSize' in data) || (data.servingSize is number && data.servingSize >= 0))
         && (!('servingUnit' in data) || (data.servingUnit in ['g', 'oz', 'unit', 'ml']))
         && (!('mealTypes' in data) || (data.mealTypes is list && data.mealTypes.size() <= 3))
+        && (!('category' in data) || (data.category in ['protein', 'carb', 'veg', 'fat', 'condiment']))
         && (!('updatedAt' in data) || (data.updatedAt is string));
     }
 

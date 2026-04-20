@@ -46,16 +46,18 @@ async function startServer() {
 
   // AI Proxy Endpoint
   app.post('/api/ai/generate', async (req, res) => {
-    const { model, prompt, systemInstruction, responseMimeType, responseSchema } = req.body;
+    const { model, prompt, systemInstruction, responseMimeType, responseSchema, thinkingBudget } = req.body;
     const apiKey = getApiKey();
 
     if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY') {
       return res.status(500).json({ error: "Gemini API key is not configured on the server. Please add GEMINI_API_KEY to secrets." });
     }
 
+    const budget = typeof thinkingBudget === 'number' ? thinkingBudget : 0;
+
     try {
       const genAI = new GoogleGenAI({ apiKey });
-      
+
       const response = await genAI.models.generateContent({
         model: model || "gemini-2.5-flash",
         contents: prompt,
@@ -63,7 +65,7 @@ async function startServer() {
           systemInstruction: systemInstruction,
           responseMimeType: responseMimeType || "text/plain",
           responseSchema: responseSchema,
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: { thinkingBudget: budget },
         }
       });
 

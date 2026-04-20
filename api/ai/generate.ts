@@ -18,7 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Gemini API key is not configured on the server.' });
   }
 
-  const { model, prompt, systemInstruction, responseMimeType, responseSchema } = req.body;
+  const { model, prompt, systemInstruction, responseMimeType, responseSchema, thinkingBudget } = req.body;
+  const budget = typeof thinkingBudget === 'number' ? thinkingBudget : 0;
 
   try {
     const genAI = new GoogleGenAI({ apiKey });
@@ -29,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         systemInstruction,
         responseMimeType: responseMimeType || 'text/plain',
         responseSchema,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingBudget: budget },
       },
     });
     res.json({ text: response.text });
