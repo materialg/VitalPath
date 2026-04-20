@@ -549,6 +549,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
 function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, targetCalories?: number, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, key?: React.Key }) {
   const safe = (meals || []).filter(Boolean);
   const totalCalories = safe.reduce((sum, m) => sum + (m?.calories || 0), 0);
+  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner"];
   
   return (
     <div 
@@ -590,9 +591,9 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                       meal.status === 'completed' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white text-orange-600 shadow-sm'
                     }`}
                   >
-                    {meal.status === 'completed' ? <Check size={16} /> : (meal.name?.[0] || '?')}
+                    {meal.status === 'completed' ? <Check size={16} /> : ((MEAL_SLOT_NAMES[mIdx] || meal.name || '?')[0])}
                   </button>
-                  <h4 className={`text-lg font-bold transition-all ${meal.status === 'completed' ? 'text-green-700' : 'text-[#141414]'}`}>{meal.name}</h4>
+                  <h4 className={`text-lg font-bold transition-all ${meal.status === 'completed' ? 'text-green-700' : 'text-[#141414]'}`}>{MEAL_SLOT_NAMES[mIdx] || meal.name}</h4>
                   {meal.status === 'completed' && (
                     <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md">Logged</span>
                   )}
