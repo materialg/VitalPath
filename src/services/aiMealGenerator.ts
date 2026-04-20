@@ -20,10 +20,20 @@ Hard rules (violating any voids the plan):
 2. Carb support: every meal contains at least one pantry item with category="carb" sized to balance calories.
 3. No ingredient appears twice in the same meal. Meals have 2-5 ingredients.
 4. mealTypes tags are strict. An item tagged only ["B"] may appear only in Breakfast. Only ["L"] only in Lunch. Only ["D"] only in Dinner. Untagged items are allowed in any slot.
-5. Portion sanity: no single ingredient exceeds 400g (yogurt may go to 500g). No ingredient below 5g. Condiment-category items stay small (5-40g).
-6. Variety across days: no protein anchor appears in more than 5 meals across the 7 days. No two days share the exact same meal composition. Rotate proteins and carbs day to day.
-7. Coherence: do not mix multiple category="fat" items in one meal (e.g., butter + cream cheese + olive oil together = no). Use ingredients that belong together: breakfast can pair bagel + cream cheese + eggs; lunch/dinner can pair a protein + carb + vegetable or condiment.
-8. Targets per day: calories within ±50 kcal of target, protein within ±15 g of target. Carbs and fats may deviate up to ±25%.
+5. Portion sanity (hard caps):
+   - Meat/fish (servingUnit "g"): 100-250 g
+   - Yogurt-like proteins: 150-400 g
+   - Bread, bagel, rice (servingUnit "g"): 50-150 g
+   - Rice/bread by unit (servingUnit "unit"): 1 unit per meal, NEVER 2 units of the same carb in one meal
+   - Oils, butter, other category="fat" items: 5-15 g
+   - Nuts, seeds, flax, hemp: 10-25 g
+   - Cheese: 15-40 g
+   - Condiments: 5-30 g
+6. Fat discipline: a meal may contain AT MOST ONE ingredient with category="fat". Do not stack fat-dominant items (no butter + oil together; no flax + hemp together; no cheese + avocado together).
+7. Per-meal calorie distribution: Breakfast takes 25-35% of daily kcal, Lunch 30-40%, Dinner 30-40%. No single meal exceeds 45% of the day's calories. No meal drops below 400 kcal unless the daily target is under 1800.
+8. Variety across days: no protein anchor appears in more than 5 meals across the 7 days. No two days share the exact same meal composition. Rotate proteins and carbs day to day.
+9. Coherence: use ingredients that belong together. Good pairings: bagel + cream cheese + eggs (breakfast); yogurt + honey + flax (breakfast); chicken + rice + olive oil (lunch/dinner); beef + potato + vegetable (dinner).
+10. Daily targets: calories within ±60 kcal of target, protein within ±15 g. Carbs and fats within ±25% of target.
 
 Output: return ONLY JSON matching the schema. Reference items by integer pantryId (the provided index, 0..N-1). amount is numeric in the item's servingUnit (whole integers for "unit" items, decimals allowed otherwise).`;
 
@@ -65,6 +75,9 @@ function buildPantry(foodBank: FoodBankItem[]): { entries: PantryEntry[]; byId: 
 }
 
 function buildUserPrompt(targets: DayTargets, pantry: PantryEntry[], days: string[], retryNote?: string): string {
+  const bk = Math.round(targets.dailyCalories * 0.30);
+  const ln = Math.round(targets.dailyCalories * 0.35);
+  const dn = targets.dailyCalories - bk - ln;
   return [
     `Daily targets per day:`,
     `  Calories: ${targets.dailyCalories} kcal`,
@@ -72,6 +85,11 @@ function buildUserPrompt(targets: DayTargets, pantry: PantryEntry[], days: strin
     `  Carbs:    ${targets.macros.carbs} g`,
     `  Fats:     ${targets.macros.fats} g`,
     `  Fiber:    ${targets.macros.fiber} g`,
+    ``,
+    `Per-meal calorie budget (stay within ±100 kcal of each):`,
+    `  Breakfast: ~${bk} kcal`,
+    `  Lunch:     ~${ln} kcal`,
+    `  Dinner:    ~${dn} kcal`,
     ``,
     `Pantry (pantryId -> item). Use these and only these:`,
     JSON.stringify(pantry, null, 2),
@@ -205,7 +223,22 @@ function parseResponse(
   });
 }
 
-function dayGapIsBad(day: DayPlan, targets: DayTargets): boolean {
+function countFatItems(meal: Meal, byName: Map<string, FoodBankItem>): number {
+  let n = 0;
+  for (const ing of meal.ingredientsWithAmounts ?? []) {
+    const food = byName.get(ing.name);
+    if (food && categorizeFood(food) === 'fat') n++;
+  }
+  return n;
+}
+
+function diagnoseDay(
+  day: DayPlan,
+  targets: DayTargets,
+  byName: Map<string, FoodBankItem>,
+): string | null {
+  if (day.meals.length === 0) return null;
+
   const totals = day.meals.reduce(
     (acc, m) => ({
       calories: acc.calories + (m.calories || 0),
@@ -213,30 +246,51 @@ function dayGapIsBad(day: DayPlan, targets: DayTargets): boolean {
     }),
     { calories: 0, protein: 0 },
   );
-  const calorieGap = Math.abs(totals.calories - targets.dailyCalories) / Math.max(1, targets.dailyCalories);
-  const proteinGap = Math.abs(totals.protein - targets.macros.protein) / Math.max(1, targets.macros.protein);
-  return calorieGap > 0.10 || proteinGap > 0.15;
+  const calorieGap = (totals.calories - targets.dailyCalories) / Math.max(1, targets.dailyCalories);
+  const proteinGap = (totals.protein - targets.macros.protein) / Math.max(1, targets.macros.protein);
+
+  if (Math.abs(calorieGap) > 0.10) {
+    return `${day.day} totalled ${totals.calories} kcal vs target ${targets.dailyCalories} (${(calorieGap * 100).toFixed(0)}%); reshape amounts.`;
+  }
+  if (Math.abs(proteinGap) > 0.15) {
+    return `${day.day} totalled ${totals.protein.toFixed(0)}g protein vs target ${targets.macros.protein}g (${(proteinGap * 100).toFixed(0)}%); adjust protein anchors.`;
+  }
+
+  if (day.meals.length >= 2) {
+    const maxMealCal = Math.max(...day.meals.map(m => m.calories || 0));
+    if (maxMealCal / Math.max(1, targets.dailyCalories) > 0.45) {
+      return `${day.day} has a single meal at ${maxMealCal} kcal (>${Math.round(0.45 * targets.dailyCalories)} = 45% of day); redistribute to match the per-meal budget.`;
+    }
+  }
+
+  for (const meal of day.meals) {
+    const fatCount = countFatItems(meal, byName);
+    if (fatCount > 1) {
+      return `${day.day} ${meal.name} stacks ${fatCount} category="fat" items; pick only one.`;
+    }
+  }
+
+  return null;
 }
 
-function validate(days: DayPlan[], targets: DayTargets): { ok: boolean; note?: string } {
+function validate(
+  days: DayPlan[],
+  targets: DayTargets,
+  byName: Map<string, FoodBankItem>,
+): { ok: boolean; note?: string } {
   if (days.length === 0) return { ok: false, note: 'no days returned' };
   const allEmpty = days.every(d => d.meals.length === 0);
   if (allEmpty) return { ok: false, note: 'every day was empty' };
 
-  const badDays = days.filter(d => d.meals.length > 0 && dayGapIsBad(d, targets));
-  if (badDays.length >= Math.max(3, Math.ceil(days.length / 2))) {
-    const sample = badDays[0];
-    const totals = sample.meals.reduce(
-      (a, m) => ({
-        calories: a.calories + (m.calories || 0),
-        protein: a.protein + (m.protein || 0),
-      }),
-      { calories: 0, protein: 0 },
-    );
-    return {
-      ok: false,
-      note: `${sample.day} came in at ${totals.calories} kcal (target ${targets.dailyCalories}) and ${totals.protein}g protein (target ${targets.macros.protein}g); tighten amounts on this day and the other ${badDays.length - 1} off days.`,
-    };
+  const issues: string[] = [];
+  for (const d of days) {
+    const issue = diagnoseDay(d, targets, byName);
+    if (issue) issues.push(issue);
+  }
+
+  const threshold = Math.max(1, Math.ceil(days.length * 0.3));
+  if (issues.length >= threshold) {
+    return { ok: false, note: issues.slice(0, 3).join(' ') };
   }
   return { ok: true };
 }
@@ -260,17 +314,20 @@ export async function aiGenerate(
     throw new Error('All your Food Bank items are hidden or the Food Bank is empty.');
   }
 
+  const byName = new Map<string, FoodBankItem>();
+  for (const food of byId.values()) byName.set(food.name, food);
+
   const userPrompt = buildUserPrompt(targets, entries, days);
   const firstRaw = await callMealAI(SYSTEM_INSTRUCTION, userPrompt);
   let parsed = parseResponse(firstRaw, days, byId);
-  const firstCheck = validate(parsed, targets);
+  const firstCheck = validate(parsed, targets, byName);
   if (firstCheck.ok) return parsed;
 
   console.warn('[aiGenerate] first pass invalid, retrying once:', firstCheck.note);
   const retryPrompt = buildUserPrompt(targets, entries, days, firstCheck.note);
   const retryRaw = await callMealAI(SYSTEM_INSTRUCTION, retryPrompt);
   parsed = parseResponse(retryRaw, days, byId);
-  const retryCheck = validate(parsed, targets);
+  const retryCheck = validate(parsed, targets, byName);
   if (retryCheck.ok) return parsed;
 
   throw new Error(`AI plan failed validation after retry: ${retryCheck.note}`);
