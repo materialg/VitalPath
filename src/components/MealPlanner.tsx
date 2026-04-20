@@ -714,8 +714,14 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
     const syncedIngredients = currentMeal.ingredientsWithAmounts.map((ing: any) => {
       const food = findFoodItem(ing.name);
       if (food) {
-        const val = parseFloat(ing.amount) || 0;
+        let val = parseFloat(ing.amount) || 0;
         const fbUnit = (food.servingUnit || 'unit').toLowerCase();
+        
+        // Enforce whole numbers for units
+        if (fbUnit === 'unit') {
+          val = Math.round(val);
+        }
+
         // Force the unit from the food bank over whatever is currently in the meal amount string
         return {
           ...ing,
@@ -742,8 +748,13 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
     const newIngredients = [...currentMeal.ingredientsWithAmounts];
     const ing = newIngredients[idx];
     const food = findFoodItem(ing.name);
-    const val = parseFloat(newAmount) || 0;
+    let val = parseFloat(newAmount) || 0;
     const unit = (food?.servingUnit || 'unit').toLowerCase();
+    
+    // Enforce whole numbers for units
+    if (unit === 'unit') {
+      val = Math.round(val);
+    }
     
     newIngredients[idx].amount = `${val} ${unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit}`;
     newIngredients[idx].name = food?.name || ing.name; // Sync casing

@@ -221,7 +221,7 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
     "gemini-3-flash-preview",
     prompt,
     {
-      systemInstruction: "You are a strict meal planning engine. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON.",
+      systemInstruction: "You are a strict meal planning engine. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON. IMPORTANT: Use whole numbers (integers) ONLY for items with unit-based serving sizes.",
       thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
       responseMimeType: "application/json",
       responseSchema: {
@@ -275,8 +275,14 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
       const food = cleanFoodBank.find(f => cleanName(f.name) === cleanName(i.name));
       if (food) {
         // ALWAYS use the food bank's unit, regardless of what the AI returned
-        const amountNum = parseFloat(i.amount) || 0;
         const fbUnit = food.servingUnit || 'unit';
+        let amountNum = parseFloat(i.amount) || 0;
+        
+        // Final safety check: if unit-based, MUST be whole number
+        if (fbUnit === 'unit') {
+          amountNum = Math.round(amountNum);
+        }
+
         // Add a space for readability, and handle plurals for unit
         let formattedUnit = fbUnit;
         if (fbUnit === 'unit') {
@@ -535,9 +541,9 @@ export async function regenerateDayPlan(
       const currentAmount = parseFloat(ing.amount.toString().replace(/,/g, '')) || food.servingSize;
       let newAmount = currentAmount * scalingFactor;
 
-      // Safety bounds - removed the 10g floor for precision
+      // Safety bounds
       if (food.servingUnit === 'unit') {
-        newAmount = Math.max(1, Math.round(newAmount * 10) / 10);
+        newAmount = Math.max(1, Math.round(newAmount));
       } else {
         newAmount = Math.max(1, Math.round(newAmount));
       }
