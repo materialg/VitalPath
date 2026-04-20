@@ -56,32 +56,42 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Check if AI is configured
 export const checkIsAIConfigured = async (): Promise<boolean> => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const isConfigured = !!(apiKey && apiKey.length > 5 && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY');
-  console.log("[AI Service] Frontend Config Check:", { isConfigured, hasKey: !!apiKey });
-  return isConfigured;
+  try {
+    const res = await fetch("/api/ai/config");
+    if (!res.ok) {
+      console.warn("[AI Service] Config check failed status:", res.status);
+      return false;
+    }
+    const data = await res.json();
+    console.log("[AI Service] Server config status:", data);
+    return data.isConfigured;
+  } catch (e) {
+    console.error("[AI Service] Config check failed FETCH:", e);
+    return false;
+  }
 };
 
-// Internal helper to call Gemini directly from frontend
+// Internal helper to call Gemini via server proxy
 async function callAI(model: string, prompt: string, config: any) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY') {
-    throw new Error("Gemini API key is not configured in environment.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-  
-  const response = await ai.models.generateContent({
-    model,
-    contents: prompt,
-    config: {
+  const response = await fetch("/api/ai/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      prompt,
       systemInstruction: config.systemInstruction,
       responseMimeType: config.responseMimeType,
-      responseSchema: config.responseSchema,
-    }
+      responseSchema: config.responseSchema
+    })
   });
 
-  return response.text;
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || `Server AI error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.text;
 }
 
 export function calculateDailyTargets(profile: any, weight: number, bodyFat: number) {
