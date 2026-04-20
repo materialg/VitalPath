@@ -16,11 +16,31 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Diagnostic Route
+  app.get("/api/ai/status", (req, res) => {
+    const keys = Object.keys(process.env).filter(k => k.includes("API") || k.includes("KEY") || k.includes("GEMINI") || k.includes("GOOGLE"));
+    res.json({
+      status: "ok",
+      node_env: process.env.NODE_ENV,
+      env_keys: keys,
+      gemini_key_exists: !!process.env.GEMINI_API_KEY,
+      gemini_key_length: process.env.GEMINI_API_KEY?.length || 0,
+      gemini_key_prefix: process.env.GEMINI_API_KEY?.substring(0, 4) || "none"
+    });
+  });
+
   // AI Proxy Routes
   app.get("/api/ai/config", (req, res) => {
     const apiKey = process.env.GEMINI_API_KEY;
-    const isConfigured = !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
-    res.json({ isConfigured });
+    // Leaner check
+    const isConfigured = !!(apiKey && apiKey.length > 5 && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY');
+    
+    console.log(`[Config Check] Key present: ${!!apiKey}, Length: ${apiKey?.length}, Configured: ${isConfigured}`);
+    
+    res.json({ 
+      isConfigured,
+      hasKey: !!apiKey
+    });
   });
 
   app.post("/api/ai/generate-meal-plan", async (req, res) => {
@@ -61,7 +81,9 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`[${new Date().toISOString()}] [Server] VitalPath Backend running on http://localhost:${PORT}`);
+    console.log(`[Server] NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`[Server] GEMINI_API_KEY Configured: ${!!process.env.GEMINI_API_KEY}`);
   });
 }
 

@@ -58,12 +58,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 export const checkIsAIConfigured = async (): Promise<boolean> => {
   try {
     const res = await fetch("/api/ai/config");
+    console.log("[AI Service] Config response status:", res.status);
+    
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(`[AI Service] Config check returned status ${res.status}: ${text.substring(0, 100)}`);
+      return false;
+    }
+    
     const data = await res.json();
+    console.log("[AI Service] Config data:", data);
     return data.isConfigured;
   } catch (e) {
-    // Fallback for dev or other issues
-    const apiKey = process.env.GEMINI_API_KEY;
-    return !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
+    console.error("[AI Service] Config check failed FETCH:", e);
+    return false;
   }
 };
 
