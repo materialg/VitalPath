@@ -1,8 +1,8 @@
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { GoogleGenAI, Type } from "@google/genai";
-import { sanitizeMeal, stripUndefined, SLOT_TAGS } from './mealSanitizer';
-import type { Meal } from '../types';
+import { stripUndefined } from './mealSanitizer';
+import { composeDay } from './mealComposer';
 
 export enum OperationType {
   CREATE = 'create',
@@ -201,141 +201,15 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
   }
 }
 
-async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[], foodBankNames: string[]) {
-  const text = await callAI(
-    "gemini-2.5-flash",
-    prompt,
-    {
-      systemInstruction: "You are a strict meal planning engine. Return exactly 3 meals in this order with these exact names: \"Breakfast\", \"Lunch\", \"Dinner\". Do NOT add adjectives or dish names to the meal name field. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON. IMPORTANT: Use whole numbers (integers) ONLY for items with unit-based serving sizes.",
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        required: ["meals"],
-        properties: {
-          meals: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              required: ["name", "calories", "protein", "carbs", "fats", "fiber", "ingredientsWithAmounts"],
-              properties: {
-                name: { type: Type.STRING },
-                calories: { type: Type.NUMBER },
-                protein: { type: Type.NUMBER },
-                carbs: { type: Type.NUMBER },
-                fats: { type: Type.NUMBER },
-                fiber: { type: Type.NUMBER },
-                ingredientsWithAmounts: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    required: ["name", "amount"],
-                    properties: {
-                      name: { type: Type.STRING },
-                      amount: { type: Type.STRING }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  );
-
-  if (!text) throw new Error(`Empty response for ${dayName}`);
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : text;
-  const data = JSON.parse(jsonStr);
-
-  const rawMeals = Array.isArray(data?.meals) ? data.meals : [];
-  const MEAL_SLOTS = ["Breakfast", "Lunch", "Dinner"];
-  const meals: Meal[] = [];
-  for (let idx = 0; idx < MEAL_SLOTS.length; idx++) {
-    const raw = rawMeals[idx];
-    if (!raw) continue;
-    const sanitized =
-      sanitizeMeal(raw, cleanFoodBank as any, SLOT_TAGS[idx]) ||
-      sanitizeMeal(raw, cleanFoodBank as any);
-    if (sanitized) meals.push({ ...sanitized, name: MEAL_SLOTS[idx] });
-  }
-
-  if (meals.length === 0) {
-    throw new Error(`No valid meals could be built for ${dayName} from your Food Bank.`);
-  }
-
-  return { day: dayName, meals };
-}
-
-function prepareFoodBank(foodBankItems: any[]) {
-  const availableItems = foodBankItems.filter(i => !i.hidden);
-  if (availableItems.length === 0) {
-    throw new Error("All your Food Bank items are hidden or the Food Bank is empty.");
-  }
-  const cleanFoodBank = availableItems.map(i => ({
-    name: i.name.trim(),
-    servingSize: i.servingSize,
-    servingUnit: i.servingUnit,
-    calories: i.calories,
-    protein: i.protein,
-    carbs: i.carbs,
-    fats: i.fats,
-    fiber: i.fiber,
-    mealTypes: i.mealTypes || []
-  }));
-  const foodBankNames = Array.from(new Set(cleanFoodBank.map(i => i.name)));
-  return { cleanFoodBank, foodBankNames };
-}
-
-function buildSlotInventoryContext(cleanFoodBank: ReturnType<typeof prepareFoodBank>['cleanFoodBank']) {
-  const fmtItem = (i: typeof cleanFoodBank[number]) => {
-    const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY)' : '';
-    return `- ${i.name}: ${i.calories} cal, ${i.protein}g P per ${i.servingSize}${i.servingUnit}${constraint}`;
-  };
-  const isUntagged = (i: typeof cleanFoodBank[number]) => !i.mealTypes || i.mealTypes.length === 0;
-  const untagged = cleanFoodBank.filter(isUntagged);
-  const forSlot = (tag: 'B' | 'L' | 'D') =>
-    cleanFoodBank.filter(i => (i.mealTypes || []).includes(tag)).concat(untagged);
-  const slotList = (label: string, items: typeof cleanFoodBank) =>
-    items.length > 0
-      ? `${label} INVENTORY (use ONLY these for ${label.toLowerCase()}):\n${items.map(fmtItem).join('\n')}`
-      : `${label} INVENTORY: (empty — skip this meal)`;
-
-  return `
-${slotList('BREAKFAST', forSlot('B'))}
-
-${slotList('LUNCH', forSlot('L'))}
-
-${slotList('DINNER', forSlot('D'))}
-
-CRITICAL:
-1. Meal 1 uses ONLY items from BREAKFAST INVENTORY.
-2. Meal 2 uses ONLY items from LUNCH INVENTORY.
-3. Meal 3 uses ONLY items from DINNER INVENTORY.
-4. Divide nutrients evenly across 3 meals. Hit targets +/- 20 kcal.
-5. RETURN ONLY JSON.`;
-}
-
 export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
   const targets = calculateDailyTargets(profile, weight, bodyFat);
-  const { cleanFoodBank, foodBankNames } = prepareFoodBank(foodBankItems);
-  const foodBankContext = buildSlotInventoryContext(cleanFoodBank);
-
   const daysLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const dayPromises = daysLabels.map(dayName => {
-    const prompt = `Generate a 1-day meal plan for ${dayName}:
-      Target Calories: ${targets.dailyCalories} kcal
-      Macros: P ${targets.macros.protein}g, C ${targets.macros.carbs}g, F ${targets.macros.fats}g
-      ${foodBankContext}`;
-    return generateDay(dayName, prompt, cleanFoodBank, foodBankNames);
-  });
+  const days = daysLabels.map(dayName => composeDay(dayName, targets, foodBankItems));
 
-  const generatedDays = await Promise.all(dayPromises);
   return {
-    days: generatedDays,
+    days,
     dailyCalories: targets.dailyCalories,
-    macros: targets.macros
+    macros: targets.macros,
   };
 }
 
@@ -362,15 +236,7 @@ export async function regenerateDayPlan(profile: any, weight: number, bodyFat: n
   if (!hasPending) return currentDayMeals;
 
   const targets = calculateDailyTargets(profile, weight, bodyFat);
-  const { cleanFoodBank, foodBankNames } = prepareFoodBank(foodBankItems);
-  const foodBankContext = buildSlotInventoryContext(cleanFoodBank);
-
-  const prompt = `Generate a fresh 1-day meal plan with new recipe ideas:
-      Target Calories: ${targets.dailyCalories} kcal
-      Macros: P ${targets.macros.protein}g, C ${targets.macros.carbs}g, F ${targets.macros.fats}g
-      ${foodBankContext}`;
-
-  const dayResult = await generateDay("Regenerated", prompt, cleanFoodBank, foodBankNames);
+  const dayResult = composeDay("Regenerated", targets, foodBankItems);
 
   return currentDayMeals.map((original, idx) => {
     if (original?.status === 'completed') return original;
