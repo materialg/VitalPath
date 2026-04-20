@@ -56,11 +56,19 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Check if AI is configured
 export const checkIsAIConfigured = async (): Promise<boolean> => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  return !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
+  try {
+    const res = await fetch("/api/ai/config");
+    const data = await res.json();
+    return data.isConfigured;
+  } catch (e) {
+    // Fallback for dev or other issues
+    const apiKey = process.env.GEMINI_API_KEY;
+    return !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
+  }
 };
 
-// Internal helper to call Gemini directly
+// Internal helper to call Gemini directly (Used on server, but logic moved to aiLogic.ts)
+// This is kept here to avoid breaking other potential direct imports if they exist
 async function callAI(model: string, contents: any, config: any) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY') {
@@ -68,10 +76,17 @@ async function callAI(model: string, contents: any, config: any) {
   }
 
   const ai = new GoogleGenAI({ apiKey });
+  
+  const text = contents[0]?.parts?.[0]?.text || "Generate a meal plan";
+
   const response = await ai.models.generateContent({
     model,
-    contents,
-    config
+    contents: [{ role: 'user', parts: [{ text }] }],
+    config: {
+      systemInstruction: config.systemInstruction,
+      responseMimeType: config.responseMimeType,
+      responseSchema: config.responseSchema,
+    }
   });
 
   return response.text;
@@ -347,46 +362,20 @@ export async function generateMealPlan(profile: any, weight: number, bodyFat: nu
     fiber: i.fiber,
     mealTypes: i.mealTypes || []
   }));
-  
-  const foodBankNames = Array.from(new Set(cleanFoodBank.map(i => i.name)));
 
-  const foodBankContext = `
-STRICT INVENTORY - YOU MUST ONLY USE THESE ITEMS:
-${cleanFoodBank.map(i => {
-  const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY - NO FRACTIONS)' : '';
-  const tags = i.mealTypes.length > 0 ? ` [STRICTLY FOR: ${i.mealTypes.map(t => t === 'B' ? 'Breakfast' : t === 'L' ? 'Lunch' : 'Dinner').join(', ')}]` : ' [UNIVERSAL - ANY MEAL]';
-  return `- ${i.name}: ${i.calories} cal, ${i.protein}g P, ${i.carbs}g C, ${i.fats}g F, ${i.fiber}g Fiber per ${i.servingSize}${i.servingUnit}${constraint}${tags}`;
-}).join('\n')}
-
-CRITICAL INSTRUCTIONS:
-1. PROTEIN DISTRIBUTION: Each meal MUST have roughly 1/3 of daily protein (${targets.macros.protein}g). Max 300g meat per meal.
-2. CALORIE DISTRIBUTION: Breakfast, Lunch, and Dinner should each be roughly 33% of daily calories (${targets.dailyCalories} kcal).
-3. ZERO HALLUCINATION: Only use listed items.
-4. WHOLE UNIT: unit-based items must be integers.
-5. SUM: Meals MUST hit Daily Target +/- 20kcal.`;
-
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  
   try {
-    const dayPromises = days.map(dayName => {
-      const prompt = `Generate a 1-day meal plan for ${dayName} with these targets:
-        Daily Calories: ${targets.dailyCalories} kcal
-        Protein: ${targets.macros.protein}g, Carbs: ${targets.macros.carbs}g, Fats: ${targets.macros.fats}g
-        
-        ${foodBankContext}
-        
-        Return JSON with a "meals" array containing Breakfast, Lunch, and Dinner.`;
-        
-      return generateDay(dayName, prompt, cleanFoodBank, foodBankNames);
+    const response = await fetch("/api/ai/generate-meal-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targets, cleanFoodBank })
     });
 
-    const generatedDays = await Promise.all(dayPromises);
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Failed to generate meal plan on server.");
+    }
 
-    return {
-      days: generatedDays,
-      dailyCalories: targets.dailyCalories,
-      macros: targets.macros
-    };
+    return await response.json();
   } catch (error: any) {
     console.error("Meal Plan Generation Error:", error);
     throw new Error(error.message || "Failed to generate meal plan. Please try again.");
@@ -501,71 +490,94 @@ export async function regenerateDayPlan(
   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
   // 3. Targets for the remaining meals
-  const remainingTargets = {
-    calories: Math.max(0, dailyTargets.dailyCalories - totalFixed.calories),
-    protein: Math.max(0, dailyTargets.macros.protein - totalFixed.protein),
-    carbs: Math.max(0, dailyTargets.macros.carbs - totalFixed.carbs),
-    fats: Math.max(0, dailyTargets.macros.fats - totalFixed.fats),
-    fiber: Math.max(0, dailyTargets.macros.fiber - totalFixed.fiber),
-  };
-
-  const targetPerMeal = {
-    calories: remainingTargets.calories / mealsToRebalance.length,
-    protein: remainingTargets.protein / mealsToRebalance.length,
-    carbs: remainingTargets.carbs / mealsToRebalance.length,
-    fats: remainingTargets.fats / mealsToRebalance.length,
-    fiber: remainingTargets.fiber / mealsToRebalance.length,
+  let currentRemaining = {
+    calories: dailyTargets.dailyCalories - totalFixed.calories,
+    protein: dailyTargets.macros.protein - totalFixed.protein,
+    carbs: dailyTargets.macros.carbs - totalFixed.carbs,
+    fats: dailyTargets.macros.fats - totalFixed.fats,
+    fiber: dailyTargets.macros.fiber - totalFixed.fiber,
   };
 
   // 4. Rebalance each internal meal mathematically (Near Instant)
-  const rebalancedMeals = mealsToRebalance.map(meal => {
-    // Calculate current calories and macros of the meal to determine the scaling factor.
-    // We include ALL items from the food bank, even hidden ones, if they are already in the meal.
-    let currentMealCals = 0;
-    (meal.ingredientsWithAmounts || []).forEach((ing: any) => {
+  const rebalancedMeals = mealsToRebalance.map((meal, index) => {
+    const mealsLeft = mealsToRebalance.length - index;
+    const mealTarget = {
+      calories: currentRemaining.calories / mealsLeft,
+      protein: currentRemaining.protein / mealsLeft,
+      carbs: currentRemaining.carbs / mealsLeft,
+      fats: currentRemaining.fats / mealsLeft,
+      fiber: currentRemaining.fiber / mealsLeft,
+    };
+
+    let originalMealCals = 0;
+    const ings = meal.ingredientsWithAmounts || [];
+    
+    ings.forEach((ing: any) => {
       const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
       if (food) {
-        const amountNum = parseFloat(ing.amount.toString().replace(/,/g, '')) || food.servingSize;
+        const amountNum = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || food.servingSize;
         const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
-        currentMealCals += (food.calories || 0) * ratio;
+        originalMealCals += (food.calories || 0) * ratio;
       }
     });
 
-    // Scaling factor to hit the exact calorie goal for this meal while keeping proportions
-    const scalingFactor = currentMealCals > 0 ? targetPerMeal.calories / currentMealCals : 1.0;
+    const scalingFactor = originalMealCals > 0 ? mealTarget.calories / originalMealCals : 1.0;
 
-    const ingredients = (meal.ingredientsWithAmounts || []).map((ing: any) => {
+    // Split items into discrete (units) and continuous (g, oz, ml)
+    const unitItems = ings.filter((ing: any) => {
       const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
-      if (!food) return ing;
-
-      const currentAmount = parseFloat(ing.amount.toString().replace(/,/g, '')) || food.servingSize;
-      let newAmount = currentAmount * scalingFactor;
-
-      // Safety bounds
-      if (food.servingUnit === 'unit') {
-        newAmount = Math.max(1, Math.round(newAmount));
-      } else {
-        newAmount = Math.max(1, Math.round(newAmount));
-      }
-
-      const fbUnit = food.servingUnit || 'unit';
-      const amountStr = fbUnit === 'unit' 
-        ? `${newAmount}${newAmount === 1 ? ' unit' : ' units'}`
-        : `${newAmount}${fbUnit}`;
-
-      return {
-        ...ing,
-        name: food.name,
-        amount: amountStr
-      };
+      return food?.servingUnit === 'unit';
+    });
+    const contItems = ings.filter((ing: any) => {
+      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
+      return food?.servingUnit !== 'unit';
     });
 
-    // Recalculate Totals for the meal locally
+    // 1. Process Unit Items (Chunky)
+    let calFromUnits = 0;
+    const processedUnitItems = unitItems.map((ing: any) => {
+      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name))!;
+      const currentAmount = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || food.servingSize;
+      const newAmount = Math.max(1, Math.round(currentAmount * scalingFactor));
+      const ratio = food.servingSize > 0 ? newAmount / food.servingSize : 0;
+      calFromUnits += (food.calories || 0) * ratio;
+      return { ...ing, name: food.name, amount: `${newAmount} ${newAmount === 1 ? 'unit' : 'units'}` };
+    });
+
+    // 2. Process Continuous Items (Fine-tuning)
+    const remainingMealCal = Math.max(0, mealTarget.calories - calFromUnits);
+    let originalContCals = 0;
+    contItems.forEach((ing: any) => {
+      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name))!;
+      const currentAmount = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || food.servingSize;
+      const ratio = food.servingSize > 0 ? currentAmount / food.servingSize : 0;
+      originalContCals += (food.calories || 0) * ratio;
+    });
+
+    // Use a specific scaling factor for continuous items to hit the EXACT remaining calorie target
+    const contScalingFactor = originalContCals > 0 ? remainingMealCal / originalContCals : scalingFactor;
+
+    const processedContItems = contItems.map((ing: any) => {
+      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name))!;
+      const currentAmount = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || food.servingSize;
+      const newAmount = Math.max(1, Math.round(currentAmount * contScalingFactor));
+      const fbUnit = food.servingUnit || 'g';
+      return { ...ing, name: food.name, amount: `${newAmount}${fbUnit}` };
+    });
+
+    const finalIngredients = [...processedUnitItems, ...processedContItems];
+    
+    // Sort to maintain original order
+    const orderedIngredients = ings.map((orig: any) => 
+      finalIngredients.find(updated => cleanName(updated.name) === cleanName(orig.name)) || orig
+    );
+
+    // Recalculate accurate totals
     let cal = 0, p = 0, c = 0, f = 0, fib = 0;
-    ingredients.forEach((ing: any) => {
+    orderedIngredients.forEach((ing: any) => {
       const food = foodBankItems.find(fi => cleanName(fi.name) === cleanName(ing.name));
       if (food) {
-        const amt = parseFloat(ing.amount.replace(/,/g, '')) || 0;
+        const amt = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || 0;
         const r = amt / (food.servingSize || 1);
         cal += (food.calories || 0) * r;
         p += (food.protein || 0) * r;
@@ -575,10 +587,17 @@ export async function regenerateDayPlan(
       }
     });
 
+    // Update error carry-over for next meal
+    currentRemaining.calories -= cal;
+    currentRemaining.protein -= p;
+    currentRemaining.carbs -= c;
+    currentRemaining.fats -= f;
+    currentRemaining.fiber -= fib;
+
     return {
       ...meal,
-      ingredientsWithAmounts: ingredients,
-      ingredients: ingredients.map((i: any) => `${i.amount} ${i.name}`),
+      ingredientsWithAmounts: orderedIngredients,
+      ingredients: orderedIngredients.map((i: any) => `${i.amount} ${i.name}`),
       calories: Math.round(cal),
       protein: Math.round(p * 10) / 10,
       carbs: Math.round(c * 10) / 10,
@@ -596,92 +615,21 @@ export async function regenerateDayPlan(
 }
 
 export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {
-  const previousPerformanceContext = previousPlan ? `
-    PREVIOUS PERFORMANCE DATA:
-    ${previousPlan.days.map((d: any) => `
-      Day: ${d.day} (${d.title})
-      Exercises:
-      ${d.exercises.map((e: any) => `- ${e.name}: Prescribed Weight: ${e.prescribedWeight || 'N/A'}, Actual Weights: ${e.setWeights?.join(', ') || 'N/A'}, Actual Reps: ${e.setReps?.join(', ') || 'N/A'}, Target Reps: ${e.reps}`).join('\n')}
-    `).join('\n')}
-  ` : '';
+  try {
+    const response = await fetch("/api/ai/generate-workout-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile, weight, bodyFat, previousPlan })
+    });
 
-  const prompt = `Generate a 7-day weekly workout schedule (Monday to Sunday) following a strict PPLR rotation:
-    Rotation Order:
-    1. Push (Chest/Shoulders/Triceps)
-    2. Pull (Back/Biceps)
-    3. Legs: Posterior Chain
-    4. Rest
-    5. Push (Chest/Shoulders/Triceps)
-    6. Pull (Back/Biceps)
-    7. Legs: Anterior Chain
-    8. Rest
-
-    STRICT EXERCISE LISTS:
-    - Push: Barbell Bench Press, Dumbbell Overhead Press, Dips
-    - Pull: Deadlifts, Pull-Ups, Bent-Over Barbell Rows
-    - Legs: Posterior Chain: Hyper extension, Hamstring curls, Calve raises
-    - Legs: Anterior Chain: Barbell Back Squat, Leg Press, Leg Extensions
-    - Rest: No exercises, just coaching tips for recovery.
-
-    User Profile:
-    Age: ${profile.age}, Weight: ${weight} lbs, Body Fat: ${bodyFat}%, Goal: ${profile.goalBodyFat}% BF.
-
-    ${previousPerformanceContext}
-
-    PROGRESSIVE OVERLOAD LOGIC:
-    1. If the user hit 2+ reps OVER their target for 2 consecutive workouts, INCREASE the prescribed weight by 5-10 lbs.
-    2. If performance dropped significantly (2+ reps BELOW the lower bound of the range) twice consecutively, REDUCE the weight by 10%.
-    3. Otherwise, maintain the weight.
-    4. If no previous data exists, provide appropriate starting weights based on the user's profile.
-
-    Return a 7-day plan in JSON format. The days MUST be named "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", and "Sunday".
-    
-    Since this is a 7-day plan and the rotation is 8 days, start Monday with "Push" and follow the sequence.
-    
-    Adjust sets and reps based on the user's goal of reaching ${profile.goalBodyFat}% body fat.`;
-
-  const text = await callAI(
-    "gemini-3-pro-preview",
-    prompt,
-    {
-      systemInstruction: "You are a world-class strength coach. You MUST follow the PPLR rotation strictly across the 7 days. You MUST ONLY use the exercises provided for each day. You MUST apply the progressive overload logic based on the provided previous performance data. For 'Rest' days, return an empty exercises array and recovery-focused notes.",
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        required: ["days"],
-        properties: {
-          days: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              required: ["day", "title", "exercises", "notes"],
-              properties: {
-                day: { type: Type.STRING },
-                title: { type: Type.STRING, enum: ["Push", "Pull", "Legs: Posterior Chain", "Legs: Anterior Chain", "Rest"] },
-                notes: { type: Type.STRING },
-                exercises: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    required: ["name", "sets", "reps", "notes", "prescribedWeight"],
-                    properties: {
-                      name: { type: Type.STRING },
-                      sets: { type: Type.NUMBER },
-                      reps: { type: Type.STRING },
-                      prescribedWeight: { type: Type.NUMBER },
-                      consecutiveHits: { type: Type.NUMBER },
-                      consecutiveDrops: { type: Type.NUMBER },
-                      notes: { type: Type.STRING }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Failed to generate workout plan on server.");
     }
-  );
 
-  return JSON.parse(text);
+    return await response.json();
+  } catch (error: any) {
+    console.error("Workout Plan Generation Error:", error);
+    throw new Error(error.message || "Failed to generate workout plan. Please try again.");
+  }
 }
