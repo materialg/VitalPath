@@ -26,6 +26,7 @@ export function MealPlanner({ profile }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
+  const [aiConfigInfo, setAiConfigInfo] = useState<{ foundKeys?: string[] }>({});
   const MEAL_PLAN_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
@@ -87,7 +88,11 @@ export function MealPlanner({ profile }: Props) {
     });
 
     // Check AI status
-    checkIsAIConfigured().then(setIsAIReady);
+    checkIsAIConfigured().then(info => {
+      console.log("[MealPlanner] AI Ready status:", info);
+      setIsAIReady(info.isConfigured);
+      setAiConfigInfo({ foundKeys: info.foundKeys });
+    });
 
     return () => {
       unsubscribeVitals();
@@ -536,6 +541,18 @@ export function MealPlanner({ profile }: Props) {
                 <p className="text-sm text-orange-800/80">
                   Please add a valid <strong>GEMINI_API_KEY</strong> in the project settings (Settings - Secrets) to enable AI meal generation.
                 </p>
+                {aiConfigInfo.foundKeys && aiConfigInfo.foundKeys.length > 0 && (
+                  <div className="pt-2 border-t border-orange-200 mt-2">
+                    <p className="text-[10px] text-orange-400 font-mono uppercase tracking-widest mb-1">Detected Keys (Verify Names):</p>
+                    <div className="flex flex-wrap gap-1">
+                      {aiConfigInfo.foundKeys.map(key => (
+                        <span key={key} className="px-1.5 py-0.5 bg-orange-100 rounded text-[10px] font-mono text-orange-600">{key}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) || (
+                  <p className="text-[10px] text-orange-400 font-mono">No relevant API keys detected in environment.</p>
+                )}
               </div>
             ) : (
               <button 

@@ -55,19 +55,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 // Check if AI is configured
-export const checkIsAIConfigured = async (): Promise<boolean> => {
+export const checkIsAIConfigured = async (): Promise<{ isConfigured: boolean, foundKeys?: string[] }> => {
   try {
     const res = await fetch("/api/ai/config");
-    if (!res.ok) {
-      console.warn("[AI Service] Config check failed status:", res.status);
-      return false;
-    }
-    const data = await res.json();
-    console.log("[AI Service] Server config status:", data);
-    return data.isConfigured;
+    if (!res.ok) return { isConfigured: false };
+    return await res.json();
   } catch (e) {
-    console.error("[AI Service] Config check failed FETCH:", e);
-    return false;
+    return { isConfigured: false };
   }
 };
 

@@ -24,6 +24,7 @@ export function WorkoutCoach({ profile }: Props) {
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
+  const [aiConfigInfo, setAiConfigInfo] = useState<{ foundKeys?: string[] }>({});
 
   useEffect(() => {
     if (!profile.uid) return;
@@ -62,7 +63,11 @@ export function WorkoutCoach({ profile }: Props) {
   }, [profile.uid, activePlanId]);
 
   useEffect(() => {
-    checkIsAIConfigured().then(setIsAIReady);
+    checkIsAIConfigured().then(info => {
+      console.log("[WorkoutCoach] AI Ready status:", info);
+      setIsAIReady(info.isConfigured);
+      setAiConfigInfo({ foundKeys: info.foundKeys });
+    });
   }, []);
 
   const activePlan = workoutPlans.find(p => p.id === activePlanId) || workoutPlans[0];
@@ -473,6 +478,18 @@ export function WorkoutCoach({ profile }: Props) {
               <p className="text-xs text-orange-800/80">
                 Please add a valid <strong>GEMINI_API_KEY</strong> in the project settings (Settings - Secrets) to enable AI workout generation.
               </p>
+              {aiConfigInfo.foundKeys && aiConfigInfo.foundKeys.length > 0 && (
+                <div className="pt-2 border-t border-orange-200 mt-2">
+                  <p className="text-[10px] text-orange-400 font-mono uppercase tracking-widest mb-1">Detected Keys (Verify Names):</p>
+                  <div className="flex flex-wrap gap-1">
+                    {aiConfigInfo.foundKeys.map(key => (
+                      <span key={key} className="px-1.5 py-0.5 bg-orange-100 rounded text-[10px] font-mono text-orange-600">{key}</span>
+                    ))}
+                  </div>
+                </div>
+              ) || (
+                <p className="text-[10px] text-orange-400 font-mono">No relevant API keys detected in environment.</p>
+              )}
             </div>
           ) : (
             <button 
