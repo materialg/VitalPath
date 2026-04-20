@@ -206,7 +206,7 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
     "gemini-3-flash-preview",
     prompt,
     {
-      systemInstruction: "You are a strict meal planning engine. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON. IMPORTANT: Use whole numbers (integers) ONLY for items with unit-based serving sizes.",
+      systemInstruction: "You are a strict meal planning engine. Return exactly 3 meals in this order with these exact names: \"Breakfast\", \"Lunch\", \"Dinner\". Do NOT add adjectives or dish names to the meal name field. Balance protein and calories evenly across all 3 meals. Max 300g of meat per meal. Hit daily targets +/- 20kcal. No hallucinations. RETURN ONLY JSON. IMPORTANT: Use whole numbers (integers) ONLY for items with unit-based serving sizes.",
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -250,9 +250,11 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
   const data = JSON.parse(jsonStr);
 
   const rawMeals = Array.isArray(data?.meals) ? data.meals : [];
+  const MEAL_SLOTS = ["Breakfast", "Lunch", "Dinner"];
   const meals = rawMeals
     .map((m: any) => sanitizeMeal(m, cleanFoodBank as any))
-    .filter((m: Meal | null): m is Meal => m !== null);
+    .filter((m: Meal | null): m is Meal => m !== null)
+    .map((m, idx) => ({ ...m, name: MEAL_SLOTS[idx] || `Meal ${idx + 1}` }));
 
   if (meals.length === 0) {
     throw new Error(`No valid meals could be built for ${dayName} from your Food Bank.`);
