@@ -103,6 +103,22 @@ function buildMeal(label: string, picked: FoodBankItem[], slotCalories: number):
     }));
   }
 
+  const flexibleIdx = entries.findIndex(e => (e.food.servingUnit || 'unit') !== 'unit');
+  if (flexibleIdx >= 0) {
+    const afterRound = computeTotals(entries);
+    const gap = slotCalories - afterRound.calories;
+    if (Math.abs(gap) > 20) {
+      const flex = entries[flexibleIdx];
+      const serving = flex.food.servingSize || 1;
+      const calPerUnit = serving > 0 ? (flex.food.calories || 0) / serving : 0;
+      if (calPerUnit > 0) {
+        const targetAmount = flex.amount + gap / calPerUnit;
+        const rounded = roundAmount(flex.food, Math.max(0, targetAmount));
+        if (rounded > 0) entries[flexibleIdx] = { food: flex.food, amount: rounded };
+      }
+    }
+  }
+
   const finalTotals = computeTotals(entries);
 
   const ingredientsWithAmounts = entries.map(({ food, amount }) => ({
