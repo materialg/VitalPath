@@ -268,13 +268,11 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
   return { day: dayName, meals };
 }
 
-export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
+function prepareFoodBank(foodBankItems: any[]) {
   const availableItems = foodBankItems.filter(i => !i.hidden);
   if (availableItems.length === 0) {
     throw new Error("All your Food Bank items are hidden or the Food Bank is empty.");
   }
-
-  const targets = calculateDailyTargets(profile, weight, bodyFat);
   const cleanFoodBank = availableItems.map(i => ({
     name: i.name.trim(),
     servingSize: i.servingSize,
@@ -286,25 +284,25 @@ export async function generateMealPlan(profile: any, weight: number, bodyFat: nu
     fiber: i.fiber,
     mealTypes: i.mealTypes || []
   }));
-
   const foodBankNames = Array.from(new Set(cleanFoodBank.map(i => i.name)));
+  return { cleanFoodBank, foodBankNames };
+}
 
+function buildSlotInventoryContext(cleanFoodBank: ReturnType<typeof prepareFoodBank>['cleanFoodBank']) {
   const fmtItem = (i: typeof cleanFoodBank[number]) => {
     const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY)' : '';
     return `- ${i.name}: ${i.calories} cal, ${i.protein}g P per ${i.servingSize}${i.servingUnit}${constraint}`;
   };
-
   const isUntagged = (i: typeof cleanFoodBank[number]) => !i.mealTypes || i.mealTypes.length === 0;
   const untagged = cleanFoodBank.filter(isUntagged);
   const forSlot = (tag: 'B' | 'L' | 'D') =>
     cleanFoodBank.filter(i => (i.mealTypes || []).includes(tag)).concat(untagged);
-
   const slotList = (label: string, items: typeof cleanFoodBank) =>
     items.length > 0
       ? `${label} INVENTORY (use ONLY these for ${label.toLowerCase()}):\n${items.map(fmtItem).join('\n')}`
       : `${label} INVENTORY: (empty — skip this meal)`;
 
-  const foodBankContext = `
+  return `
 ${slotList('BREAKFAST', forSlot('B'))}
 
 ${slotList('LUNCH', forSlot('L'))}
@@ -317,6 +315,12 @@ CRITICAL:
 3. Meal 3 uses ONLY items from DINNER INVENTORY.
 4. Divide nutrients evenly across 3 meals. Hit targets +/- 20 kcal.
 5. RETURN ONLY JSON.`;
+}
+
+export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
+  const targets = calculateDailyTargets(profile, weight, bodyFat);
+  const { cleanFoodBank, foodBankNames } = prepareFoodBank(foodBankItems);
+  const foodBankContext = buildSlotInventoryContext(cleanFoodBank);
 
   const daysLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const dayPromises = daysLabels.map(dayName => {
@@ -354,91 +358,24 @@ export async function generateAndSaveMealPlan(profile: any, weight: number, body
 }
 
 export async function regenerateDayPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[], currentDayMeals: any[]) {
-  const cleanName = (n: string) => n?.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || '';
-  const dailyTargets = calculateDailyTargets(profile, weight, bodyFat);
-  const fixedMeals = currentDayMeals.filter(m => m.status === 'completed');
-  const mealsToRebalance = currentDayMeals.filter(m => m.status !== 'completed');
-  if (mealsToRebalance.length === 0) return currentDayMeals;
+  const hasPending = currentDayMeals.some(m => m?.status !== 'completed');
+  if (!hasPending) return currentDayMeals;
 
-  const totalFixed = fixedMeals.reduce((acc, m) => ({
-    calories: acc.calories + (m.calories || 0),
-    protein: acc.protein + (m.protein || 0),
-    carbs: acc.carbs + (m.carbs || 0),
-    fats: acc.fats + (m.fats || 0),
-    fiber: acc.fiber + (m.fiber || 0),
-  }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
+  const targets = calculateDailyTargets(profile, weight, bodyFat);
+  const { cleanFoodBank, foodBankNames } = prepareFoodBank(foodBankItems);
+  const foodBankContext = buildSlotInventoryContext(cleanFoodBank);
 
-  let currentRemaining = {
-    calories: dailyTargets.dailyCalories - totalFixed.calories,
-    protein: dailyTargets.macros.protein - totalFixed.protein,
-    carbs: dailyTargets.macros.carbs - totalFixed.carbs,
-    fats: dailyTargets.macros.fats - totalFixed.fats,
-    fiber: dailyTargets.macros.fiber - totalFixed.fiber,
-  };
+  const prompt = `Generate a fresh 1-day meal plan with new recipe ideas:
+      Target Calories: ${targets.dailyCalories} kcal
+      Macros: P ${targets.macros.protein}g, C ${targets.macros.carbs}g, F ${targets.macros.fats}g
+      ${foodBankContext}`;
 
-  const rebalancedMeals = mealsToRebalance.map((meal, index) => {
-    const mealsLeft = mealsToRebalance.length - index;
-    const mealTarget = { calories: currentRemaining.calories / mealsLeft };
-    let originalMealCals = 0;
-    const ings = meal.ingredientsWithAmounts || [];
-    ings.forEach((ing: any) => {
-      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
-      if (food) {
-        const amt = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || food.servingSize;
-        originalMealCals += (food.calories || 0) * (amt / food.servingSize);
-      }
-    });
+  const dayResult = await generateDay("Regenerated", prompt, cleanFoodBank, foodBankNames);
 
-    const scalingFactor = originalMealCals > 0 ? mealTarget.calories / originalMealCals : 1.0;
-    const processedIngredients = ings.map((ing: any) => {
-      const food = foodBankItems.find(f => cleanName(f.name) === cleanName(ing.name));
-      if (!food) return ing;
-      const currentAmt = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || food.servingSize;
-      let newAmt = currentAmt * scalingFactor;
-      if (food.servingUnit === 'unit') newAmt = Math.round(newAmt);
-      const unit = food.servingUnit || 'g';
-      return { ...ing, amount: `${Math.max(1, Math.round(newAmt))}${unit}` };
-    });
-
-    let cal = 0, p = 0, c = 0, f = 0, fib = 0;
-    processedIngredients.forEach((ing: any) => {
-      const food = foodBankItems.find(fi => cleanName(fi.name) === cleanName(ing.name));
-      if (food) {
-        const amt = parseFloat(ing.amount.toString().replace(/[^0-9.]/g, '')) || 0;
-        const r = amt / (food.servingSize || 1);
-        cal += (food.calories || 0) * r;
-        p += (food.protein || 0) * r;
-        c += (food.carbs || 0) * r;
-        f += (food.fats || 0) * r;
-        fib += (food.fiber || 0) * r;
-      }
-    });
-
-    currentRemaining.calories -= cal;
-    return {
-      ...meal,
-      ingredientsWithAmounts: processedIngredients,
-      ingredients: processedIngredients.map((i: any) => `${i.amount} ${i.name}`),
-      calories: Math.round(cal),
-      protein: Math.round(p * 10) / 10,
-      carbs: Math.round(c * 10) / 10,
-      fats: Math.round(f * 10) / 10,
-      fiber: Math.round(fib * 10) / 10
-    };
+  return currentDayMeals.map((original, idx) => {
+    if (original?.status === 'completed') return original;
+    return dayResult.meals[idx] || original;
   });
-
-  let rebalanceIdx = 0;
-  const merged = currentDayMeals.map((original) => {
-    if (original?.status === 'completed') {
-      return fixedMeals.find(m => m.name === original.name) || original;
-    }
-    const next = rebalancedMeals[rebalanceIdx++];
-    return next || original;
-  });
-
-  return merged
-    .map((m: any) => sanitizeMeal(m, foodBankItems) ?? m)
-    .filter((m: any) => m && typeof m.name === 'string');
 }
 
 export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {
