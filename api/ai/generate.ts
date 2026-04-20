@@ -29,6 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         systemInstruction,
         responseMimeType: responseMimeType || 'text/plain',
         responseSchema,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     });
     res.json({ text: response.text });

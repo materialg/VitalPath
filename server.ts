@@ -63,6 +63,7 @@ async function startServer() {
           systemInstruction: systemInstruction,
           responseMimeType: responseMimeType || "text/plain",
           responseSchema: responseSchema,
+          thinkingConfig: { thinkingBudget: 0 },
         }
       });
 
