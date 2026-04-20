@@ -826,7 +826,9 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Total</p>
-              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.calories + currentMeal.calories)}</p>
+              <p className={`text-lg font-bold ${(dayProgressOffset.calories + currentMeal.calories) > targets.dailyCalories ? 'text-red-500' : 'text-white'}`}>
+                {Math.round(dayProgressOffset.calories + currentMeal.calories)}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
