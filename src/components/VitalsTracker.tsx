@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, VitalLog } from '../types';
 import { motion } from 'motion/react';
 import { Plus, Trash2, Scale, Activity, Pencil, X, Save, TrendingUp } from 'lucide-react';
-import { logDailyTarget, calculateTargetDate } from '../services/aiService';
+import { logDailyTarget } from '../services/aiService';
 import { 
   LineChart, 
   Line, 
@@ -82,20 +82,8 @@ export function VitalsTracker({ profile }: Props) {
         updatedAt: new Date().toISOString()
       });
 
-      // Recalculate target date based on new body fat
-      const newTargetDate = calculateTargetDate(
-        bodyFat,
-        profile.goalBodyFat || 15,
-        profile.activityLevel || 'moderate'
-      );
-
-      // Update profile with new target date only
-      await updateDoc(doc(db, 'users', profile.uid), {
-        targetDate: newTargetDate
-      });
-
       // Log daily target snapshot
-      await logDailyTarget(profile.uid, { ...profile, targetDate: newTargetDate }, weight, bodyFat, isoDate);
+      await logDailyTarget(profile.uid, profile, weight, bodyFat, isoDate);
     } catch (error) {
       console.error(error);
     } finally {

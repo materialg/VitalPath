@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
-import { logDailyTarget, calculateTargetDate, calculateDailyTargets } from '../services/aiService';
+import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 
 interface Props {
   profile: UserProfile;
@@ -452,20 +452,8 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
         });
       }
 
-      // Recalculate target date based on new body fat
-      const newTargetDate = calculateTargetDate(
-        bodyFat,
-        profile.goalBodyFat || 15,
-        profile.activityLevel || 'moderate'
-      );
-
-      // Update profile with new target date only
-      await updateDoc(doc(db, 'users', profile.uid), {
-        targetDate: newTargetDate
-      });
-
       // Log daily target snapshot
-      await logDailyTarget(profile.uid, { ...profile, targetDate: newTargetDate }, weight, bodyFat, isoDate);
+      await logDailyTarget(profile.uid, profile, weight, bodyFat, isoDate);
       
       onClose();
     } catch (error) {

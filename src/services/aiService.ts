@@ -1,5 +1,6 @@
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { GoogleGenAI } from "@google/genai";
 
 export enum OperationType {
   CREATE = 'create',
@@ -53,34 +54,27 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(message);
 }
 
-// Check if AI is configured on the server
+// Check if AI is configured
 export const checkIsAIConfigured = async (): Promise<boolean> => {
-  try {
-    const res = await fetch('/api/ai/configured');
-    if (!res.ok) return false;
-    const { configured } = await res.json();
-    return configured;
-  } catch (err) {
-    console.error("Failed to check AI config:", err);
-    return false;
-  }
+  const apiKey = process.env.GEMINI_API_KEY;
+  return !!(apiKey && apiKey !== 'undefined' && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '');
 };
 
-// Internal helper to call the backend proxy
+// Internal helper to call Gemini directly
 async function callAI(model: string, contents: any, config: any) {
-  const res = await fetch('/api/ai/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, contents, config })
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `AI request failed with status ${res.status}`);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'undefined' || apiKey === 'MY_GEMINI_API_KEY') {
+    throw new Error("Gemini API key is not configured.");
   }
 
-  const data = await res.json();
-  return data.text;
+  const ai = new GoogleGenAI({ apiKey });
+  const response = await ai.models.generateContent({
+    model,
+    contents,
+    config
+  });
+
+  return response.text;
 }
 
 export function calculateDailyTargets(profile: any, weight: number, bodyFat: number) {

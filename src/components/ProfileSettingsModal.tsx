@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, ActivityLevel, Gender, VitalLog } from '../types';
-import { calculateTargetDate } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Target, Activity, User as UserIcon, Save, Scale, Calendar } from 'lucide-react';
 
@@ -72,12 +71,6 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
       const prevWeight = latestVital?.weight ?? 180;
       const prevBF = latestVital?.bodyFat ?? 20;
 
-      const newTargetDate = calculateTargetDate(
-        formData.currentBodyFat, 
-        formData.goalBodyFat, 
-        formData.activityLevel
-      );
-
       // Log new vital if weight or body fat changed
       if (formData.currentWeight !== prevWeight || formData.currentBodyFat !== prevBF) {
         await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
@@ -90,7 +83,6 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
       const { currentWeight, currentBodyFat, ...rest } = formData;
       await updateDoc(doc(db, 'users', profile.uid), {
         ...rest,
-        targetDate: newTargetDate,
         updatedAt: new Date().toISOString()
       });
       onClose();
@@ -100,12 +92,6 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
       setIsSubmitting(false);
     }
   };
-
-  const currentTargetDate = calculateTargetDate(
-    formData.currentBodyFat,
-    formData.goalBodyFat,
-    formData.activityLevel
-  );
 
   return (
     <div 
@@ -217,26 +203,17 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
             </div>
           </div>
 
-          <div className="p-4 bg-[#141414]/5 rounded-2xl border border-[#141414]/10">
-            <div className="flex items-center gap-3 mb-2">
-              <Calendar size={16} className="text-[#141414]/40" />
-              <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Suggested Target Date</p>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#141414]/60">Target Achievement Date</label>
+            <div className="relative">
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+              <input 
+                type="date" 
+                value={formData.targetDate}
+                onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
+                className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+              />
             </div>
-            <p className="text-xl font-black text-[#141414]">
-              {(() => {
-                const date = new Date(currentTargetDate);
-                return isNaN(date.getTime()) 
-                  ? 'Calculating...' 
-                  : date.toLocaleDateString('en-US', { 
-                      month: 'long', 
-                      day: 'numeric', 
-                      year: 'numeric' 
-                    });
-              })()}
-            </p>
-            <p className="text-[10px] text-[#141414]/40 mt-1">
-              Recalculated based on your current stats.
-            </p>
           </div>
 
           <div className="pt-4">

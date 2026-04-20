@@ -221,6 +221,17 @@ export function MealPlanner({ profile }: Props) {
     }
   };
 
+  const dayMeals = activePlan?.days?.[selectedDay]?.meals || [];
+  const otherMealsTotals = editingMeal 
+    ? dayMeals.filter((_, i) => i !== editingMeal.mIdx).reduce((acc: any, meal: any) => ({
+        calories: acc.calories + (meal.calories || 0),
+        protein: acc.protein + (meal.protein || 0),
+        carbs: acc.carbs + (meal.carbs || 0),
+        fats: acc.fats + (meal.fats || 0),
+        fiber: acc.fiber + (meal.fiber || 0),
+      }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 })
+    : { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 };
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -638,6 +649,8 @@ export function MealPlanner({ profile }: Props) {
           <EditMealModal 
             meal={editingMeal.meal}
             foodBank={foodBankItems}
+            targets={targets}
+            dayProgressOffset={otherMealsTotals}
             onClose={() => setEditingMeal(null)}
             onSave={(updatedMeal) => handleUpdateMeal(editingMeal.mIdx, updatedMeal)}
           />
@@ -647,7 +660,7 @@ export function MealPlanner({ profile }: Props) {
   );
 }
 
-function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void }) {
+function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], targets: any, dayProgressOffset: any, onClose: () => void, onSave: (updatedMeal: any) => void }) {
   const [currentMeal, setCurrentMeal] = useState(meal);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFoodBank, setShowFoodBank] = useState(false);
@@ -804,6 +817,34 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
             <X size={20} />
           </button>
+        </div>
+
+        <div className="mb-6 p-4 bg-[#141414] text-white rounded-2xl relative shadow-xl">
+          <div className="absolute top-4 left-4">
+            <Flame size={14} className="text-orange-500" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Total</p>
+              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.calories + currentMeal.calories)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
+              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.protein + currentMeal.protein)}g</p>
+            </div>
+            <div className="text-center">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Carbs</p>
+              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.carbs + currentMeal.carbs)}g</p>
+            </div>
+            <div className="text-center">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fats</p>
+              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.fats + currentMeal.fats)}g</p>
+            </div>
+            <div className="text-center">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fiber</p>
+              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.fiber + currentMeal.fiber)}g</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
