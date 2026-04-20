@@ -1,6 +1,8 @@
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { GoogleGenAI, Type } from "@google/genai";
+import { sanitizeMeal, stripUndefined } from './mealSanitizer';
+import type { Meal } from '../types';
 
 export enum OperationType {
   CREATE = 'create',
@@ -242,54 +244,19 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
   );
 
   if (!text) throw new Error(`Empty response for ${dayName}`);
-  
+
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   const jsonStr = jsonMatch ? jsonMatch[0] : text;
   const data = JSON.parse(jsonStr);
 
-  const cleanName = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+  const rawMeals = Array.isArray(data?.meals) ? data.meals : [];
+  const meals = rawMeals
+    .map((m: any) => sanitizeMeal(m, cleanFoodBank as any))
+    .filter((m: Meal | null): m is Meal => m !== null);
 
-  const meals = data.meals.map((meal: any) => {
-    meal.ingredientsWithAmounts = (meal.ingredientsWithAmounts || []).filter((i: any) => 
-      foodBankNames.some(name => cleanName(name) === cleanName(i.name))
-    ).map((i: any) => {
-      const food = cleanFoodBank.find(f => cleanName(f.name) === cleanName(i.name));
-      if (food) {
-        const fbUnit = food.servingUnit || 'unit';
-        let amountNum = parseFloat(i.amount) || 0;
-        if (fbUnit === 'unit') amountNum = Math.round(amountNum);
-        let formattedUnit = fbUnit;
-        if (fbUnit === 'unit') formattedUnit = amountNum === 1 ? 'unit' : 'units';
-        const formattedAmount = `${amountNum} ${formattedUnit}`;
-        return { ...i, name: food.name, amount: formattedAmount };
-      }
-      return i;
-    });
-
-    meal.ingredients = meal.ingredientsWithAmounts.map((i: any) => `${i.amount} ${i.name}`);
-
-    let totalCal = 0, totalP = 0, totalC = 0, totalF = 0, totalFib = 0;
-    meal.ingredientsWithAmounts.forEach((ing: any) => {
-      const food = cleanFoodBank.find(f => cleanName(f.name) === cleanName(ing.name));
-      if (food) {
-        const amountNum = parseFloat(ing.amount) || 0;
-        const ratio = food.servingSize > 0 ? amountNum / food.servingSize : 0;
-        totalCal += (food.calories || 0) * ratio;
-        totalP += (food.protein || 0) * ratio;
-        totalC += (food.carbs || 0) * ratio;
-        totalF += (food.fats || 0) * ratio;
-        totalFib += (food.fiber || 0) * ratio;
-      }
-    });
-
-    meal.calories = Math.round(totalCal);
-    meal.protein = Math.round(totalP * 10) / 10;
-    meal.carbs = Math.round(totalC * 10) / 10;
-    meal.fats = Math.round(totalF * 10) / 10;
-    meal.fiber = Math.round(totalFib * 10) / 10;
-
-    return meal;
-  });
+  if (meals.length === 0) {
+    throw new Error(`No valid meals could be built for ${dayName} from your Food Bank.`);
+  }
 
   return { day: dayName, meals };
 }
@@ -346,7 +313,7 @@ CRITICAL:
 export async function generateAndSaveMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[]) {
   const plan = await generateMealPlan(profile, weight, bodyFat, foodBankItems);
   const today = new Date().toLocaleDateString('en-CA');
-  const newPlan = { ...plan, weekStartDate: today, updatedAt: new Date().toISOString() };
+  const newPlan = stripUndefined({ ...plan, weekStartDate: today, updatedAt: new Date().toISOString() });
   const q = query(collection(db, 'users', profile.uid, 'mealPlans'), where('weekStartDate', '==', today), limit(1));
   const snap = await getDocs(q);
   let planId = '';
@@ -435,7 +402,18 @@ export async function regenerateDayPlan(profile: any, weight: number, bodyFat: n
     };
   });
 
-  return ["Breakfast", "Lunch", "Dinner"].map(name => fixedMeals.find(m => m.name === name) || rebalancedMeals.find(m => m.name === name) || currentDayMeals.find(m => m.name === name));
+  let rebalanceIdx = 0;
+  const merged = currentDayMeals.map((original) => {
+    if (original?.status === 'completed') {
+      return fixedMeals.find(m => m.name === original.name) || original;
+    }
+    const next = rebalancedMeals[rebalanceIdx++];
+    return next || original;
+  });
+
+  return merged
+    .map((m: any) => sanitizeMeal(m, foodBankItems) ?? m)
+    .filter((m: any) => m && typeof m.name === 'string');
 }
 
 export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {

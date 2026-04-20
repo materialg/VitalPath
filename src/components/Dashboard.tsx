@@ -5,6 +5,7 @@ import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem } from
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
+import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
 interface Props {
   profile: UserProfile;
@@ -143,10 +144,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
         status: currentStatus === 'completed' ? 'none' : 'completed' 
       };
       updatedDays[dayIndex].meals = meals;
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     }
   };
 
@@ -157,10 +158,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
     const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
     if (dayIndex !== -1) {
       updatedDays[dayIndex].meals[mIdx] = updatedMeal;
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     }
   };
 
@@ -172,14 +173,14 @@ export function Dashboard({ profile, onNavigate }: Props) {
       const meals = [...updatedDays[dayIndex].meals];
       const areAllCompleted = meals.every(m => m.status === 'completed');
       const newStatus = areAllCompleted ? 'none' : 'completed';
-      
+
       const newMeals = meals.map(m => ({ ...m, status: newStatus }));
       updatedDays[dayIndex].meals = newMeals;
-      
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     }
   };
 
@@ -367,7 +368,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
         {showMealModal && todayMealPlan && (
           <MealModal 
              key="meal-modal"
-             meals={todayMealPlan.meals} 
+             meals={safeMeals(todayMealPlan.meals, foodBankItems)}
              dayName={todayMealPlan.day}
              targetCalories={currentTargets.dailyCalories}
              onClose={() => setShowMealModal(false)} 
@@ -377,10 +378,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
                const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
                if (dayIndex !== -1) {
                  updatedDays[dayIndex].meals = updatedDays[dayIndex].meals.map(m => ({ ...m, status: 'completed' }));
-                 await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+                 await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), stripUndefined({
                    days: updatedDays,
                    updatedAt: new Date().toISOString()
-                 });
+                 }));
                }
              }}
              onToggleMeal={async (mIdx) => {
@@ -390,15 +391,15 @@ export function Dashboard({ profile, onNavigate }: Props) {
                if (dayIndex !== -1) {
                  const meals = [...updatedDays[dayIndex].meals];
                  const currentStatus = meals[mIdx].status;
-                 meals[mIdx] = { 
-                   ...meals[mIdx], 
-                   status: currentStatus === 'completed' ? 'none' : 'completed' 
+                 meals[mIdx] = {
+                   ...meals[mIdx],
+                   status: currentStatus === 'completed' ? 'none' : 'completed'
                  };
                  updatedDays[dayIndex].meals = meals;
-                 await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), {
+                 await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), stripUndefined({
                    days: updatedDays,
                    updatedAt: new Date().toISOString()
-                 });
+                 }));
                }
              }}
           />
@@ -546,7 +547,8 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
 }
 
 function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, targetCalories?: number, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, key?: React.Key }) {
-  const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
+  const safe = (meals || []).filter(Boolean);
+  const totalCalories = safe.reduce((sum, m) => sum + (m?.calories || 0), 0);
   
   return (
     <div 
@@ -578,17 +580,17 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
         </div>
 
         <div className="space-y-6">
-          {meals.map((meal, mIdx) => (
+          {safe.map((meal, mIdx) => (
             <div key={mIdx} className={`p-6 rounded-2xl space-y-4 transition-all ${meal.status === 'completed' ? 'bg-green-50/50 border border-green-100' : 'bg-[#141414]/5'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <button 
+                  <button
                     onClick={() => onToggleMeal?.(mIdx)}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-all ${
                       meal.status === 'completed' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white text-orange-600 shadow-sm'
                     }`}
                   >
-                    {meal.status === 'completed' ? <Check size={16} /> : meal.name[0]}
+                    {meal.status === 'completed' ? <Check size={16} /> : (meal.name?.[0] || '?')}
                   </button>
                   <h4 className={`text-lg font-bold transition-all ${meal.status === 'completed' ? 'text-green-700' : 'text-[#141414]'}`}>{meal.name}</h4>
                   {meal.status === 'completed' && (
@@ -596,14 +598,14 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories} kcal</span>
+                  <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories || 0} kcal</span>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Ingredients</h5>
                 <div className="flex flex-wrap gap-2">
-                  {meal.ingredients.map((ing, idx) => (
+                  {(Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing, idx) => (
                     <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5">
                       {ing}
                     </span>

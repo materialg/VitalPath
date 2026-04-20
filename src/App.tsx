@@ -16,6 +16,7 @@ import { FoodBank } from './components/FoodBank';
 import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -323,7 +324,9 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {renderContent()}
+              <ErrorBoundary resetKey={activeTab}>
+                {renderContent()}
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </div>

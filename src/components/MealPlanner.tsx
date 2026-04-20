@@ -3,6 +3,7 @@ import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, 
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan, checkIsAIConfigured } from '../services/aiService';
+import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
 import { Utensils, Sparkles, RotateCcw, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
 
@@ -121,10 +122,10 @@ export function MealPlanner({ profile }: Props) {
     updatedDays[selectedDay].meals[mIdx] = updatedMeal;
 
     try {
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     } catch (err) {
       console.error("Failed to update meal:", err);
       setError("Failed to save meal changes. Please try again.");
@@ -151,10 +152,10 @@ export function MealPlanner({ profile }: Props) {
 
       updatedDays[selectedDay].meals = newDayMeals;
 
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     } catch (err) {
       console.error("Failed to rebalance day:", err);
       setError("AI was unable to rebalance the day. Try adjusting your items manually or generating a new week.");
@@ -176,10 +177,10 @@ export function MealPlanner({ profile }: Props) {
     updatedDays[selectedDay].meals = meals;
 
     try {
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     } catch (err) {
       console.error("Failed to toggle meal status:", err);
     }
@@ -192,10 +193,10 @@ export function MealPlanner({ profile }: Props) {
     updatedDays[selectedDay].meals = updatedDays[selectedDay].meals.map(m => ({ ...m, status: 'completed' }));
 
     try {
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), {
+      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
         days: updatedDays,
         updatedAt: new Date().toISOString()
-      });
+      }));
     } catch (err) {
       console.error("Failed to confirm all meals:", err);
     }
@@ -226,9 +227,9 @@ export function MealPlanner({ profile }: Props) {
     }
   };
 
-  const dayMeals = activePlan?.days?.[selectedDay]?.meals || [];
-  const otherMealsTotals = editingMeal 
-    ? dayMeals.filter((_, i) => i !== editingMeal.mIdx).reduce((acc: any, meal: any) => ({
+  const dayMeals = safeMeals(activePlan?.days?.[selectedDay]?.meals, foodBankItems);
+  const otherMealsTotals = editingMeal
+    ? dayMeals.filter((_, i) => i !== editingMeal.mIdx).reduce((acc, meal) => ({
         calories: acc.calories + (meal.calories || 0),
         protein: acc.protein + (meal.protein || 0),
         carbs: acc.carbs + (meal.carbs || 0),
@@ -358,8 +359,7 @@ export function MealPlanner({ profile }: Props) {
             <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
               <div className="flex flex-wrap gap-4 lg:gap-8 mb-8">
                 {(() => {
-                  const dayMeals = activePlan?.days?.[selectedDay]?.meals || [];
-                  const totals = dayMeals.reduce((acc: any, meal: any) => ({
+                  const totals = dayMeals.reduce((acc, meal) => ({
                     calories: acc.calories + (meal.calories || 0),
                     protein: acc.protein + (meal.protein || 0),
                     carbs: acc.carbs + (meal.carbs || 0),
@@ -436,7 +436,7 @@ export function MealPlanner({ profile }: Props) {
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-6"
                   >
-                    {activePlan?.days?.[selectedDay]?.meals?.map((meal: any, mIdx: number) => (
+                    {dayMeals.map((meal: any, mIdx: number) => (
                       <div key={mIdx} className="group">
                         <div 
                           onClick={() => toggleMealStatus(mIdx)}
@@ -482,20 +482,22 @@ export function MealPlanner({ profile }: Props) {
                               </div>
                             </div>
                             <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                              {meal.ingredientsWithAmounts ? meal.ingredientsWithAmounts.map((ing: any, iIdx: number) => {
-                                const food = findFoodItem(ing.name);
-                                const val = parseFloat(ing.amount) || 0;
-                                const unit = (food?.servingUnit || 'unit').toLowerCase();
-                                return (
-                                  <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
-                                    {val} {unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit} {food?.name || ing.name}
-                                  </span>
-                                );
-                              }) : meal.ingredients.map((ing: any, iIdx: number) => (
-                                <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
-                                  {ing}
-                                </span>
-                              ))}
+                              {Array.isArray(meal.ingredientsWithAmounts) && meal.ingredientsWithAmounts.length > 0
+                                ? meal.ingredientsWithAmounts.map((ing: any, iIdx: number) => {
+                                    const food = findFoodItem(ing.name);
+                                    const val = parseFloat(ing.amount) || 0;
+                                    const unit = (food?.servingUnit || 'unit').toLowerCase();
+                                    return (
+                                      <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
+                                        {val} {unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit} {food?.name || ing.name}
+                                      </span>
+                                    );
+                                  })
+                                : (Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing: any, iIdx: number) => (
+                                    <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
+                                      {ing}
+                                    </span>
+                                  ))}
                             </div>
                           </div>
                         </div>
@@ -504,7 +506,7 @@ export function MealPlanner({ profile }: Props) {
                   </motion.div>
                 </AnimatePresence>
 
-                {activePlan?.days?.[selectedDay]?.meals?.length > 0 && activePlan.days[selectedDay].meals.every(m => m.status === 'completed') && (
+                {dayMeals.length > 0 && dayMeals.every(m => m.status === 'completed') && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
