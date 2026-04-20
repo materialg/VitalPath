@@ -11,6 +11,7 @@ export interface UserProfile {
   gender?: Gender;
   activityLevel?: ActivityLevel;
   goalBodyFat?: number;
+  dailyStepsGoal?: number;
   targetDate?: string;
   activeMealPlanId?: string;
   activeWorkoutId?: string;

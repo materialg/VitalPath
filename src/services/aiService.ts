@@ -109,7 +109,11 @@ export function calculateDailyTargets(profile: any, weight: number, bodyFat: num
     very_active: 1.9
   };
 
-  const tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.2);
+  let tdee = bmr * (activityMultipliers[profile.activityLevel as keyof typeof activityMultipliers] || 1.2);
+
+  // Add steps calories: approx 0.04 per step
+  const stepCalories = (profile.dailyStepsGoal || 0) * 0.04;
+  tdee += stepCalories;
 
   // Target Weight Calculation
   // Lean Body Mass = Current Weight * (1 - Current BF%)

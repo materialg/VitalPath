@@ -23,6 +23,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
     gender: 'male' as Gender,
     activityLevel: 'moderate' as ActivityLevel,
     goalBodyFat: 15,
+    dailyStepsGoal: 10000,
     currentWeight: 180, // lbs
     currentBodyFat: 20,
     targetDate: '',
@@ -117,7 +118,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <label className="text-sm font-medium text-[#141414]/60">Age</label>
                   <input 
                     type="number" 
-                    value={formData.age}
+                    value={Number.isNaN(formData.age) ? '' : formData.age}
                     onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />
@@ -146,7 +147,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <label className="text-sm font-medium text-[#141414]/60">Height (inches)</label>
                   <input 
                     type="number" 
-                    value={formData.height}
+                    value={Number.isNaN(formData.height) ? '' : formData.height}
                     onChange={e => setFormData({ ...formData, height: parseInt(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />
@@ -157,7 +158,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <input 
                     type="number" 
                     step="1"
-                    value={formData.currentWeight}
+                    value={Number.isNaN(formData.currentWeight) ? '' : formData.currentWeight}
                     onChange={e => setFormData({ ...formData, currentWeight: parseFloat(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />
@@ -168,20 +169,34 @@ export function ProfileSetup({ user, onComplete }: Props) {
 
           {step === 3 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-              <h3 className="text-xl font-bold text-[#141414]">Activity Level</h3>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#141414]/60">Daily Activity</label>
-                <select 
-                  value={formData.activityLevel}
-                  onChange={e => setFormData({ ...formData, activityLevel: e.target.value as ActivityLevel })}
-                  className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-                >
-                  <option value="sedentary">Sedentary (Office job, little exercise)</option>
-                  <option value="light">Light (1-2 days/week exercise)</option>
-                  <option value="moderate">Moderate (3-5 days/week exercise)</option>
-                  <option value="active">Active (6-7 days/week exercise)</option>
-                  <option value="very_active">Very Active (Physical job + daily exercise)</option>
-                </select>
+              <h3 className="text-xl font-bold text-[#141414]">Activity & Steps</h3>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#141414]/60">Daily Activity Level</label>
+                  <select 
+                    value={formData.activityLevel}
+                    onChange={e => setFormData({ ...formData, activityLevel: e.target.value as ActivityLevel })}
+                    className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  >
+                    <option value="sedentary">Sedentary (Office job, little exercise)</option>
+                    <option value="light">Light (1-2 days/week exercise)</option>
+                    <option value="moderate">Moderate (3-5 days/week exercise)</option>
+                    <option value="active">Active (6-7 days/week exercise)</option>
+                    <option value="very_active">Very Active (Physical job + daily exercise)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#141414]/60">Daily Steps Goal</label>
+                  <input 
+                    type="number" 
+                    step="500"
+                    value={Number.isNaN(formData.dailyStepsGoal) ? '' : formData.dailyStepsGoal}
+                    onChange={e => setFormData({ ...formData, dailyStepsGoal: parseInt(e.target.value) })}
+                    className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  />
+                  <p className="text-xs text-[#141414]/40">Your daily steps goal also impacts your calorie requirements.</p>
+                </div>
               </div>
             </motion.div>
           )}
@@ -195,7 +210,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <input 
                     type="number" 
                     step="1"
-                    value={formData.currentBodyFat}
+                    value={Number.isNaN(formData.currentBodyFat) ? '' : formData.currentBodyFat}
                     onChange={e => setFormData({ ...formData, currentBodyFat: parseFloat(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />
@@ -205,7 +220,7 @@ export function ProfileSetup({ user, onComplete }: Props) {
                   <input 
                     type="number" 
                     step="1"
-                    value={formData.goalBodyFat}
+                    value={Number.isNaN(formData.goalBodyFat) ? '' : formData.goalBodyFat}
                     onChange={e => setFormData({ ...formData, goalBodyFat: parseFloat(e.target.value) })}
                     className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />

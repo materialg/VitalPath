@@ -3,7 +3,7 @@ import { doc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc } fr
 import { db } from '../firebase';
 import { UserProfile, ActivityLevel, Gender, VitalLog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Target, Activity, User as UserIcon, Save, Scale, Calendar } from 'lucide-react';
+import { X, Target, Activity, User as UserIcon, Save, Scale, Calendar, Footprints } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -14,6 +14,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
   const [formData, setFormData] = useState({
     displayName: profile.displayName,
     goalBodyFat: profile.goalBodyFat || 15,
+    dailyStepsGoal: profile.dailyStepsGoal || 10000,
     currentWeight: 0,
     currentBodyFat: 0,
     activityLevel: profile.activityLevel || 'moderate' as ActivityLevel,
@@ -148,8 +149,22 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
               <input 
                 type="number" 
                 step="1"
-                value={formData.goalBodyFat}
+                value={Number.isNaN(formData.goalBodyFat) ? '' : formData.goalBodyFat}
                 onChange={e => setFormData({ ...formData, goalBodyFat: parseFloat(e.target.value) })}
+                className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#141414]/60">Daily Steps Goal</label>
+            <div className="relative">
+              <Footprints className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+              <input 
+                type="number" 
+                step="500"
+                value={Number.isNaN(formData.dailyStepsGoal) ? '' : formData.dailyStepsGoal}
+                onChange={e => setFormData({ ...formData, dailyStepsGoal: parseInt(e.target.value) })}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
               />
             </div>
@@ -163,7 +178,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
                 <input 
                   type="number" 
                   step="1"
-                  value={formData.currentWeight}
+                  value={Number.isNaN(formData.currentWeight) ? '' : formData.currentWeight}
                   onChange={e => setFormData({ ...formData, currentWeight: parseFloat(e.target.value) })}
                   className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                 />
@@ -177,7 +192,7 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
                 <input 
                   type="number" 
                   step="1"
-                  value={formData.currentBodyFat}
+                  value={Number.isNaN(formData.currentBodyFat) ? '' : formData.currentBodyFat}
                   onChange={e => setFormData({ ...formData, currentBodyFat: parseFloat(e.target.value) })}
                   className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                 />

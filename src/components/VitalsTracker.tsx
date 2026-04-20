@@ -147,7 +147,7 @@ export function VitalsTracker({ profile }: Props) {
                   <input 
                     type="number" 
                     step="1"
-                    value={weight}
+                    value={Number.isNaN(weight) ? '' : weight}
                     onChange={e => setWeight(parseFloat(e.target.value))}
                     className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />
@@ -161,7 +161,7 @@ export function VitalsTracker({ profile }: Props) {
                   <input 
                     type="number" 
                     step="1"
-                    value={bodyFat}
+                    value={Number.isNaN(bodyFat) ? '' : bodyFat}
                     onChange={e => setBodyFat(parseFloat(e.target.value))}
                     className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                   />
@@ -436,7 +436,7 @@ function EditModal({ log, onClose, onSave }: { log: VitalLog, onClose: () => voi
               <input 
                 type="number" 
                 step="1"
-                value={weight}
+                value={Number.isNaN(weight) ? '' : weight}
                 onChange={e => setWeight(parseFloat(e.target.value))}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
               />
@@ -450,7 +450,7 @@ function EditModal({ log, onClose, onSave }: { log: VitalLog, onClose: () => voi
               <input 
                 type="number" 
                 step="1"
-                value={bodyFat}
+                value={Number.isNaN(bodyFat) ? '' : bodyFat}
                 onChange={e => setBodyFat(parseFloat(e.target.value))}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
               />

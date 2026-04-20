@@ -235,7 +235,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full">
         <StatCard 
           progress={timelineProgress}
           label="Timeline" 
@@ -249,6 +249,13 @@ export function Dashboard({ profile, onNavigate }: Props) {
           value={`${currentBF}%`} 
           subValue={`Goal: ${profile.goalBodyFat}%`}
           color="text-orange-500"
+        />
+        <StatCard 
+          progress={100}
+          label="Steps Goal" 
+          value={`${profile.dailyStepsGoal || 10000}`} 
+          subValue="Steps / Day"
+          color="text-blue-500"
         />
         <StatCard 
           progress={100}
@@ -362,6 +369,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
              key="meal-modal"
              meals={todayMealPlan.meals} 
              dayName={todayMealPlan.day}
+             targetCalories={currentTargets.dailyCalories}
              onClose={() => setShowMealModal(false)} 
              onConfirm={async () => {
                if (!latestMealPlan || !todayMealPlan) return;
@@ -503,7 +511,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
               <input 
                 type="number" 
                 step="1"
-                value={weight}
+                value={Number.isNaN(weight) ? '' : weight}
                 onChange={e => setWeight(parseFloat(e.target.value))}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
               />
@@ -517,7 +525,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
               <input 
                 type="number" 
                 step="1"
-                value={bodyFat}
+                value={Number.isNaN(bodyFat) ? '' : bodyFat}
                 onChange={e => setBodyFat(parseFloat(e.target.value))}
                 className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
               />
@@ -537,7 +545,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
   );
 }
 
-function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, key?: React.Key }) {
+function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, targetCalories?: number, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, key?: React.Key }) {
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
   
   return (
@@ -559,7 +567,9 @@ function MealModal({ meals, dayName, onClose, onConfirm, onToggleMeal }: { meals
             </div>
             <div>
               <h3 className="text-2xl font-bold text-[#141414]">Today's Meals</h3>
-              <p className="text-[#141414]/60">{dayName} • {totalCalories} kcal total</p>
+              <p className={`text-[#141414]/60 ${targetCalories && totalCalories > targetCalories ? 'text-red-500' : ''}`}>
+                {dayName} • {totalCalories} kcal total
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">

@@ -372,7 +372,7 @@ export function MealPlanner({ profile }: Props) {
                       {/* centers macro summary */}
                       <div className="flex-1 flex justify-around items-start px-2 lg:px-6">
                         {[
-                          { label: 'Daily Calories', value: `${Math.round(totals.calories)} kcal` },
+                          { label: 'Daily Calories', value: `${Math.round(totals.calories)} kcal`, isCalories: true },
                           { label: 'Protein', value: `${Math.round(totals.protein)}g` },
                           { label: 'Carbs', value: `${Math.round(totals.carbs)}g` },
                           { label: 'Fats', value: `${Math.round(totals.fats)}g` },
@@ -380,7 +380,13 @@ export function MealPlanner({ profile }: Props) {
                         ].map((stat, i) => (
                           <div key={i} className="text-center">
                             <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{stat.label}</p>
-                            <p className="text-xl lg:text-2xl font-black text-[#141414] whitespace-nowrap">{stat.value}</p>
+                            <p className={`text-xl lg:text-2xl font-black whitespace-nowrap ${
+                              stat.isCalories && totals.calories > targets.dailyCalories 
+                                ? 'text-red-500' 
+                                : 'text-[#141414]'
+                            }`}>
+                              {stat.value}
+                            </p>
                           </div>
                         ))}
                       </div>
