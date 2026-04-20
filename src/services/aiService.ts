@@ -1,7 +1,7 @@
 import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { GoogleGenAI, Type } from "@google/genai";
-import { sanitizeMeal, stripUndefined } from './mealSanitizer';
+import { sanitizeMeal, stripUndefined, SLOT_TAGS } from './mealSanitizer';
 import type { Meal } from '../types';
 
 export enum OperationType {
@@ -251,10 +251,15 @@ async function generateDay(dayName: string, prompt: string, cleanFoodBank: any[]
 
   const rawMeals = Array.isArray(data?.meals) ? data.meals : [];
   const MEAL_SLOTS = ["Breakfast", "Lunch", "Dinner"];
-  const meals = rawMeals
-    .map((m: any) => sanitizeMeal(m, cleanFoodBank as any))
-    .filter((m: Meal | null): m is Meal => m !== null)
-    .map((m, idx) => ({ ...m, name: MEAL_SLOTS[idx] || `Meal ${idx + 1}` }));
+  const meals: Meal[] = [];
+  for (let idx = 0; idx < MEAL_SLOTS.length; idx++) {
+    const raw = rawMeals[idx];
+    if (!raw) continue;
+    const sanitized =
+      sanitizeMeal(raw, cleanFoodBank as any, SLOT_TAGS[idx]) ||
+      sanitizeMeal(raw, cleanFoodBank as any);
+    if (sanitized) meals.push({ ...sanitized, name: MEAL_SLOTS[idx] });
+  }
 
   if (meals.length === 0) {
     throw new Error(`No valid meals could be built for ${dayName} from your Food Bank.`);
@@ -283,17 +288,35 @@ export async function generateMealPlan(profile: any, weight: number, bodyFat: nu
   }));
 
   const foodBankNames = Array.from(new Set(cleanFoodBank.map(i => i.name)));
-  const foodBankContext = `
-STRICT INVENTORY:
-${cleanFoodBank.map(i => {
+
+  const fmtItem = (i: typeof cleanFoodBank[number]) => {
     const constraint = i.servingUnit === 'unit' ? ' (WHOLE UNIT ONLY)' : '';
     return `- ${i.name}: ${i.calories} cal, ${i.protein}g P per ${i.servingSize}${i.servingUnit}${constraint}`;
-  }).join('\n')}
+  };
+
+  const isUntagged = (i: typeof cleanFoodBank[number]) => !i.mealTypes || i.mealTypes.length === 0;
+  const untagged = cleanFoodBank.filter(isUntagged);
+  const forSlot = (tag: 'B' | 'L' | 'D') =>
+    cleanFoodBank.filter(i => (i.mealTypes || []).includes(tag)).concat(untagged);
+
+  const slotList = (label: string, items: typeof cleanFoodBank) =>
+    items.length > 0
+      ? `${label} INVENTORY (use ONLY these for ${label.toLowerCase()}):\n${items.map(fmtItem).join('\n')}`
+      : `${label} INVENTORY: (empty — skip this meal)`;
+
+  const foodBankContext = `
+${slotList('BREAKFAST', forSlot('B'))}
+
+${slotList('LUNCH', forSlot('L'))}
+
+${slotList('DINNER', forSlot('D'))}
 
 CRITICAL:
-1. Divide nutrients by 3 for each meal.
-2. Hit targets +/- 20kcal.
-3. RETURN ONLY JSON.`;
+1. Meal 1 uses ONLY items from BREAKFAST INVENTORY.
+2. Meal 2 uses ONLY items from LUNCH INVENTORY.
+3. Meal 3 uses ONLY items from DINNER INVENTORY.
+4. Divide nutrients evenly across 3 meals. Hit targets +/- 20 kcal.
+5. RETURN ONLY JSON.`;
 
   const daysLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const dayPromises = daysLabels.map(dayName => {

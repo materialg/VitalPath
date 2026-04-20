@@ -19,7 +19,15 @@ const formatAmount = (amount: number, unit: string) => {
   return `${amount} ${unit}`;
 };
 
-export function sanitizeMeal(rawMeal: any, foodBank: FoodBankItem[]): Meal | null {
+export type MealSlotTag = 'B' | 'L' | 'D';
+
+export const SLOT_TAGS: MealSlotTag[][] = [['B'], ['L'], ['D']];
+
+export function sanitizeMeal(
+  rawMeal: any,
+  foodBank: FoodBankItem[],
+  allowedMealTypes?: MealSlotTag[]
+): Meal | null {
   if (!rawMeal || typeof rawMeal !== 'object') return null;
 
   const name = typeof rawMeal.name === 'string' ? rawMeal.name.trim() : '';
@@ -39,6 +47,13 @@ export function sanitizeMeal(rawMeal: any, foodBank: FoodBankItem[]): Meal | nul
 
     const food = foodBank.find(f => cleanName(f.name) === cleanName(ingName));
     if (!food) continue;
+
+    if (allowedMealTypes && allowedMealTypes.length > 0) {
+      const foodTypes = food.mealTypes ?? [];
+      if (foodTypes.length > 0 && !foodTypes.some(t => allowedMealTypes.includes(t))) {
+        continue;
+      }
+    }
 
     let amountNum = toNumber(ing.amount, 0);
     const unit = food.servingUnit || 'unit';
