@@ -393,20 +393,20 @@ export function MealPlanner({ profile }: Props) {
                       {/* centers macro summary */}
                       <div className="flex-1 flex justify-around items-start px-2 lg:px-6">
                         {[
-                          { label: 'Daily Calories', value: `${Math.round(totals.calories)} kcal`, isCalories: true },
-                          { label: 'Protein', value: `${Math.round(totals.protein)}g` },
-                          { label: 'Carbs', value: `${Math.round(totals.carbs)}g` },
-                          { label: 'Fats', value: `${Math.round(totals.fats)}g` },
-                          { label: 'Fiber', value: `${Math.round(totals.fiber)}g` }
+                          { label: 'Daily Calories', value: Math.round(totals.calories), unit: 'kcal', isCalories: true },
+                          { label: 'Protein', value: Math.round(totals.protein), unit: 'g' },
+                          { label: 'Carbs', value: Math.round(totals.carbs), unit: 'g' },
+                          { label: 'Fats', value: Math.round(totals.fats), unit: 'g' },
+                          { label: 'Fiber', value: Math.round(totals.fiber), unit: 'g' }
                         ].map((stat, i) => (
                           <div key={i} className="text-center">
                             <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{stat.label}</p>
                             <p className={`text-xl lg:text-2xl font-black whitespace-nowrap ${
-                              stat.isCalories && totals.calories > targets.dailyCalories 
-                                ? 'text-red-500' 
+                              stat.isCalories && totals.calories > targets.dailyCalories
+                                ? 'text-red-500'
                                 : 'text-[#141414]'
                             }`}>
-                              {stat.value}
+                              {stat.value}<span className="hidden md:inline">{stat.unit === 'kcal' ? ` ${stat.unit}` : stat.unit}</span>
                             </p>
                           </div>
                         ))}
@@ -495,7 +495,7 @@ export function MealPlanner({ profile }: Props) {
                               </div>
                               <div className={`text-right shrink-0 ${isEmpty ? 'opacity-30' : ''}`}>
                                 <p className="text-sm font-bold text-[#141414]">{Math.round(meal.calories || 0)} kcal</p>
-                                <div className="flex gap-2 text-[10px] font-medium text-[#141414]/40 whitespace-nowrap">
+                                <div className="hidden md:flex gap-2 text-[10px] font-medium text-[#141414]/40 whitespace-nowrap">
                                   <span>P: {Math.round(meal.protein || 0)}g</span>
                                   <span>C: {Math.round(meal.carbs || 0)}g</span>
                                   <span>F: {Math.round(meal.fats || 0)}g</span>
@@ -503,7 +503,7 @@ export function MealPlanner({ profile }: Props) {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex flex-wrap gap-2 pb-2">
+                            <div className="hidden md:flex flex-wrap gap-2 pb-2">
                               {Array.isArray(meal.ingredientsWithAmounts) && meal.ingredientsWithAmounts.length > 0
                                 ? meal.ingredientsWithAmounts.map((ing: any, iIdx: number) => {
                                     const food = findFoodItem(ing.name);
