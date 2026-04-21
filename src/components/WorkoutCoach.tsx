@@ -297,10 +297,10 @@ export function WorkoutCoach({ profile }: Props) {
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-              <div className="flex items-center justify-between mb-5 lg:mb-8 px-4 lg:px-6">
+              <div className="flex items-center justify-between mb-4 lg:mb-8 px-4 lg:px-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
-                  <p className="text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
+                  <h3 className="text-xl lg:text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
+                  <p className="text-xs lg:text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
                 </div>
               </div>
 
@@ -365,14 +365,14 @@ export function WorkoutCoach({ profile }: Props) {
                                       <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Log Performance</p>
                                       <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Target: {ex.reps} Reps</p>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                       {Array.from({ length: ex.sets }).map((_, sIdx) => (
-                                        <div key={sIdx} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-[#141414]/5">
-                                          <div className="w-8 h-8 bg-[#141414]/5 rounded-lg flex items-center justify-center shrink-0">
+                                        <div key={sIdx} className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white rounded-xl border border-[#141414]/5">
+                                          <div className="w-7 h-7 md:w-8 md:h-8 bg-[#141414]/5 rounded-lg flex items-center justify-center shrink-0">
                                             <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
                                           </div>
 
-                                          <div className="flex-1 grid grid-cols-2 gap-4">
+                                          <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4">
                                             <div className="relative">
                                               <input
                                                 type="number"

@@ -307,7 +307,7 @@ export function MealPlanner({ profile }: Props) {
 
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
+            <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
               <div className="flex flex-wrap gap-4 lg:gap-8 mb-8">
                 {(() => {
                   const totals = dayMeals.reduce((acc, meal) => ({
@@ -321,8 +321,8 @@ export function MealPlanner({ profile }: Props) {
                   return (
                     <div className="flex items-center justify-between w-full mb-12">
                       {/* fire icon */}
-                      <div className="w-12 h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
-                        <Flame size={24} className="text-orange-500" />
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
+                        <Flame size={22} className="text-orange-500" />
                       </div>
 
                       {/* mobile: compact summary */}
@@ -369,16 +369,16 @@ export function MealPlanner({ profile }: Props) {
                       {/* date tile */}
                       {(() => {
                         if (!activePlan?.weekStartDate) {
-                          return <div className="w-12 h-12 shrink-0" />;
+                          return <div className="w-10 h-10 md:w-12 md:h-12 shrink-0" />;
                         }
                         const d = new Date(activePlan.weekStartDate + 'T00:00:00');
                         d.setDate(d.getDate() + selectedDay);
                         const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
                         const dayNum = d.getDate();
                         return (
-                          <div className="w-12 h-12 rounded-xl bg-[#141414]/5 flex flex-col items-center justify-center shrink-0">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex flex-col items-center justify-center shrink-0">
                             <span className="text-[9px] font-bold text-[#141414]/50 uppercase leading-none">{month}</span>
-                            <span className="text-base font-black text-[#141414] leading-tight">{dayNum}</span>
+                            <span className="text-sm md:text-base font-black text-[#141414] leading-tight">{dayNum}</span>
                           </div>
                         );
                       })()}
@@ -394,7 +394,7 @@ export function MealPlanner({ profile }: Props) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="space-y-6"
+                    className="space-y-3 md:space-y-6"
                   >
                     {MEAL_SLOT_NAMES.map((slotName, mIdx) => {
                       const existingMeal = dayMeals[mIdx];
@@ -404,19 +404,19 @@ export function MealPlanner({ profile }: Props) {
                       <div key={mIdx} className="group">
                         <div
                           onClick={() => toggleMealStatus(mIdx)}
-                          className={`flex items-start gap-4 p-6 rounded-2xl transition-all cursor-pointer ${
+                          className={`flex items-start gap-3 md:gap-4 p-4 md:p-6 rounded-2xl transition-all cursor-pointer ${
                             meal.status === 'completed' ? 'bg-green-50/50' : 'hover:bg-[#141414]/5'
                           }`}
                         >
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold transition-all ${
+                          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm md:text-base transition-all ${
                             meal.status === 'completed' ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
                           }`}>
-                            {meal.status === 'completed' ? <Check size={20} /> : mIdx + 1}
+                            {meal.status === 'completed' ? <Check size={18} /> : mIdx + 1}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2 gap-4">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <h4 className={`text-xl font-bold truncate ${meal.status === 'completed' ? 'text-[#141414]/40 line-through' : 'text-[#141414]'}`}>
+                            <div className="flex items-center justify-between mb-1 md:mb-2 gap-4">
+                              <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                                <h4 className={`text-lg md:text-xl font-bold truncate ${meal.status === 'completed' ? 'text-[#141414]/40 line-through' : 'text-[#141414]'}`}>
                                   {MEAL_SLOT_NAMES[mIdx] || meal.name}
                                 </h4>
                                 {meal.status === 'completed' && (
