@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
-import { generateMealPlan, calculateDailyTargets, logDailyTarget, generateAndSaveMealPlan, regenerateDayPlan, checkIsAIConfigured } from '../services/aiService';
+import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, Sparkles, RotateCcw, ChevronRight, ChefHat, Flame, Info, Target, TrendingDown, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search, Loader2, Zap } from 'lucide-react';
+import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -24,10 +24,7 @@ export function MealPlanner({ profile }: Props) {
   const [dailyTargets, setDailyTargets] = useState<any[]>([]);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isRecalculating, setIsRecalculating] = useState(false);
-  const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
-  const [aiConfigInfo, setAiConfigInfo] = useState<{ foundKeys?: string[] }>({});
+  const [isCreatingWeek, setIsCreatingWeek] = useState(false);
   const MEAL_PLAN_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
 
@@ -102,13 +99,6 @@ export function MealPlanner({ profile }: Props) {
       setFoodBankItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FoodBankItem)));
     });
 
-    // Check AI status
-    checkIsAIConfigured().then(info => {
-      console.log("[MealPlanner] AI Ready status:", info);
-      setIsAIReady(info.isConfigured);
-      setAiConfigInfo({ foundKeys: info.foundKeys });
-    });
-
     return () => {
       unsubscribeVitals();
       unsubscribePlans();
@@ -143,38 +133,6 @@ export function MealPlanner({ profile }: Props) {
     } catch (err) {
       console.error("Failed to update meal:", err);
       setError("Failed to save meal changes. Please try again.");
-    }
-  };
-
-  const handleRebalanceDay = async () => {
-    if (!activePlan || !activePlanId) return;
-
-    setIsRecalculating(true);
-    setError(null);
-
-    const updatedDays = [...activePlan.days];
-    const currentDayMeals = updatedDays[selectedDay].meals;
-    
-    try {
-      const newDayMeals = await regenerateDayPlan(
-        profile,
-        latestVital?.weight || 180,
-        latestVital?.bodyFat || 20,
-        foodBankItems,
-        currentDayMeals
-      );
-
-      updatedDays[selectedDay].meals = newDayMeals;
-
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
-        days: updatedDays,
-        updatedAt: new Date().toISOString()
-      }));
-    } catch (err) {
-      console.error("Failed to rebalance day:", err);
-      setError("AI was unable to rebalance the day. Try adjusting your items manually or generating a new week.");
-    } finally {
-      setIsRecalculating(false);
     }
   };
 
@@ -218,28 +176,27 @@ export function MealPlanner({ profile }: Props) {
     }
   };
 
-  const handleGenerate = async () => {
-    if (foodBankItems.length === 0) {
-      setError("Your Food Bank is empty. Please add some foods first so the AI can build your plan!");
-      return;
-    }
-    setIsGenerating(true);
+  const handleCreateEmptyWeek = async () => {
+    setIsCreatingWeek(true);
     setError(null);
-    console.log("Generating meal plan...");
     try {
-      const planId = await generateAndSaveMealPlan(
-        profile, 
-        latestVital?.weight || 180, 
-        latestVital?.bodyFat || 20, 
-        foodBankItems
-      );
-      console.log("Meal plan generated successfully:", planId);
-      setActivePlanId(planId);
+      const today = new Date().toLocaleDateString('en-CA');
+      const days = MEAL_PLAN_DAYS.map(day => ({ day, meals: [] }));
+      const newPlan = stripUndefined({
+        days,
+        dailyCalories: targets.dailyCalories,
+        macros: targets.macros,
+        weekStartDate: today,
+        updatedAt: new Date().toISOString(),
+      });
+      const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
+      await updateDoc(doc(db, 'users', profile.uid), { activeMealPlanId: docRef.id });
+      setActivePlanId(docRef.id);
     } catch (err: any) {
-      console.error("Meal generation failed:", err);
-      setError(err.message || "Failed to generate meal plan. Please try again.");
+      console.error("Failed to create week:", err);
+      setError(err.message || "Failed to create week. Please try again.");
     } finally {
-      setIsGenerating(false);
+      setIsCreatingWeek(false);
     }
   };
 
@@ -269,17 +226,7 @@ export function MealPlanner({ profile }: Props) {
             <Info size={20} />
             <p className="font-medium">{error}</p>
           </div>
-          <div className="flex items-center gap-3">
-            {error.includes("timed out") && (
-              <button 
-                onClick={handleGenerate}
-                className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors"
-              >
-                Retry Generation
-              </button>
-            )}
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold p-2">✕</button>
-          </div>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 font-bold p-2">✕</button>
         </div>
       )}
 
@@ -431,38 +378,12 @@ export function MealPlanner({ profile }: Props) {
                         ))}
                       </div>
 
-                      {/* replay icon */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRebalanceDay();
-                        }}
-                        disabled={isRecalculating}
-                        className="w-12 h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0 group/regen transition-all hover:bg-[#141414]/10 disabled:opacity-30"
-                        title="Regenerate Day"
-                      >
-                        <RotateCcw 
-                          size={24} 
-                          className={`transition-all ${isRecalculating ? 'animate-spin text-orange-500' : 'text-[#141414]/20 group-hover/regen:text-orange-500'}`} 
-                        />
-                      </button>
                     </div>
                   );
                 })()}
               </div>
 
               <div className="space-y-8 relative">
-                {isRecalculating && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center rounded-2xl animate-in fade-in duration-300">
-                    <div className="p-4 bg-[#141414] text-white rounded-2xl border border-white/10 shadow-2xl flex flex-col items-center gap-3">
-                      <Loader2 className="animate-spin text-orange-500" size={32} />
-                      <div className="text-center">
-                        <p className="font-bold">Recalculating Day Plan</p>
-                        <p className="text-[10px] text-white/40 uppercase tracking-widest">Adjusting other meals to stay on target</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`${activePlanId}-${selectedDay}`}
@@ -580,45 +501,16 @@ export function MealPlanner({ profile }: Props) {
             </div>
             <h3 className="text-2xl font-bold text-[#141414] mb-2">No Weekly Plan Yet</h3>
             <p className="text-[#141414]/60 max-w-md mx-auto mb-8">
-              {foodBankItems.length === 0 
-                ? "Your Food Bank is empty. Add some foods first so the AI can build your customized meal plan!"
-                : "Get a customized 7-day meal schedule tailored to your goals and available food."}
+              Start an empty 7-day plan and fill it in by hand from your Food Bank.
             </p>
-            
-            {isAIReady === false ? (
-              <div className="max-w-md mx-auto p-6 bg-orange-50 border border-orange-200 rounded-2xl text-left space-y-3">
-                <div className="flex items-center gap-3 text-orange-600">
-                  <Sparkles size={20} />
-                  <p className="font-bold">AI Features Unconfigured</p>
-                </div>
-                <p className="text-sm text-orange-800/80">
-                  Please add a valid <strong>GEMINI_API_KEY</strong> in the project settings (Settings - Secrets) to enable AI meal generation.
-                </p>
-                {aiConfigInfo.foundKeys && aiConfigInfo.foundKeys.length > 0 && (
-                  <div className="pt-2 border-t border-orange-200 mt-2">
-                    <p className="text-[10px] text-orange-400 font-mono uppercase tracking-widest mb-1">Detected Keys (Verify Names):</p>
-                    <div className="flex flex-wrap gap-1">
-                      {aiConfigInfo.foundKeys.map(key => (
-                        <span key={key} className="px-1.5 py-0.5 bg-orange-100 rounded text-[10px] font-mono text-orange-600">{key}</span>
-                      ))}
-                    </div>
-                  </div>
-                ) || (
-                  <p className="text-[10px] text-orange-400 font-mono">No relevant API keys detected in environment.</p>
-                )}
-              </div>
-            ) : (
-              <button 
-                onClick={handleGenerate}
-                disabled={isGenerating || isAIReady === null}
-                className="px-8 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-[#141414]/20 mx-auto"
-              >
-                {isGenerating ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
-                ) : <Sparkles size={18} />}
-                Generate Weekly Plan
-              </button>
-            )}
+            <button
+              onClick={handleCreateEmptyWeek}
+              disabled={isCreatingWeek}
+              className="px-8 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-[#141414]/20 mx-auto"
+            >
+              <Plus size={18} />
+              {isCreatingWeek ? 'Creating...' : 'Start Empty Week'}
+            </button>
           </div>
 
           {dailyTargets.length > 0 && (

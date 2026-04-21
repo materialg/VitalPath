@@ -1,9 +1,6 @@
-import { collection, addDoc, query, where, getDocs, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, limit } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { GoogleGenAI, Type } from "@google/genai";
-import { stripUndefined } from './mealSanitizer';
-import { composeDay } from './mealComposer';
-import { aiGenerate } from './aiMealGenerator';
 
 export enum OperationType {
   CREATE = 'create',
@@ -203,64 +200,6 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
       ...targets
     });
   }
-}
-
-export async function generateMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[] = []) {
-  const targets = calculateDailyTargets(profile, weight, bodyFat);
-  const daysLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-  let days;
-  try {
-    days = await aiGenerate(targets, foodBankItems, daysLabels);
-  } catch (err) {
-    console.warn('[generateMealPlan] AI path failed, falling back to deterministic composer:', err);
-    days = daysLabels.map(dayName => composeDay(dayName, targets, foodBankItems));
-  }
-
-  return {
-    days,
-    dailyCalories: targets.dailyCalories,
-    macros: targets.macros,
-  };
-}
-
-export async function generateAndSaveMealPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[]) {
-  const plan = await generateMealPlan(profile, weight, bodyFat, foodBankItems);
-  const today = new Date().toLocaleDateString('en-CA');
-  const newPlan = stripUndefined({ ...plan, weekStartDate: today, updatedAt: new Date().toISOString() });
-  const q = query(collection(db, 'users', profile.uid, 'mealPlans'), where('weekStartDate', '==', today), limit(1));
-  const snap = await getDocs(q);
-  let planId = '';
-  if (!snap.empty) {
-    planId = snap.docs[0].id;
-    await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', planId), newPlan);
-  } else {
-    const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
-    planId = docRef.id;
-  }
-  await updateDoc(doc(db, 'users', profile.uid), { activeMealPlanId: planId });
-  return planId;
-}
-
-export async function regenerateDayPlan(profile: any, weight: number, bodyFat: number, foodBankItems: any[], currentDayMeals: any[]) {
-  const hasPending = currentDayMeals.some(m => m?.status !== 'completed');
-  if (!hasPending) return currentDayMeals;
-
-  const targets = calculateDailyTargets(profile, weight, bodyFat);
-
-  let dayResult;
-  try {
-    const [aiDay] = await aiGenerate(targets, foodBankItems, ['Today']);
-    dayResult = aiDay;
-  } catch (err) {
-    console.warn('[regenerateDayPlan] AI path failed, falling back to deterministic composer:', err);
-    dayResult = composeDay('Today', targets, foodBankItems);
-  }
-
-  return currentDayMeals.map((original, idx) => {
-    if (original?.status === 'completed') return original;
-    return dayResult.meals[idx] || original;
-  });
 }
 
 export async function generateWorkoutPlan(profile: any, weight: number, bodyFat: number, previousPlan?: any) {

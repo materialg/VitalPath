@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, writeBatch, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, FoodBankItem, VitalLog } from '../types';
-import { generateAndSaveMealPlan } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Trash2, Pencil, X, Save, Search, Database, Scale, Flame, Zap, Upload, FileText, Loader2, Eye, EyeOff, Download } from 'lucide-react';
 import Papa from 'papaparse';
