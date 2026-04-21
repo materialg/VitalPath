@@ -390,8 +390,27 @@ export function MealPlanner({ profile }: Props) {
                         <Flame size={24} className="text-orange-500" />
                       </div>
 
-                      {/* centers macro summary */}
-                      <div className="flex-1 flex justify-around items-start px-2 lg:px-6">
+                      {/* mobile: compact summary */}
+                      <div className="flex-1 md:hidden flex items-center justify-center gap-3 px-3 min-w-0">
+                        <div className="flex flex-col items-center shrink-0">
+                          <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider">Kcal</p>
+                          <p className={`text-2xl font-black leading-none ${
+                            totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]'
+                          }`}>
+                            {Math.round(totals.calories)}
+                          </p>
+                        </div>
+                        <div className="h-8 w-px bg-[#141414]/10 shrink-0" />
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-bold text-[#141414]/60">
+                          <span>P {Math.round(totals.protein)}</span>
+                          <span>C {Math.round(totals.carbs)}</span>
+                          <span>F {Math.round(totals.fats)}</span>
+                          <span>Fib {Math.round(totals.fiber)}</span>
+                        </div>
+                      </div>
+
+                      {/* desktop: 5-column grid */}
+                      <div className="hidden md:flex flex-1 justify-around items-start px-2 lg:px-6">
                         {[
                           { label: 'Daily Calories', value: Math.round(totals.calories), unit: 'kcal', isCalories: true },
                           { label: 'Protein', value: Math.round(totals.protein), unit: 'g' },
@@ -406,7 +425,7 @@ export function MealPlanner({ profile }: Props) {
                                 ? 'text-red-500'
                                 : 'text-[#141414]'
                             }`}>
-                              {stat.value}<span className="hidden md:inline">{stat.unit === 'kcal' ? ` ${stat.unit}` : stat.unit}</span>
+                              {stat.value}{stat.unit === 'kcal' ? ` ${stat.unit}` : stat.unit}
                             </p>
                           </div>
                         ))}
