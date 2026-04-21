@@ -5,7 +5,7 @@ import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCateg
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addDays } from 'date-fns';
-import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, ChevronLeft } from 'lucide-react';
+import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, ChevronLeft } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -212,6 +212,34 @@ export function WorkoutCoach({ profile }: Props) {
     }
   };
 
+  const removeSet = async (exerciseIdx: number, setIdx: number) => {
+    if (!activePlan || !activePlanId) return;
+
+    const updatedDays = [...activePlan.days];
+    const updatedExercises = [...updatedDays[selectedDay].exercises];
+    const exercise = { ...updatedExercises[exerciseIdx] };
+    const currentCount = exercise.sets || 0;
+    if (currentCount <= 1) return;
+
+    exercise.sets = currentCount - 1;
+    exercise.setReps = (exercise.setReps || []).filter((_, i) => i !== setIdx);
+    exercise.setWeights = (exercise.setWeights || []).filter((_, i) => i !== setIdx);
+
+    updatedExercises[exerciseIdx] = exercise;
+    updatedDays[selectedDay].exercises = updatedExercises;
+
+    try {
+      const planRef = doc(db, 'users', profile.uid, 'workouts', activePlanId);
+      await updateDoc(planRef, {
+        days: updatedDays,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to remove set:', err);
+      setError('Failed to remove set. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -382,7 +410,23 @@ export function WorkoutCoach({ profile }: Props) {
                                     </div>
                                     <div className="space-y-2">
                                       {Array.from({ length: ex.sets }).map((_, sIdx) => (
-                                        <div key={sIdx} className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white rounded-xl border border-[#141414]/5">
+                                        <div key={sIdx} className="relative rounded-xl overflow-hidden">
+                                          <div className="absolute inset-0 bg-red-500 rounded-xl flex items-center justify-end pr-5">
+                                            <Trash2 size={18} className="text-white" />
+                                          </div>
+                                          <motion.div
+                                            drag={ex.sets > 1 ? 'x' : false}
+                                            dragConstraints={{ left: -100, right: 0 }}
+                                            dragElastic={0.15}
+                                            dragMomentum={false}
+                                            onDragEnd={(_, info) => {
+                                              if (info.offset.x < -80) {
+                                                removeSet(idx, sIdx);
+                                              }
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="relative flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white rounded-xl border border-[#141414]/5 touch-pan-y"
+                                          >
                                           <div className="w-7 h-7 md:w-8 md:h-8 bg-[#141414]/5 rounded-lg flex items-center justify-center shrink-0">
                                             <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
                                           </div>
@@ -412,6 +456,7 @@ export function WorkoutCoach({ profile }: Props) {
                                               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
                                             </div>
                                           </div>
+                                          </motion.div>
                                         </div>
                                       ))}
                                       <button
