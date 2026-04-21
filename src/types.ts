@@ -105,6 +105,21 @@ export interface WorkoutPlan {
   days: WorkoutDay[];
 }
 
+export type LiftCategory = 'push' | 'pull' | 'legs' | 'core' | 'cardio';
+export type LiftEquipment = 'barbell' | 'dumbbell' | 'bodyweight' | 'machine' | 'cable' | 'kettlebell' | 'other';
+
+export interface LiftBankItem {
+  id: string;
+  name: string;
+  category: LiftCategory;
+  equipment?: LiftEquipment;
+  defaultSets?: number;
+  defaultReps?: string;
+  muscleGroups?: string[];
+  notes?: string;
+  hidden?: boolean;
+}
+
 export interface FoodBankItem {
   id: string;
   name: string;

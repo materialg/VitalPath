@@ -13,11 +13,12 @@ import { VitalsTracker } from './components/VitalsTracker';
 import { MealPlanner } from './components/MealPlanner';
 import { WorkoutCoach } from './components/WorkoutCoach';
 import { FoodBank } from './components/FoodBank';
+import { LiftBank } from './components/LiftBank';
 import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database, X } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database, Library, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -194,6 +195,7 @@ export default function App() {
       case 'vitals': return <VitalsTracker profile={profile} />;
       case 'meals': return <MealPlanner profile={profile} />;
       case 'foodbank': return <FoodBank profile={profile} />;
+      case 'liftbank': return <LiftBank profile={profile} />;
       case 'workouts': return <WorkoutCoach profile={profile} />;
       default: return <Dashboard profile={profile} onNavigate={setActiveTab} />;
     }
@@ -235,11 +237,17 @@ export default function App() {
             icon={<Dumbbell size={20} />} 
             label="Workouts" 
           />
-          <NavItem 
-            active={activeTab === 'foodbank'} 
-            onClick={() => setActiveTab('foodbank')} 
-            icon={<Database size={20} />} 
-            label="Food Bank" 
+          <NavItem
+            active={activeTab === 'foodbank'}
+            onClick={() => setActiveTab('foodbank')}
+            icon={<Database size={20} />}
+            label="Food Bank"
+          />
+          <NavItem
+            active={activeTab === 'liftbank'}
+            onClick={() => setActiveTab('liftbank')}
+            icon={<Library size={20} />}
+            label="Lift Bank"
           />
         </div>
 
@@ -300,12 +308,17 @@ export default function App() {
           onClick={() => setActiveTab('workouts')} 
           icon={<Dumbbell size={20} />} 
         />
-        <MobileNavItem 
-          active={activeTab === 'foodbank'} 
-          onClick={() => setActiveTab('foodbank')} 
-          icon={<Database size={20} />} 
+        <MobileNavItem
+          active={activeTab === 'foodbank'}
+          onClick={() => setActiveTab('foodbank')}
+          icon={<Database size={20} />}
         />
-        <button 
+        <MobileNavItem
+          active={activeTab === 'liftbank'}
+          onClick={() => setActiveTab('liftbank')}
+          icon={<Library size={20} />}
+        />
+        <button
           onClick={() => setShowSettings(true)}
           className="p-3 text-[#141414]/40"
         >

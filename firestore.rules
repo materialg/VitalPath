@@ -77,6 +77,18 @@ service cloud.firestore {
         && (!('updatedAt' in data) || (data.updatedAt is string));
     }
 
+    function isValidLiftBankItem(data) {
+      return (!('name' in data) || (data.name is string && data.name.size() <= 128))
+        && (!('category' in data) || (data.category in ['push', 'pull', 'legs', 'core', 'cardio']))
+        && (!('equipment' in data) || (data.equipment in ['barbell', 'dumbbell', 'bodyweight', 'machine', 'cable', 'kettlebell', 'other']))
+        && (!('defaultSets' in data) || (data.defaultSets is number && data.defaultSets >= 0 && data.defaultSets <= 20))
+        && (!('defaultReps' in data) || (data.defaultReps is string && data.defaultReps.size() <= 32))
+        && (!('muscleGroups' in data) || (data.muscleGroups is list && data.muscleGroups.size() <= 10))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 512))
+        && (!('hidden' in data) || data.hidden is bool)
+        && (!('updatedAt' in data) || (data.updatedAt is string));
+    }
+
     function isValidFoodBankItem(data) {
       return (!('name' in data) || (data.name is string && data.name.size() <= 128))
         && (!('calories' in data) || (data.calories is number && data.calories >= 0 && data.calories <= 100000))
@@ -144,6 +156,14 @@ service cloud.firestore {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming());
         allow update: if isVerifiedOwner(userId) && isValidId(itemId) && isValidFoodBankItem(incoming());
+        allow delete: if isVerifiedOwner(userId) || isAdmin();
+      }
+
+      // Lift Bank
+      match /liftBank/{itemId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidId(itemId) && isValidLiftBankItem(incoming());
+        allow update: if isVerifiedOwner(userId) && isValidId(itemId) && isValidLiftBankItem(incoming());
         allow delete: if isVerifiedOwner(userId) || isAdmin();
       }
 
