@@ -297,17 +297,17 @@ export function WorkoutCoach({ profile }: Props) {
                               <div className="w-12 h-12 bg-[#141414] rounded-xl flex items-center justify-center shrink-0 text-white font-bold">
                                 {idx + 1}
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-2 gap-3">
                                   <h4 className="text-xl font-bold text-[#141414]">{ex.name}</h4>
                                   {ex.prescribedWeight && (
-                                    <div className="text-right">
+                                    <div className="hidden md:block text-right shrink-0">
                                       <p className="text-xl font-bold text-[#141414]">{ex.prescribedWeight} lbs</p>
                                       <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Target Weight</p>
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
+                                <p className="hidden md:block text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
                               </div>
                             </div>
 
