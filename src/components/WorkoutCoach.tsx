@@ -410,23 +410,10 @@ export function WorkoutCoach({ profile }: Props) {
                                     </div>
                                     <div className="space-y-2">
                                       {Array.from({ length: ex.sets }).map((_, sIdx) => (
-                                        <div key={sIdx} className="relative rounded-xl overflow-hidden">
-                                          <div className="absolute inset-0 bg-red-500 rounded-xl flex items-center justify-end pr-5">
-                                            <Trash2 size={18} className="text-white" />
-                                          </div>
-                                          <motion.div
-                                            drag={ex.sets > 1 ? 'x' : false}
-                                            dragConstraints={{ left: -100, right: 0 }}
-                                            dragElastic={0.15}
-                                            dragMomentum={false}
-                                            onDragEnd={(_, info) => {
-                                              if (info.offset.x < -80) {
-                                                removeSet(idx, sIdx);
-                                              }
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="relative flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white rounded-xl border border-[#141414]/5 touch-pan-y"
-                                          >
+                                        <div
+                                          key={sIdx}
+                                          className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white rounded-xl border border-[#141414]/5"
+                                        >
                                           <div className="w-7 h-7 md:w-8 md:h-8 bg-[#141414]/5 rounded-lg flex items-center justify-center shrink-0">
                                             <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
                                           </div>
@@ -456,7 +443,19 @@ export function WorkoutCoach({ profile }: Props) {
                                               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
                                             </div>
                                           </div>
-                                          </motion.div>
+
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              removeSet(idx, sIdx);
+                                            }}
+                                            disabled={ex.sets <= 1}
+                                            title={ex.sets <= 1 ? 'At least one set is required' : 'Remove set'}
+                                            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#141414]/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#141414]/30 transition-colors"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
                                         </div>
                                       ))}
                                       <button
