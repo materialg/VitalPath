@@ -5,7 +5,7 @@ import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, CheckCircle2, Pencil, Trash2, Plus, Search } from 'lucide-react';
+import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Pencil, Trash2, Plus, Search } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -140,12 +140,12 @@ export function MealPlanner({ profile }: Props) {
     if (!activePlan || !activePlanId) return;
 
     const updatedDays = [...activePlan.days];
-    const meals = [...updatedDays[selectedDay].meals];
-    const currentStatus = meals[mIdx].status;
-    meals[mIdx] = { 
-      ...meals[mIdx], 
-      status: currentStatus === 'completed' ? 'none' : 'completed' 
-    };
+    const meals = [...(updatedDays[selectedDay].meals || [])];
+    const existing = meals[mIdx];
+    const slotName = MEAL_SLOT_NAMES[mIdx] || `Meal ${mIdx + 1}`;
+    const base = existing ?? emptyMealFor(slotName);
+    const isCompleted = base.status === 'completed';
+    meals[mIdx] = { ...base, status: isCompleted ? 'pending' : 'completed' };
     updatedDays[selectedDay].meals = meals;
 
     try {
@@ -155,24 +155,6 @@ export function MealPlanner({ profile }: Props) {
       }));
     } catch (err) {
       console.error("Failed to toggle meal status:", err);
-    }
-  };
-
-  const confirmAllDayMeals = async () => {
-    if (!activePlan || !activePlanId) return;
-
-    const updatedDays = [...activePlan.days];
-    updatedDays[selectedDay].meals = updatedDays[selectedDay].meals.map(m =>
-      (m?.ingredientsWithAmounts?.length ?? 0) > 0 ? { ...m, status: 'completed' } : m
-    );
-
-    try {
-      await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
-        days: updatedDays,
-        updatedAt: new Date().toISOString()
-      }));
-    } catch (err) {
-      console.error("Failed to confirm all meals:", err);
     }
   };
 
@@ -399,11 +381,9 @@ export function MealPlanner({ profile }: Props) {
                       return (
                       <div key={mIdx} className="group">
                         <div
-                          onClick={() => { if (!isEmpty) toggleMealStatus(mIdx); }}
-                          className={`flex items-start gap-4 p-6 rounded-2xl transition-all ${
-                            isEmpty ? 'cursor-default' : 'cursor-pointer'
-                          } ${
-                            meal.status === 'completed' ? 'bg-green-50/50' : isEmpty ? '' : 'hover:bg-[#141414]/5'
+                          onClick={() => toggleMealStatus(mIdx)}
+                          className={`flex items-start gap-4 p-6 rounded-2xl transition-all cursor-pointer ${
+                            meal.status === 'completed' ? 'bg-green-50/50' : 'hover:bg-[#141414]/5'
                           }`}
                         >
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold transition-all ${
@@ -475,20 +455,6 @@ export function MealPlanner({ profile }: Props) {
                   </motion.div>
                 </AnimatePresence>
 
-                {(() => {
-                  const realMeals = dayMeals.filter(m => (m.ingredientsWithAmounts?.length ?? 0) > 0);
-                  return realMeals.length > 0 && realMeals.every(m => m.status === 'completed');
-                })() && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    onClick={confirmAllDayMeals}
-                    className="w-full py-4 bg-green-500 text-white rounded-2xl font-bold hover:bg-green-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
-                  >
-                    <CheckCircle2 size={18} />
-                    Confirm All Meals Completed
-                  </motion.button>
-                )}
               </div>
             </div>
           </div>
