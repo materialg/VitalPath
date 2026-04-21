@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay } from '../types';
+import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addDays } from 'date-fns';
@@ -25,6 +25,9 @@ export function WorkoutCoach({ profile }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
   const [aiConfigInfo, setAiConfigInfo] = useState<{ foundKeys?: string[] }>({});
+  const [liftBank, setLiftBank] = useState<LiftBankItem[]>([]);
+  const [isPickingLift, setIsPickingLift] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
 
   useEffect(() => {
     if (!profile.uid) return;
@@ -56,9 +59,15 @@ export function WorkoutCoach({ profile }: Props) {
       }
     });
 
+    const qLifts = query(collection(db, 'users', profile.uid, 'liftBank'), orderBy('name', 'asc'));
+    const unsubscribeLifts = onSnapshot(qLifts, (snap) => {
+      setLiftBank(snap.docs.map(d => ({ id: d.id, ...d.data() } as LiftBankItem)));
+    });
+
     return () => {
       unsubscribeVitals();
       unsubscribePlans();
+      unsubscribeLifts();
     };
   }, [profile.uid, activePlanId]);
 
@@ -134,6 +143,46 @@ export function WorkoutCoach({ profile }: Props) {
     } catch (err) {
       console.error("Failed to update set data:", err);
       setError("Failed to save data. Please try again.");
+    }
+  };
+
+  const inferCategoryFromTitle = (title: string): LiftCategory | null => {
+    const lower = (title || '').toLowerCase();
+    if (lower === 'rest') return null;
+    if (lower.includes('pull')) return 'pull';
+    if (lower.includes('leg')) return 'legs';
+    if (lower.includes('core') || lower.includes('abs')) return 'core';
+    if (lower.includes('cardio')) return 'cardio';
+    if (lower.includes('push')) return 'push';
+    return null;
+  };
+
+  const addExerciseFromLift = async (lift: LiftBankItem) => {
+    if (!activePlan || !activePlanId) return;
+    const updatedDays = [...activePlan.days];
+    const day = { ...updatedDays[selectedDay] };
+    const newExercise = {
+      name: lift.name,
+      sets: lift.defaultSets || 3,
+      reps: lift.defaultReps || '8-12',
+      notes: lift.notes || '',
+      prescribedWeight: 0,
+      setReps: [],
+      setWeights: [],
+    };
+    day.exercises = [...(day.exercises || []), newExercise];
+    updatedDays[selectedDay] = day;
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString(),
+      });
+      setIsPickingLift(false);
+      setPickerSearch('');
+    } catch (err) {
+      console.error('Failed to add exercise:', err);
+      setError('Failed to add exercise. Please try again.');
     }
   };
 
@@ -248,7 +297,7 @@ export function WorkoutCoach({ profile }: Props) {
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-8 px-6">
                 <div>
                   <h3 className="text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
                   <p className="text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
@@ -369,6 +418,15 @@ export function WorkoutCoach({ profile }: Props) {
                         </div>
                       ))
                     )}
+                    {activePlan?.days[selectedDay]?.title !== 'Rest' && (
+                      <button
+                        onClick={() => { setPickerSearch(''); setIsPickingLift(true); }}
+                        className="w-full p-6 rounded-2xl border-2 border-dashed border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                      >
+                        <Plus size={18} />
+                        Add Exercise from Lift Bank
+                      </button>
+                    )}
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -421,6 +479,112 @@ export function WorkoutCoach({ profile }: Props) {
           )}
         </div>
       )}
+
+      {/* Lift Bank Picker */}
+      <AnimatePresence>
+        {isPickingLift && (() => {
+          const activeDayTitle = activePlan?.days[selectedDay]?.title || '';
+          const preferredCategory = inferCategoryFromTitle(activeDayTitle);
+          const visibleLifts = liftBank.filter(l => !l.hidden);
+          const searchLower = pickerSearch.toLowerCase().trim();
+          const matched = visibleLifts.filter(l => {
+            if (searchLower && !l.name.toLowerCase().includes(searchLower)) return false;
+            return true;
+          });
+          const preferred = preferredCategory
+            ? matched.filter(l => l.category === preferredCategory)
+            : matched;
+          const others = preferredCategory
+            ? matched.filter(l => l.category !== preferredCategory)
+            : [];
+          return (
+            <div
+              className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setIsPickingLift(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white w-full max-w-lg p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#141414]">Add Exercise</h3>
+                    <p className="text-sm text-[#141414]/40">
+                      {preferredCategory
+                        ? `Showing ${preferredCategory} lifts first. Others below.`
+                        : 'Pick any lift from your bank.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsPickingLift(false)}
+                    className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search lift bank..."
+                  value={pickerSearch}
+                  onChange={e => setPickerSearch(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] mb-4"
+                />
+
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                  {visibleLifts.length === 0 && (
+                    <p className="text-sm text-[#141414]/40 text-center py-8">
+                      Your Lift Bank is empty. Add lifts there first.
+                    </p>
+                  )}
+                  {preferred.map(lift => (
+                    <button
+                      key={lift.id}
+                      onClick={() => addExerciseFromLift(lift)}
+                      className="w-full p-4 text-left rounded-xl border border-[#141414]/5 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-bold text-[#141414]">{lift.name}</p>
+                        <p className="text-[10px] text-[#141414]/40 uppercase tracking-wider">
+                          {lift.category} · {lift.equipment || 'other'} · {lift.defaultSets ?? 3} × {lift.defaultReps || '8-12'}
+                        </p>
+                      </div>
+                      <Plus size={18} className="text-[#141414]/20" />
+                    </button>
+                  ))}
+                  {others.length > 0 && (
+                    <>
+                      <p className="text-[10px] font-bold text-[#141414]/30 uppercase tracking-widest pt-4 pb-1">Other categories</p>
+                      {others.map(lift => (
+                        <button
+                          key={lift.id}
+                          onClick={() => addExerciseFromLift(lift)}
+                          className="w-full p-4 text-left rounded-xl border border-[#141414]/5 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-between opacity-70"
+                        >
+                          <div>
+                            <p className="font-bold text-[#141414]">{lift.name}</p>
+                            <p className="text-[10px] text-[#141414]/40 uppercase tracking-wider">
+                              {lift.category} · {lift.equipment || 'other'} · {lift.defaultSets ?? 3} × {lift.defaultReps || '8-12'}
+                            </p>
+                          </div>
+                          <Plus size={18} className="text-[#141414]/20" />
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {matched.length === 0 && visibleLifts.length > 0 && (
+                    <p className="text-sm text-[#141414]/40 text-center py-6">No lifts match your search.</p>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* History Modal */}
       <AnimatePresence>
