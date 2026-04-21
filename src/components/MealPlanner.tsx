@@ -865,9 +865,10 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white w-full max-w-2xl p-4 md:p-8 rounded-t-3xl md:rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-2xl rounded-t-3xl md:rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto overscroll-contain"
         onClick={e => e.stopPropagation()}
       >
+        <div className="p-4 md:p-8 pb-0 md:pb-0">
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <div className="min-w-0">
             <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate">Edit {currentMeal.name}</h3>
@@ -931,7 +932,7 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 md:space-y-4 mb-4 md:mb-6 -mr-2 pr-2 custom-scrollbar">
+        <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
           {currentMeal.ingredientsWithAmounts.map((ing: any, idx: number) => {
             const food = findFoodItem(ing.name);
             const unit = (food?.servingUnit || 'unit').toLowerCase();
@@ -1038,7 +1039,8 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           )}
         </div>
 
-        <div className="flex gap-2 md:gap-4 pb-safe">
+        </div>
+        <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
           <button
             onClick={onClose}
             className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all"
