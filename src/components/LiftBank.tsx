@@ -13,7 +13,8 @@ import {
 import { db } from '../firebase';
 import { UserProfile, LiftBankItem, LiftCategory, LiftEquipment } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Pencil, X, Save, Search, Library, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Save, Search, Library, Eye, EyeOff, Download, Loader2 } from 'lucide-react';
+import { importLiftsFromWorkouts } from '../services/liftBankImport';
 
 interface Props {
   profile: UserProfile;
@@ -44,6 +45,8 @@ export function LiftBank({ profile }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<LiftBankItem | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({
     name: '',
     category: 'push' as LiftCategory,
@@ -118,6 +121,25 @@ export function LiftBank({ profile }: Props) {
     await deleteDoc(doc(db, 'users', profile.uid, 'liftBank', id));
   };
 
+  const handleImportFromWorkouts = async () => {
+    if (isImporting) return;
+    setIsImporting(true);
+    setImportMessage(null);
+    try {
+      const added = await importLiftsFromWorkouts(profile.uid, items);
+      setImportMessage(
+        added === 0
+          ? 'No new lifts to import — every exercise from your workouts is already in the bank.'
+          : `Imported ${added} lift${added === 1 ? '' : 's'} from your workout plans.`
+      );
+    } catch (err: any) {
+      console.error('Import failed:', err);
+      setImportMessage(`Import failed: ${err?.message || 'unknown error'}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
     const batch = writeBatch(db);
@@ -178,8 +200,25 @@ export function LiftBank({ profile }: Props) {
             <Plus size={18} />
             Add Lift
           </button>
+          <button
+            onClick={handleImportFromWorkouts}
+            disabled={isImporting}
+            className="flex-1 lg:flex-none px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isImporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+            Import from Workouts
+          </button>
         </div>
       </header>
+
+      {importMessage && (
+        <div className="px-4 py-3 bg-[#141414]/5 text-[#141414] rounded-2xl text-sm flex items-center justify-between">
+          <span>{importMessage}</span>
+          <button onClick={() => setImportMessage(null)} className="text-[#141414]/40 hover:text-[#141414]">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={20} />
@@ -301,14 +340,22 @@ export function LiftBank({ profile }: Props) {
         </div>
 
         {filteredItems.length === 0 && !isAdding && (
-          <div className="py-20 text-center space-y-4">
+          <div className="py-20 text-center space-y-6">
             <div className="w-16 h-16 bg-[#141414]/5 rounded-2xl flex items-center justify-center mx-auto">
               <Library className="text-[#141414]/20" size={32} />
             </div>
             <div className="space-y-1">
               <p className="text-[#141414] font-bold">Your lift bank is empty</p>
-              <p className="text-[#141414]/40 text-sm">Add lifts you actually do so the AI can build workouts around them.</p>
+              <p className="text-[#141414]/40 text-sm">Import lifts from your existing workouts, or add them manually.</p>
             </div>
+            <button
+              onClick={handleImportFromWorkouts}
+              disabled={isImporting}
+              className="px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 mx-auto disabled:opacity-50"
+            >
+              {isImporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+              Import from My Workouts
+            </button>
           </div>
         )}
       </div>
