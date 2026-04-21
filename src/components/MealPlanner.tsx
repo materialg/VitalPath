@@ -51,6 +51,7 @@ export function MealPlanner({ profile }: Props) {
     }
   }, [profile.activeMealPlanId]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [selectedHistoryKey, setSelectedHistoryKey] = useState<string | null>(null);
   const [editingMeal, setEditingMeal] = useState<{ mIdx: number, meal: any } | null>(null);
 
   const targets = calculateDailyTargets(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20);
@@ -162,7 +163,12 @@ export function MealPlanner({ profile }: Props) {
     setIsCreatingWeek(true);
     setError(null);
     try {
-      const today = new Date().toLocaleDateString('en-CA');
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysSinceMonday = (dayOfWeek + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - daysSinceMonday);
+      const today = monday.toLocaleDateString('en-CA');
       const days = MEAL_PLAN_DAYS.map(day => ({ day, meals: [] }));
       const newPlan = stripUndefined({
         days,
@@ -524,57 +530,149 @@ export function MealPlanner({ profile }: Props) {
 
       {/* History Modal */}
       <AnimatePresence>
-        {isHistoryOpen && (
-          <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsHistoryOpen(false)}>
-            <motion.div 
+        {isHistoryOpen && (() => {
+          const dayEntries: Array<{ key: string; date: Date; dayLabel: string; meals: any[] }> = [];
+          const seen = new Set<string>();
+          for (const plan of mealPlans) {
+            if (!plan.weekStartDate || !Array.isArray(plan.days)) continue;
+            const base = new Date(plan.weekStartDate + 'T00:00:00');
+            if (isNaN(base.getTime())) continue;
+            plan.days.forEach((day, idx) => {
+              const date = new Date(base);
+              date.setDate(base.getDate() + idx);
+              const key = date.toLocaleDateString('en-CA');
+              if (seen.has(key)) return;
+              seen.add(key);
+              dayEntries.push({
+                key,
+                date,
+                dayLabel: MEAL_PLAN_DAYS[idx] || day.day || '',
+                meals: Array.isArray(day.meals) ? day.meals : [],
+              });
+            });
+          }
+          dayEntries.sort((a, b) => b.date.getTime() - a.date.getTime());
+          const selected = dayEntries.find(e => e.key === selectedHistoryKey) || null;
+          const dayTotal = (meals: any[]) => {
+            const real = meals.filter(m => (m?.ingredientsWithAmounts?.length ?? 0) > 0);
+            const kcal = real.reduce((acc, m) => acc + (m.calories || 0), 0);
+            const completed = real.filter(m => m.status === 'completed').length;
+            return { kcal, completed, total: real.length };
+          };
+
+          return (
+          <div
+            className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => { setIsHistoryOpen(false); setSelectedHistoryKey(null); }}
+          >
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-lg p-8 rounded-3xl shadow-2xl border border-[#141414]/5"
+              className="bg-white w-full max-w-3xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-[#141414]">Plan History</h3>
-                <button onClick={() => setIsHistoryOpen(false)} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
+                <div>
+                  <h3 className="text-2xl font-bold text-[#141414]">Meal History</h3>
+                  <p className="text-sm text-[#141414]/40">Every day you&apos;ve tracked, newest first.</p>
+                </div>
+                <button
+                  onClick={() => { setIsHistoryOpen(false); setSelectedHistoryKey(null); }}
+                  className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors"
+                >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                {mealPlans
-                  .filter((plan, index, self) => 
-                    index === self.findIndex((p) => p.weekStartDate === plan.weekStartDate)
-                  )
-                  .map((plan) => (
-                  <button
-                    key={plan.id}
-                    onClick={() => handlePlanSelect(plan.id)}
-                    className={`w-full p-6 text-left rounded-2xl transition-all border ${
-                      activePlanId === plan.id 
-                        ? 'bg-[#141414] text-white border-transparent shadow-lg' 
-                        : 'bg-white text-[#141414]/60 border-[#141414]/5 hover:border-[#141414]/20'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-lg">
-                        {new Date(plan.weekStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${activePlanId === plan.id ? 'bg-white/10 text-white' : 'bg-[#141414]/5 text-[#141414]'}`}>
-                        {plan.dailyCalories} kcal
-                      </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
+                <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+                  {dayEntries.length === 0 && (
+                    <p className="text-sm text-[#141414]/40 text-center py-8">No meal history yet.</p>
+                  )}
+                  {dayEntries.map(entry => {
+                    const totals = dayTotal(entry.meals);
+                    const isSelected = selected?.key === entry.key;
+                    return (
+                      <button
+                        key={entry.key}
+                        onClick={() => setSelectedHistoryKey(entry.key)}
+                        className={`w-full p-4 text-left rounded-2xl transition-all border ${
+                          isSelected
+                            ? 'bg-[#141414] text-white border-transparent shadow-lg'
+                            : 'bg-white text-[#141414] border-[#141414]/5 hover:border-[#141414]/20'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-bold">
+                            {entry.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </span>
+                          <span className={`text-xs font-bold ${isSelected ? 'text-white/60' : 'text-[#141414]/40'}`}>
+                            {entry.date.toLocaleDateString('en-US', { year: 'numeric' })}
+                          </span>
+                        </div>
+                        <div className={`flex gap-3 text-[10px] font-medium ${isSelected ? 'text-white/60' : 'text-[#141414]/40'}`}>
+                          <span>{Math.round(totals.kcal)} kcal</span>
+                          <span>·</span>
+                          <span>{totals.completed}/{totals.total} logged</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="bg-[#141414]/[0.02] rounded-2xl p-6 overflow-y-auto custom-scrollbar">
+                  {selected ? (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">
+                          {selected.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                        <h4 className="text-xl font-bold text-[#141414]">{selected.dayLabel}</h4>
+                      </div>
+                      {selected.meals.filter((m: any) => (m?.ingredientsWithAmounts?.length ?? 0) > 0).length === 0 ? (
+                        <p className="text-sm text-[#141414]/40">No meals recorded for this day.</p>
+                      ) : (
+                        selected.meals.map((meal: any, idx: number) => {
+                          if (!meal || (meal.ingredientsWithAmounts?.length ?? 0) === 0) return null;
+                          return (
+                            <div key={idx} className="bg-white p-4 rounded-xl border border-[#141414]/5">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <h5 className="font-bold text-[#141414]">{MEAL_SLOT_NAMES[idx] || meal.name}</h5>
+                                  {meal.status === 'completed' && (
+                                    <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-bold uppercase rounded">Logged</span>
+                                  )}
+                                </div>
+                                <span className="text-xs font-bold text-[#141414]/60">{Math.round(meal.calories || 0)} kcal</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {(meal.ingredientsWithAmounts || []).map((ing: any, iIdx: number) => (
+                                  <span key={iIdx} className="px-2 py-0.5 bg-[#141414]/5 rounded-full text-[10px] text-[#141414]/60">
+                                    {ing.amount} {ing.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
-                    <div className="flex gap-4 text-xs font-medium opacity-60">
-                      <span>Protein: {plan.macros.protein}g</span>
-                      <span>Carbs: {plan.macros.carbs}g</span>
-                      <span>Fats: {plan.macros.fats}g</span>
-                      <span>Fiber: {plan.macros.fiber}g</span>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 bg-[#141414]/5 rounded-xl flex items-center justify-center mb-3">
+                        <Calendar className="text-[#141414]/20" size={22} />
+                      </div>
+                      <p className="text-sm font-bold text-[#141414]">Select a day</p>
+                      <p className="text-xs text-[#141414]/40">Click any date on the left to see its meals.</p>
                     </div>
-                  </button>
-                ))}
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* Edit Meal Modal */}
