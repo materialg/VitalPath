@@ -860,135 +860,132 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div 
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-2xl p-4 md:p-8 rounded-t-3xl md:rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-2xl font-bold text-[#141414]">Edit {currentMeal.name}</h3>
-            <p className="text-sm text-[#141414]/40">Customize ingredients and portions.</p>
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <div className="min-w-0">
+            <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate">Edit {currentMeal.name}</h3>
+            <p className="hidden md:block text-sm text-[#141414]/40">Customize ingredients and portions.</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors shrink-0">
             <X size={20} />
           </button>
         </div>
 
-        <div className="mb-6 p-4 bg-[#141414] text-white rounded-2xl relative shadow-xl">
-          <div className="absolute top-4 left-4">
+        <div className="mb-3 md:mb-6 p-3 md:p-4 bg-[#141414] text-white rounded-2xl relative shadow-xl">
+          <div className="hidden md:block absolute top-4 left-4">
             <Flame size={14} className="text-orange-500" />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-5 gap-2 md:gap-4">
             <div className="text-center">
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Total</p>
-              <p className={`text-lg font-bold ${(dayProgressOffset.calories + currentMeal.calories) > targets.dailyCalories ? 'text-red-500' : 'text-white'}`}>
+              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Total</p>
+              <p className={`text-sm md:text-lg font-bold ${(dayProgressOffset.calories + currentMeal.calories) > targets.dailyCalories ? 'text-red-500' : 'text-white'}`}>
                 {Math.round(dayProgressOffset.calories + currentMeal.calories)}
               </p>
             </div>
             <div className="text-center">
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
-              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.protein + currentMeal.protein)}g</p>
+              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Protein</p>
+              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.protein + currentMeal.protein)}g</p>
             </div>
             <div className="text-center">
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Carbs</p>
-              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.carbs + currentMeal.carbs)}g</p>
+              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Carbs</p>
+              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.carbs + currentMeal.carbs)}g</p>
             </div>
             <div className="text-center">
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fats</p>
-              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.fats + currentMeal.fats)}g</p>
+              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
+              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.fats + currentMeal.fats)}g</p>
             </div>
             <div className="text-center">
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fiber</p>
-              <p className="text-lg font-bold text-white">{Math.round(dayProgressOffset.fiber + currentMeal.fiber)}g</p>
+              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Fiber</p>
+              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.fiber + currentMeal.fiber)}g</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
+        <div className="grid grid-cols-5 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
           <div className="text-center">
-            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Calories</p>
-            <p className="text-lg font-bold text-[#141414]">{currentMeal.calories}</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Kcal</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.calories}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Protein</p>
-            <p className="text-lg font-bold text-[#141414]">{currentMeal.protein}g</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Protein</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.protein}g</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Carbs</p>
-            <p className="text-lg font-bold text-[#141414]">{currentMeal.carbs}g</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Carbs</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.carbs}g</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Fats</p>
-            <p className="text-lg font-bold text-[#141414]">{currentMeal.fats}g</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.fats}g</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">Fiber</p>
-            <p className="text-lg font-bold text-[#141414]">{currentMeal.fiber}g</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fiber</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.fiber}g</p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto space-y-3 md:space-y-4 mb-4 md:mb-6 -mr-2 pr-2 custom-scrollbar">
           {currentMeal.ingredientsWithAmounts.map((ing: any, idx: number) => {
             const food = findFoodItem(ing.name);
             const unit = (food?.servingUnit || 'unit').toLowerCase();
+            const unitLabel = unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit;
             return (
-              <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-[#141414]/5 rounded-2xl group">
-                <div className="flex-1">
-                  <p className="font-bold text-[#141414]">{food?.name || ing.name}</p>
-                  <p className="text-xs text-[#141414]/40">
-                    {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-[#141414]/5 rounded-xl p-1 gap-1">
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const val = parseFloat(ing.amount) || 0;
-                        updateIngredientAmount(idx, `${Math.max(0, val - 1)}`);
-                      }}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
-                    >
-                      -
-                    </button>
-                    
-                    <div className="flex items-center justify-center gap-1 px-2 w-24">
-                      <input 
-                        type="number"
-                        value={parseFloat(ing.amount) || 0}
-                        step="1"
-                        onChange={(e) => {
-                          updateIngredientAmount(idx, e.target.value);
-                        }}
-                        className="w-8 bg-transparent border-none text-sm font-bold text-right focus:ring-0 p-0 appearance-none"
-                      />
-                      <span className="text-[10px] font-bold text-[#141414]/40 uppercase flex-1 text-left ml-1">
-                        {unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit}
-                      </span>
-                    </div>
-
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const val = parseFloat(ing.amount) || 0;
-                        updateIngredientAmount(idx, `${val + 1}`);
-                      }}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
-                    >
-                      +
-                    </button>
+              <div key={idx} className="p-3 md:p-4 bg-white border border-[#141414]/5 rounded-2xl">
+                <div className="flex items-start gap-2 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[#141414] truncate">{food?.name || ing.name}</p>
+                    <p className="text-xs text-[#141414]/40 truncate">
+                      {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
+                    </p>
                   </div>
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => removeIngredient(idx)}
-                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between bg-[#141414]/5 rounded-xl p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const val = parseFloat(ing.amount) || 0;
+                      updateIngredientAmount(idx, `${Math.max(0, val - 1)}`);
+                    }}
+                    className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 flex items-center justify-center gap-1">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={parseFloat(ing.amount) || 0}
+                      step="1"
+                      onChange={(e) => updateIngredientAmount(idx, e.target.value)}
+                      className="w-16 bg-transparent border-none text-base font-bold text-right focus:ring-0 p-0 appearance-none"
+                    />
+                    <span className="text-[10px] font-bold text-[#141414]/40 uppercase">{unitLabel}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const val = parseFloat(ing.amount) || 0;
+                      updateIngredientAmount(idx, `${val + 1}`);
+                    }}
+                    className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
+                  >
+                    +
                   </button>
                 </div>
               </div>
@@ -1041,16 +1038,16 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           )}
         </div>
 
-        <div className="flex gap-4">
-          <button 
+        <div className="flex gap-2 md:gap-4 pb-safe">
+          <button
             onClick={onClose}
-            className="flex-1 py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all"
+            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleSave}
-            className="flex-1 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10"
+            className="flex-1 py-3 md:py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10"
           >
             Save Changes
           </button>
