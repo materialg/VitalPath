@@ -29,7 +29,20 @@ export function MealPlanner({ profile }: Props) {
   const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
   const [aiConfigInfo, setAiConfigInfo] = useState<{ foundKeys?: string[] }>({});
   const MEAL_PLAN_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner"];
+  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+
+  const emptyMealFor = (slotName: string) => ({
+    name: slotName,
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fats: 0,
+    fiber: 0,
+    ingredients: [] as string[],
+    ingredientsWithAmounts: [] as { name: string; amount: string }[],
+    status: 'pending' as const,
+    recipe: '',
+  });
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeMealPlanId || null);
@@ -191,7 +204,9 @@ export function MealPlanner({ profile }: Props) {
     if (!activePlan || !activePlanId) return;
 
     const updatedDays = [...activePlan.days];
-    updatedDays[selectedDay].meals = updatedDays[selectedDay].meals.map(m => ({ ...m, status: 'completed' }));
+    updatedDays[selectedDay].meals = updatedDays[selectedDay].meals.map(m =>
+      (m?.ingredientsWithAmounts?.length ?? 0) > 0 ? { ...m, status: 'completed' } : m
+    );
 
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', activePlanId), stripUndefined({
@@ -437,12 +452,18 @@ export function MealPlanner({ profile }: Props) {
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-6"
                   >
-                    {dayMeals.map((meal: any, mIdx: number) => (
+                    {MEAL_SLOT_NAMES.map((slotName, mIdx) => {
+                      const existingMeal = dayMeals[mIdx];
+                      const meal: any = existingMeal ?? emptyMealFor(slotName);
+                      const isEmpty = !existingMeal || !(meal.ingredientsWithAmounts?.length);
+                      return (
                       <div key={mIdx} className="group">
-                        <div 
-                          onClick={() => toggleMealStatus(mIdx)}
-                          className={`flex items-start gap-4 p-6 rounded-2xl transition-all cursor-pointer ${
-                            meal.status === 'completed' ? 'bg-green-50/50' : 'hover:bg-[#141414]/5'
+                        <div
+                          onClick={() => { if (!isEmpty) toggleMealStatus(mIdx); }}
+                          className={`flex items-start gap-4 p-6 rounded-2xl transition-all ${
+                            isEmpty ? 'cursor-default' : 'cursor-pointer'
+                          } ${
+                            meal.status === 'completed' ? 'bg-green-50/50' : isEmpty ? '' : 'hover:bg-[#141414]/5'
                           }`}
                         >
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold transition-all ${
@@ -472,7 +493,7 @@ export function MealPlanner({ profile }: Props) {
                                   <Pencil size={14} />
                                 </button>
                               </div>
-                              <div className="text-right shrink-0">
+                              <div className={`text-right shrink-0 ${isEmpty ? 'opacity-30' : ''}`}>
                                 <p className="text-sm font-bold text-[#141414]">{Math.round(meal.calories || 0)} kcal</p>
                                 <div className="flex gap-2 text-[10px] font-medium text-[#141414]/40 whitespace-nowrap">
                                   <span>P: {Math.round(meal.protein || 0)}g</span>
@@ -494,20 +515,30 @@ export function MealPlanner({ profile }: Props) {
                                       </span>
                                     );
                                   })
-                                : (Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing: any, iIdx: number) => (
-                                    <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
-                                      {ing}
-                                    </span>
-                                  ))}
+                                : isEmpty
+                                  ? (
+                                      <span className="text-xs text-[#141414]/30 italic">
+                                        Tap the pencil to add items
+                                      </span>
+                                    )
+                                  : (Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing: any, iIdx: number) => (
+                                      <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
+                                        {ing}
+                                      </span>
+                                    ))}
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </motion.div>
                 </AnimatePresence>
 
-                {dayMeals.length > 0 && dayMeals.every(m => m.status === 'completed') && (
+                {(() => {
+                  const realMeals = dayMeals.filter(m => (m.ingredientsWithAmounts?.length ?? 0) > 0);
+                  return realMeals.length > 0 && realMeals.every(m => m.status === 'completed');
+                })() && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
