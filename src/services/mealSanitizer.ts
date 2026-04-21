@@ -60,8 +60,6 @@ export function sanitizeMeal(rawMeal: any, foodBank: FoodBankItem[]): Meal | nul
     });
   }
 
-  if (ingredientsWithAmounts.length === 0) return null;
-
   const ingredients = ingredientsWithAmounts.map(i => `${i.amount} ${i.name}`);
   const status: Meal['status'] =
     rawMeal.status === 'completed' || rawMeal.status === 'skipped' || rawMeal.status === 'pending'
