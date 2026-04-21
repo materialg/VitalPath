@@ -366,6 +366,22 @@ export function MealPlanner({ profile }: Props) {
                         ))}
                       </div>
 
+                      {/* date tile */}
+                      {(() => {
+                        if (!activePlan?.weekStartDate) {
+                          return <div className="w-12 h-12 shrink-0" />;
+                        }
+                        const d = new Date(activePlan.weekStartDate + 'T00:00:00');
+                        d.setDate(d.getDate() + selectedDay);
+                        const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+                        const dayNum = d.getDate();
+                        return (
+                          <div className="w-12 h-12 rounded-xl bg-[#141414]/5 flex flex-col items-center justify-center shrink-0">
+                            <span className="text-[9px] font-bold text-[#141414]/50 uppercase leading-none">{month}</span>
+                            <span className="text-base font-black text-[#141414] leading-tight">{dayNum}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
