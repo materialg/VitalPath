@@ -228,17 +228,17 @@ export function WorkoutCoach({ profile }: Props) {
       )}
 
       {/* Daily Target Header (Consistent with Meal Planner) */}
-      <div className="bg-[#141414] p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
+      <div className="bg-[#141414] p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl transition-all group-hover:bg-white/10" />
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-5 lg:mb-8">
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
               <Target className="text-white" size={20} />
             </div>
             <h2 className="text-xl font-bold">Training Target</h2>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-8">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-3 lg:gap-8">
             <TargetStat label="Frequency" value="5-6 Days" subValue="PPLR Split" icon={<Dumbbell className="text-blue-400" />} />
             <TargetStat label="Intensity" value="RPE 8-9" subValue="High Effort" icon={<Zap className="text-yellow-400" />} />
             <TargetStat label="Duration" value="45-60m" subValue="Per Session" icon={<Clock className="text-purple-400" />} />
@@ -296,8 +296,8 @@ export function WorkoutCoach({ profile }: Props) {
 
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-              <div className="flex items-center justify-between mb-8 px-6">
+            <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
+              <div className="flex items-center justify-between mb-5 lg:mb-8 px-4 lg:px-6">
                 <div>
                   <h3 className="text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
                   <p className="text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
@@ -336,18 +336,18 @@ export function WorkoutCoach({ profile }: Props) {
                     ) : (
                       activePlan?.days[selectedDay]?.exercises.map((ex, idx) => (
                         <div key={idx} className="group">
-                          <div 
+                          <div
                             onClick={() => setExpandedExercise(expandedExercise === idx ? null : idx)}
-                            className={`flex flex-col gap-4 p-6 rounded-2xl transition-all cursor-pointer ${
+                            className={`flex flex-col gap-4 p-4 lg:p-6 rounded-2xl transition-all cursor-pointer ${
                               expandedExercise === idx ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : 'hover:bg-[#141414]/5'
                             }`}
                           >
-                            <div className="flex items-start gap-4">
-                              <div className="w-12 h-12 bg-[#141414] rounded-xl flex items-center justify-center shrink-0 text-white font-bold">
+                            <div className="flex items-start gap-3 lg:gap-4">
+                              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#141414] rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm lg:text-base">
                                 {idx + 1}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-xl font-bold text-[#141414] mb-2">{ex.name}</h4>
+                                <h4 className="text-lg lg:text-xl font-bold text-[#141414] mb-0 lg:mb-2">{ex.name}</h4>
                                 <p className="hidden md:block text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
                               </div>
                             </div>
@@ -421,7 +421,7 @@ export function WorkoutCoach({ profile }: Props) {
                     {activePlan?.days[selectedDay]?.title !== 'Rest' && (
                       <button
                         onClick={() => { setPickerSearch(''); setIsPickingLift(true); }}
-                        className="w-full p-6 rounded-2xl border-2 border-dashed border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                        className="w-full p-4 lg:p-6 rounded-2xl border-2 border-dashed border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 text-sm font-bold"
                       >
                         <Plus size={18} />
                         Add Exercise from Lift Bank
@@ -755,11 +755,11 @@ function TargetStat({ label, value, subValue, icon }: { label: string, value: st
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2 mb-1">
-        {icon && <div className="shrink-0">{icon}</div>}
-        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{label}</p>
+        {icon && <div className="shrink-0 hidden md:block">{icon}</div>}
+        <p className="text-[9px] lg:text-[10px] font-bold text-white/40 uppercase tracking-wider lg:tracking-widest">{label}</p>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {subValue && <p className="text-[10px] font-medium text-white/40">{subValue}</p>}
+      <p className="text-base lg:text-2xl font-bold text-white">{value}</p>
+      {subValue && <p className="hidden md:block text-[10px] font-medium text-white/40">{subValue}</p>}
     </div>
   );
 }
