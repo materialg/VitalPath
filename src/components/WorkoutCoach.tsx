@@ -5,7 +5,7 @@ import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addDays } from 'date-fns';
-import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Check, Edit2, ChevronLeft } from 'lucide-react';
+import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, ChevronLeft } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -137,85 +137,29 @@ export function WorkoutCoach({ profile }: Props) {
     }
   };
 
-  const toggleSetCompletion = async (exerciseIdx: number, setIdx: number) => {
+  const addSet = async (exerciseIdx: number) => {
     if (!activePlan || !activePlanId) return;
 
     const updatedDays = [...activePlan.days];
     const updatedExercises = [...updatedDays[selectedDay].exercises];
     const exercise = { ...updatedExercises[exerciseIdx] };
-    
-    const completed = exercise.completedSets ? [...exercise.completedSets] : Array(exercise.sets).fill(false);
-    const wasCompleted = completed[setIdx];
-    completed[setIdx] = !completed[setIdx];
-    exercise.completedSets = completed;
+    const currentCount = exercise.sets || 0;
+    exercise.sets = currentCount + 1;
+    exercise.setReps = [...(exercise.setReps || Array(currentCount).fill(0)), 0];
+    exercise.setWeights = [...(exercise.setWeights || Array(currentCount).fill(0)), 0];
 
-    // Progressive Overload Logic
-    // Only apply if the set is being marked as completed (not unchecked)
-    if (!wasCompleted) {
-      const actualReps = exercise.setReps?.[setIdx] || 0;
-      const actualWeight = exercise.setWeights?.[setIdx] || 0;
-      
-      // Parse target reps range (e.g., "8-10")
-      const repsRange = exercise.reps.split('-').map(r => parseInt(r.trim()));
-      const targetReps = repsRange.length > 1 ? repsRange[1] : (parseInt(exercise.reps) || 0);
-      const lowerBound = repsRange[0] || 0;
-
-      // Check for hit (+2 over target)
-      if (actualReps >= targetReps + 2) {
-        exercise.consecutiveHits = (exercise.consecutiveHits || 0) + 1;
-        exercise.consecutiveDrops = 0;
-      } 
-      // Check for significant drop (2+ below lower bound)
-      else if (actualReps <= lowerBound - 2 && actualReps > 0) {
-        exercise.consecutiveDrops = (exercise.consecutiveDrops || 0) + 1;
-        exercise.consecutiveHits = 0;
-      } else {
-        // Performance was within range, reset counters? 
-        // Logic says "consecutive workouts", so maybe only reset if they don't hit the trigger.
-        // Let's keep counters if they are within range but not hitting the trigger.
-      }
-
-      // Apply triggers
-      if (exercise.consecutiveHits >= 2) {
-        const currentWeight = exercise.prescribedWeight || actualWeight;
-        exercise.prescribedWeight = currentWeight + 5; // Increase by 5 lbs
-        exercise.consecutiveHits = 0;
-        console.log(`Progressive Overload: Increasing weight for ${exercise.name} to ${exercise.prescribedWeight}`);
-      } else if (exercise.consecutiveDrops >= 2) {
-        const currentWeight = exercise.prescribedWeight || actualWeight;
-        exercise.prescribedWeight = Math.round(currentWeight * 0.9); // 10% reduction
-        exercise.consecutiveDrops = 0;
-        console.log(`Progressive Overload: Reducing weight for ${exercise.name} to ${exercise.prescribedWeight}`);
-      }
-    }
-    
     updatedExercises[exerciseIdx] = exercise;
-
-    // Update future occurrences of this exercise in the current plan
-    updatedDays.forEach((day, dIdx) => {
-      day.exercises.forEach((ex, eIdx) => {
-        if (ex.name === exercise.name && (dIdx > selectedDay)) {
-          updatedDays[dIdx].exercises[eIdx] = {
-            ...ex,
-            prescribedWeight: exercise.prescribedWeight,
-            consecutiveHits: exercise.consecutiveHits,
-            consecutiveDrops: exercise.consecutiveDrops
-          };
-        }
-      });
-    });
-
     updatedDays[selectedDay].exercises = updatedExercises;
 
     try {
       const planRef = doc(db, 'users', profile.uid, 'workouts', activePlanId);
-      await updateDoc(planRef, { 
+      await updateDoc(planRef, {
         days: updatedDays,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       });
     } catch (err) {
-      console.error("Failed to toggle set completion:", err);
-      setError("Failed to save data. Please try again.");
+      console.error("Failed to add set:", err);
+      setError("Failed to add set. Please try again.");
     }
   };
 
@@ -386,64 +330,44 @@ export function WorkoutCoach({ profile }: Props) {
                                           <div className="w-8 h-8 bg-[#141414]/5 rounded-lg flex items-center justify-center shrink-0">
                                             <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
                                           </div>
-                                          
-                                          <div className="flex-1 flex items-center gap-3">
-                                            <div className="flex-1 grid grid-cols-2 gap-4">
-                                              <div className="relative">
-                                                <input
-                                                  type="number"
-                                                  disabled={ex.completedSets?.[sIdx]}
-                                                  value={ex.setReps?.[sIdx] || ''}
-                                                  onChange={(e) => updateSetData(idx, sIdx, 'reps', parseInt(e.target.value) || 0)}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  placeholder="0"
-                                                  className={`w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all ${
-                                                    ex.completedSets?.[sIdx] 
-                                                      ? 'bg-green-50 text-green-700 border-green-100' 
-                                                      : 'bg-[#141414]/5 border-transparent focus:bg-white focus:ring-2 focus:ring-[#141414]/10'
-                                                  }`}
-                                                />
-                                                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase ${
-                                                  ex.completedSets?.[sIdx] ? 'text-green-300' : 'text-[#141414]/20'
-                                                }`}>reps</span>
-                                              </div>
 
-                                              <div className="relative">
-                                                <input
-                                                  type="number"
-                                                  disabled={ex.completedSets?.[sIdx]}
-                                                  value={ex.setWeights?.[sIdx] || ''}
-                                                  onChange={(e) => updateSetData(idx, sIdx, 'weight', parseFloat(e.target.value) || 0)}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  placeholder="0"
-                                                  className={`w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all ${
-                                                    ex.completedSets?.[sIdx] 
-                                                      ? 'bg-green-50 text-green-700 border-green-100' 
-                                                      : 'bg-[#141414]/5 border-transparent focus:bg-white focus:ring-2 focus:ring-[#141414]/10'
-                                                  }`}
-                                                />
-                                                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase ${
-                                                  ex.completedSets?.[sIdx] ? 'text-green-300' : 'text-[#141414]/20'
-                                                }`}>lbs</span>
-                                              </div>
+                                          <div className="flex-1 grid grid-cols-2 gap-4">
+                                            <div className="relative">
+                                              <input
+                                                type="number"
+                                                value={ex.setReps?.[sIdx] || ''}
+                                                onChange={(e) => updateSetData(idx, sIdx, 'reps', parseInt(e.target.value) || 0)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                placeholder="0"
+                                                className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-[#141414]/5 border-transparent focus:bg-white focus:ring-2 focus:ring-[#141414]/10"
+                                              />
+                                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
                                             </div>
 
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleSetCompletion(idx, sIdx);
-                                              }}
-                                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                                                ex.completedSets?.[sIdx]
-                                                  ? 'bg-green-500 text-white shadow-lg shadow-green-200'
-                                                  : 'bg-[#141414]/5 text-[#141414]/40 hover:bg-[#141414]/10 hover:text-[#141414]'
-                                              }`}
-                                            >
-                                              {ex.completedSets?.[sIdx] ? <Edit2 size={16} /> : <Check size={18} />}
-                                            </button>
+                                            <div className="relative">
+                                              <input
+                                                type="number"
+                                                value={ex.setWeights?.[sIdx] || ''}
+                                                onChange={(e) => updateSetData(idx, sIdx, 'weight', parseFloat(e.target.value) || 0)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                placeholder="0"
+                                                className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-[#141414]/5 border-transparent focus:bg-white focus:ring-2 focus:ring-[#141414]/10"
+                                              />
+                                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
+                                            </div>
                                           </div>
                                         </div>
                                       ))}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          addSet(idx);
+                                        }}
+                                        className="w-full py-3 rounded-xl border-2 border-dashed border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                                      >
+                                        <Plus size={16} />
+                                        Add Set
+                                      </button>
                                     </div>
                                   </div>
                                 </motion.div>
