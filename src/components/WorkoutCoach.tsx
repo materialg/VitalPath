@@ -429,22 +429,12 @@ export function WorkoutCoach({ profile }: Props) {
                         return (
                         <div key={idx} className="group">
                           <div
-                            onClick={(e) => {
-                              if (typeof window !== 'undefined' && window.innerWidth < 768) return;
-                              toggleExerciseStatus(idx);
-                            }}
-                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl transition-all md:cursor-pointer ${
-                              isCompleted ? 'bg-green-50/50' : isExpanded ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : 'md:hover:bg-[#141414]/5'
+                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl transition-all ${
+                              isCompleted ? 'bg-green-50/50' : isExpanded ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : ''
                             }`}
                           >
                             <div className="flex items-center md:items-start gap-3 lg:gap-4">
-                              <div className={`hidden md:flex w-10 h-10 lg:w-12 lg:h-12 rounded-xl items-center justify-center shrink-0 font-bold text-sm lg:text-base transition-all ${
-                                isCompleted ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
-                              }`}>
-                                {isCompleted ? <Check size={18} /> : idx + 1}
-                              </div>
-
-                              {/* Mobile: stacked name + sets × reps, capped to number-box height */}
+                              {/* Mobile: stacked name + sets × reps, capped to action-box height */}
                               <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
                                 <h4 className="text-base font-bold truncate text-[#141414] leading-tight">{ex.name}</h4>
                                 <p className="text-xs font-medium text-[#141414]/60 leading-tight">
@@ -452,35 +442,7 @@ export function WorkoutCoach({ profile }: Props) {
                                 </p>
                               </div>
 
-                              {/* Mobile: action icons replace tap-to-complete */}
-                              <div className="md:hidden flex items-center gap-2 shrink-0">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleExerciseStatus(idx);
-                                  }}
-                                  aria-label={isCompleted ? 'Mark exercise pending' : 'Mark exercise completed'}
-                                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                    isCompleted
-                                      ? 'bg-green-500 text-white'
-                                      : 'bg-[#141414]/5 text-[#141414]/50 active:bg-green-500 active:text-white'
-                                  }`}
-                                >
-                                  <Check size={18} />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpandedExercise(isExpanded ? null : idx);
-                                  }}
-                                  aria-label={isExpanded ? 'Collapse exercise' : 'Edit exercise'}
-                                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 active:bg-[#141414]/10 transition-colors"
-                                >
-                                  <Pencil size={16} />
-                                </button>
-                              </div>
-
-                              {/* Desktop: full header with badge, pencil, notes */}
+                              {/* Desktop: full header with badge, notes */}
                               <div className="flex-1 min-w-0 hidden md:block">
                                 <div className="flex items-center gap-2 lg:gap-3 mb-2 flex-wrap">
                                   <h4 className="text-lg lg:text-xl font-bold text-[#141414]">
@@ -489,17 +451,30 @@ export function WorkoutCoach({ profile }: Props) {
                                   {isCompleted && (
                                     <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold uppercase rounded-md">Completed</span>
                                   )}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedExercise(isExpanded ? null : idx);
-                                    }}
-                                    className="p-1.5 hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
                                 </div>
                                 <p className="text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
+                              </div>
+
+                              {/* Action icons — consistent across breakpoints */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => toggleExerciseStatus(idx)}
+                                  aria-label={isCompleted ? 'Mark exercise pending' : 'Mark exercise completed'}
+                                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                    isCompleted
+                                      ? 'bg-green-500 text-white hover:bg-green-600'
+                                      : 'bg-[#141414]/5 text-[#141414]/50 hover:bg-green-500 hover:text-white'
+                                  }`}
+                                >
+                                  <Check size={18} />
+                                </button>
+                                <button
+                                  onClick={() => setExpandedExercise(isExpanded ? null : idx)}
+                                  aria-label={isExpanded ? 'Collapse exercise' : 'Edit exercise'}
+                                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 hover:bg-[#141414]/10 hover:text-[#141414] transition-colors"
+                                >
+                                  <Pencil size={16} />
+                                </button>
                               </div>
                             </div>
 
