@@ -578,8 +578,11 @@ export function MealPlanner({ profile }: Props) {
               });
             });
           }
-          dayEntries.sort((a, b) => b.date.getTime() - a.date.getTime());
-          const selected = dayEntries.find(e => e.key === selectedHistoryKey) || null;
+          const todayKey = new Date().toLocaleDateString('en-CA');
+          const visibleEntries = dayEntries
+            .filter(e => e.key <= todayKey)
+            .sort((a, b) => b.date.getTime() - a.date.getTime());
+          const selected = visibleEntries.find(e => e.key === selectedHistoryKey) || null;
           const dayTotal = (meals: any[]) => {
             const real = meals.filter(m => (m?.ingredientsWithAmounts?.length ?? 0) > 0);
             const kcal = real.reduce((acc, m) => acc + (m.calories || 0), 0);
@@ -614,10 +617,10 @@ export function MealPlanner({ profile }: Props) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
                 <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar">
-                  {dayEntries.length === 0 && (
+                  {visibleEntries.length === 0 && (
                     <p className="text-sm text-[#141414]/40 text-center py-8">No meal history yet.</p>
                   )}
-                  {dayEntries.map(entry => {
+                  {visibleEntries.map(entry => {
                     const totals = dayTotal(entry.meals);
                     const isSelected = selected?.key === entry.key;
                     return (
