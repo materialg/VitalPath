@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
@@ -15,6 +15,10 @@ export function WorkoutCoach({ profile }: Props) {
   const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeWorkoutId || null);
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
+  const selectedDayRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    selectedDayRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [selectedDay, activePlanId]);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -337,16 +341,16 @@ export function WorkoutCoach({ profile }: Props) {
                 {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
               </button>
 
-              <div className="flex flex-col gap-4">
-                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mt-4 lg:mt-8">Select Day</h3>
+              <div className="flex flex-col gap-4 mt-4 lg:mt-8">
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
                   {activePlan?.days.map((day, idx) => (
                     <button
                       key={idx}
+                      ref={selectedDay === idx ? selectedDayRef : null}
                       onClick={() => setSelectedDay(idx)}
                       className={`shrink-0 lg:w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                        selectedDay === idx 
-                          ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]' 
+                        selectedDay === idx
+                          ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
                           : 'text-[#141414]/40 hover:bg-white/50'
                       }`}
                     >
