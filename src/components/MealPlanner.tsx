@@ -42,6 +42,19 @@ export function MealPlanner({ profile }: Props) {
   });
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
+
+  const weekDateFor = (idx: number): Date | null => {
+    const ws = activePlan?.weekStartDate;
+    if (!ws) return null;
+    const d = new Date(ws + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() + idx);
+    return d;
+  };
+  const weekdayLabelFor = (idx: number): string => {
+    const d = weekDateFor(idx);
+    return d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : MEAL_PLAN_DAYS[idx];
+  };
   const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeMealPlanId || null);
   const [error, setError] = useState<string | null>(null);
 
@@ -368,11 +381,9 @@ export function MealPlanner({ profile }: Props) {
 
                       {/* date tile */}
                       {(() => {
-                        if (!activePlan?.weekStartDate) {
-                          return <div className="w-10 h-10 md:w-12 md:h-12 shrink-0" />;
-                        }
-                        const d = new Date(activePlan.weekStartDate + 'T00:00:00');
-                        d.setDate(d.getDate() + selectedDay);
+                        const now = new Date();
+                        const d = new Date(now);
+                        d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + selectedDay);
                         const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
                         const dayNum = d.getDate();
                         return (
