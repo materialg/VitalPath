@@ -438,9 +438,6 @@ export function MealPlanner({ profile }: Props) {
                                 <h4 className="text-xl font-bold truncate text-[#141414]">
                                   {MEAL_SLOT_NAMES[mIdx] || meal.name}
                                 </h4>
-                                {meal.status === 'completed' && (
-                                  <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold uppercase rounded-md">Completed</span>
-                                )}
                                 {meal.status === 'skipped' && (
                                   <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold uppercase rounded-md">Skipped</span>
                                 )}

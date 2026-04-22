@@ -444,14 +444,9 @@ export function WorkoutCoach({ profile }: Props) {
 
                               {/* Desktop: full header with badge, notes */}
                               <div className="flex-1 min-w-0 hidden md:block">
-                                <div className="flex items-center gap-2 lg:gap-3 mb-2 flex-wrap">
-                                  <h4 className="text-lg lg:text-xl font-bold text-[#141414]">
-                                    {ex.name}
-                                  </h4>
-                                  {isCompleted && (
-                                    <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold uppercase rounded-md">Completed</span>
-                                  )}
-                                </div>
+                                <h4 className="text-lg lg:text-xl font-bold text-[#141414] mb-2">
+                                  {ex.name}
+                                </h4>
                                 <p className="text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
                               </div>
 
