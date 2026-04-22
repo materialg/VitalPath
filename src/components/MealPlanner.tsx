@@ -417,9 +417,12 @@ export function MealPlanner({ profile }: Props) {
                       return (
                       <div key={mIdx} className="group">
                         <div
-                          onClick={() => toggleMealStatus(mIdx)}
-                          className={`flex items-start gap-3 md:gap-4 p-4 md:p-6 rounded-2xl transition-all cursor-pointer ${
-                            meal.status === 'completed' ? 'bg-green-50/50' : 'hover:bg-[#141414]/5'
+                          onClick={(e) => {
+                            if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+                            toggleMealStatus(mIdx);
+                          }}
+                          className={`flex items-center md:items-start gap-3 md:gap-4 p-3 md:p-6 rounded-2xl transition-all md:cursor-pointer ${
+                            meal.status === 'completed' ? 'bg-green-50/50' : 'md:hover:bg-[#141414]/5'
                           }`}
                         >
                           <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm md:text-base transition-all ${
@@ -427,10 +430,50 @@ export function MealPlanner({ profile }: Props) {
                           }`}>
                             {meal.status === 'completed' ? <Check size={18} /> : mIdx + 1}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1 md:mb-2 gap-4">
-                              <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                                <h4 className={`text-lg md:text-xl font-bold truncate ${meal.status === 'completed' ? 'text-[#141414]/40 line-through' : 'text-[#141414]'}`}>
+
+                          {/* Mobile: stacked name + calories, capped to number-box height */}
+                          <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
+                            <h4 className="text-base font-bold truncate text-[#141414] leading-tight">
+                                  {MEAL_SLOT_NAMES[mIdx] || meal.name}
+                                </h4>
+                            <p className={`text-xs font-medium text-[#141414]/60 leading-tight ${isEmpty ? 'opacity-30' : ''}`}>
+                              {Math.round(meal.calories || 0)} kcal
+                            </p>
+                          </div>
+
+                          {/* Mobile: action icons replace tap-to-complete */}
+                          <div className="md:hidden flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMealStatus(mIdx);
+                              }}
+                              aria-label={meal.status === 'completed' ? 'Mark meal pending' : 'Mark meal completed'}
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                meal.status === 'completed'
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-[#141414]/5 text-[#141414]/50 active:bg-green-500 active:text-white'
+                              }`}
+                            >
+                              <Check size={18} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
+                              }}
+                              aria-label="Edit meal"
+                              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 active:bg-[#141414]/10 transition-colors"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                          </div>
+
+                          {/* Desktop: full header with badges, pencil, macros, ingredients */}
+                          <div className="flex-1 min-w-0 hidden md:block">
+                            <div className="flex items-center justify-between mb-2 gap-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <h4 className="text-xl font-bold truncate text-[#141414]">
                                   {MEAL_SLOT_NAMES[mIdx] || meal.name}
                                 </h4>
                                 {meal.status === 'completed' && (
@@ -444,14 +487,14 @@ export function MealPlanner({ profile }: Props) {
                                     e.stopPropagation();
                                     setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
                                   }}
-                                  className={`p-1.5 hover:bg-[#141414]/5 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors ${meal.status === 'completed' ? 'hidden md:inline-flex' : ''}`}
+                                  className="p-1.5 hover:bg-[#141414]/5 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
                                 >
                                   <Pencil size={14} />
                                 </button>
                               </div>
                               <div className={`text-right shrink-0 ${isEmpty ? 'opacity-30' : ''}`}>
                                 <p className="text-sm font-bold text-[#141414]">{Math.round(meal.calories || 0)} kcal</p>
-                                <div className="hidden md:flex gap-2 text-[10px] font-medium text-[#141414]/40 whitespace-nowrap">
+                                <div className="flex gap-2 text-[10px] font-medium text-[#141414]/40 whitespace-nowrap">
                                   <span>P: {Math.round(meal.protein || 0)}g</span>
                                   <span>C: {Math.round(meal.carbs || 0)}g</span>
                                   <span>F: {Math.round(meal.fats || 0)}g</span>
@@ -459,7 +502,7 @@ export function MealPlanner({ profile }: Props) {
                                 </div>
                               </div>
                             </div>
-                            <div className="hidden md:flex flex-wrap gap-2 pb-2">
+                            <div className="flex flex-wrap gap-2 pb-2">
                               {Array.isArray(meal.ingredientsWithAmounts) && meal.ingredientsWithAmounts.length > 0
                                 ? meal.ingredientsWithAmounts.map((ing: any, iIdx: number) => {
                                     const food = findFoodItem(ing.name);
