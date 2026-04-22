@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2 } from 'lucide-react';
+import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, Check, Pencil } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -238,6 +238,32 @@ export function WorkoutCoach({ profile }: Props) {
     }
   };
 
+  const toggleExerciseStatus = async (exerciseIdx: number) => {
+    if (!activePlan || !activePlanId) return;
+
+    const updatedDays = [...activePlan.days];
+    const day = { ...updatedDays[selectedDay] };
+    const exercises = [...(day.exercises || [])];
+    const existing = exercises[exerciseIdx];
+    if (!existing) return;
+    const isCompleted = existing.status === 'completed';
+    exercises[exerciseIdx] = { ...existing, status: isCompleted ? 'pending' : 'completed' };
+    day.exercises = exercises;
+    const allDone = exercises.length > 0 && exercises.every(e => e.status === 'completed');
+    day.status = allDone ? 'completed' : 'pending';
+    updatedDays[selectedDay] = day;
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to toggle exercise status:', err);
+      setError('Failed to update exercise. Please try again.');
+    }
+  };
+
   const removeExercise = async (exerciseIdx: number) => {
     if (!activePlan || !activePlanId) return;
 
@@ -394,26 +420,47 @@ export function WorkoutCoach({ profile }: Props) {
                         </div>
                       </div>
                     ) : (
-                      activePlan?.days[selectedDay]?.exercises.map((ex, idx) => (
+                      activePlan?.days[selectedDay]?.exercises.map((ex, idx) => {
+                        const isCompleted = ex.status === 'completed';
+                        const isExpanded = expandedExercise === idx;
+                        return (
                         <div key={idx} className="group">
                           <div
-                            onClick={() => setExpandedExercise(expandedExercise === idx ? null : idx)}
+                            onClick={() => toggleExerciseStatus(idx)}
                             className={`flex flex-col gap-4 p-4 lg:p-6 rounded-2xl transition-all cursor-pointer ${
-                              expandedExercise === idx ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : 'hover:bg-[#141414]/5'
+                              isCompleted ? 'bg-green-50/50' : isExpanded ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : 'hover:bg-[#141414]/5'
                             }`}
                           >
                             <div className="flex items-start gap-3 lg:gap-4">
-                              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#141414] rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm lg:text-base">
-                                {idx + 1}
+                              <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm lg:text-base transition-all ${
+                                isCompleted ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
+                              }`}>
+                                {isCompleted ? <Check size={18} /> : idx + 1}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-lg lg:text-xl font-bold text-[#141414] mb-0 lg:mb-2">{ex.name}</h4>
+                                <div className="flex items-center gap-2 lg:gap-3 mb-0 lg:mb-2 flex-wrap">
+                                  <h4 className={`text-lg lg:text-xl font-bold ${isCompleted ? 'text-[#141414]/40 line-through' : 'text-[#141414]'}`}>
+                                    {ex.name}
+                                  </h4>
+                                  {isCompleted && (
+                                    <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold uppercase rounded-md">Completed</span>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedExercise(isExpanded ? null : idx);
+                                    }}
+                                    className="p-1.5 hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                </div>
                                 <p className="hidden md:block text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
                               </div>
                             </div>
 
                             <AnimatePresence>
-                              {expandedExercise === idx && (
+                              {isExpanded && (
                                 <motion.div
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: 'auto', opacity: 1 }}
@@ -502,7 +549,8 @@ export function WorkoutCoach({ profile }: Props) {
                             </AnimatePresence>
                           </div>
                         </div>
-                      ))
+                        );
+                      })
                     )}
                     {activePlan?.days[selectedDay]?.title !== 'Rest' && (
                       <button
@@ -716,14 +764,10 @@ export function WorkoutCoach({ profile }: Props) {
             if (!workout) return { label: 'No workout logged', detail: '' };
             if (workout.title === 'Rest') return { label: 'Rest day', detail: '' };
             const exercises = workout.exercises || [];
-            const loggedSets = exercises.reduce((acc, ex) => {
-              const weights = ex.setWeights || [];
-              return acc + weights.filter(w => (w || 0) > 0).length;
-            }, 0);
-            const totalSets = exercises.reduce((acc, ex) => acc + (ex.sets || 0), 0);
+            const completed = exercises.filter(e => e.status === 'completed').length;
             return {
               label: `${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`,
-              detail: totalSets > 0 ? `${loggedSets}/${totalSets} sets logged` : '',
+              detail: exercises.length > 0 ? `${completed}/${exercises.length} completed` : '',
             };
           };
 
@@ -814,7 +858,7 @@ export function WorkoutCoach({ profile }: Props) {
                         <p className="text-sm text-[#141414]/40">No exercises recorded for this day.</p>
                       ) : (
                         (selected.workout.exercises || []).map((ex, eIdx) => {
-                          const hasLogged = (ex.setWeights || []).some(w => (w || 0) > 0);
+                          const hasLogged = ex.status === 'completed';
                           return (
                             <div key={eIdx} className="bg-white p-4 rounded-xl border border-[#141414]/5">
                               <div className="flex items-center justify-between mb-2">

@@ -88,6 +88,7 @@ export interface Exercise {
   consecutiveHits?: number;
   consecutiveDrops?: number;
   notes?: string;
+  status?: 'pending' | 'completed';
 }
 
 export interface WorkoutDay {
