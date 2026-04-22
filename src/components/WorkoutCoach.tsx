@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, Check, Pencil } from 'lucide-react';
+import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, Check, Eye } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -457,7 +457,7 @@ export function WorkoutCoach({ profile }: Props) {
                                   aria-label={isExpanded ? 'Collapse exercise' : 'Edit exercise'}
                                   className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 hover:bg-[#141414]/10 hover:text-[#141414] transition-colors"
                                 >
-                                  <Pencil size={16} />
+                                  <Eye size={16} />
                                 </button>
                                 <button
                                   onClick={() => toggleExerciseStatus(idx)}
