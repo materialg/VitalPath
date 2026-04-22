@@ -350,11 +350,9 @@ export function WorkoutCoach({ profile }: Props) {
                   <p className="text-xs lg:text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
                 </div>
                 {(() => {
-                  if (!activePlan?.weekStartDate) {
-                    return <div className="w-10 h-10 md:w-12 md:h-12 shrink-0" />;
-                  }
-                  const d = new Date(activePlan.weekStartDate + 'T00:00:00');
-                  d.setDate(d.getDate() + selectedDay);
+                  const now = new Date();
+                  const d = new Date(now);
+                  d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + selectedDay);
                   const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
                   const dayNum = d.getDate();
                   return (
