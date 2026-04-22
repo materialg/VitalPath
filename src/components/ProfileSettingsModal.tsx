@@ -95,23 +95,23 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto"
       onClick={onClose}
     >
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl border border-[#141414]/5"
+        className="bg-white w-full max-w-md p-6 md:p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[calc(100dvh-2rem)] overflow-y-auto my-auto"
       >
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 bg-[#141414] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="w-12 h-12 md:w-16 md:h-16 bg-[#141414] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
             {profile.photoURL ? (
-              <img 
-                src={profile.photoURL} 
-                alt={profile.displayName} 
+              <img
+                src={profile.photoURL}
+                alt={profile.displayName}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
@@ -119,11 +119,11 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
               <UserIcon className="text-white w-8 h-8" />
             )}
           </div>
-          <div className="flex-1">
-            <h3 className="text-2xl font-bold text-[#141414]">Profile Settings</h3>
-            <p className="text-sm text-[#141414]/40">{profile.email}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate">Profile Settings</h3>
+            <p className="text-xs md:text-sm text-[#141414]/40 truncate">{profile.email}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors self-start">
+          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors self-start shrink-0">
             <X size={20} />
           </button>
         </div>
@@ -170,31 +170,31 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div className="space-y-2 min-w-0">
               <label className="text-sm font-medium text-[#141414]/60">Current Weight (lbs)</label>
               <div className="relative">
                 <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="1"
                   value={Number.isNaN(formData.currentWeight) ? '' : formData.currentWeight}
                   onChange={e => setFormData({ ...formData, currentWeight: parseFloat(e.target.value) })}
-                  className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  className="w-full min-w-0 pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <label className="text-sm font-medium text-[#141414]/60">Current BF %</label>
               <div className="relative">
                 <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="1"
                   value={Number.isNaN(formData.currentBodyFat) ? '' : formData.currentBodyFat}
                   onChange={e => setFormData({ ...formData, currentBodyFat: parseFloat(e.target.value) })}
-                  className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                  className="w-full min-w-0 pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
                 />
               </div>
             </div>
@@ -221,12 +221,12 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
           <div className="space-y-2">
             <label className="text-sm font-medium text-[#141414]/60">Target Achievement Date</label>
             <div className="relative">
-              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-              <input 
-                type="date" 
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20 pointer-events-none" size={18} />
+              <input
+                type="date"
                 value={formData.targetDate}
                 onChange={e => setFormData({ ...formData, targetDate: e.target.value })}
-                className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                className="block w-full min-w-0 pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] appearance-none"
               />
             </div>
           </div>
