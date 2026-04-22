@@ -240,6 +240,27 @@ export function WorkoutCoach({ profile }: Props) {
     }
   };
 
+  const removeExercise = async (exerciseIdx: number) => {
+    if (!activePlan || !activePlanId) return;
+
+    const updatedDays = [...activePlan.days];
+    const currentExercises = updatedDays[selectedDay].exercises || [];
+    updatedDays[selectedDay] = {
+      ...updatedDays[selectedDay],
+      exercises: currentExercises.filter((_, i) => i !== exerciseIdx),
+    };
+
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', activePlanId), {
+        days: updatedDays,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('Failed to remove exercise:', err);
+      setError('Failed to remove exercise. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -467,6 +488,16 @@ export function WorkoutCoach({ profile }: Props) {
                                       >
                                         <Plus size={16} />
                                         Add Set
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeExercise(idx);
+                                        }}
+                                        className="w-full py-3 rounded-xl border-2 border-dashed border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                                      >
+                                        <Trash2 size={16} />
+                                        Delete Exercise
                                       </button>
                                     </div>
                                   </div>
