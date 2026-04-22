@@ -4,8 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addDays } from 'date-fns';
-import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, ChevronLeft } from 'lucide-react';
+import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2 } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -19,8 +18,7 @@ export function WorkoutCoach({ profile }: Props) {
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedHistoryDay, setSelectedHistoryDay] = useState<{ date: Date, workout: WorkoutDay } | null>(null);
+  const [selectedHistoryKey, setSelectedHistoryKey] = useState<string | null>(null);
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAIReady, setIsAIReady] = useState<boolean | null>(null);
@@ -678,164 +676,171 @@ export function WorkoutCoach({ profile }: Props) {
 
       {/* History Modal */}
       <AnimatePresence>
-        {isHistoryOpen && (
-          <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => {
-            setIsHistoryOpen(false);
-            setSelectedHistoryDay(null);
-          }}>
-            <motion.div 
+        {isHistoryOpen && (() => {
+          const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+          const dayEntries: Array<{ key: string; date: Date; dayLabel: string; workout: WorkoutDay }> = [];
+          const seen = new Set<string>();
+          for (const plan of workoutPlans) {
+            if (!plan.weekStartDate || !Array.isArray(plan.days)) continue;
+            const base = new Date(plan.weekStartDate + 'T00:00:00');
+            if (isNaN(base.getTime())) continue;
+            plan.days.forEach((day, idx) => {
+              const date = new Date(base);
+              date.setDate(base.getDate() + idx);
+              const key = date.toLocaleDateString('en-CA');
+              if (seen.has(key)) return;
+              seen.add(key);
+              dayEntries.push({
+                key,
+                date,
+                dayLabel: DAY_NAMES[idx] || '',
+                workout: day,
+              });
+            });
+          }
+          const todayKey = new Date().toLocaleDateString('en-CA');
+          const visibleEntries = dayEntries
+            .filter(e => e.key <= todayKey)
+            .sort((a, b) => b.date.getTime() - a.date.getTime());
+          const selected = visibleEntries.find(e => e.key === selectedHistoryKey) || null;
+          const workoutSummary = (workout: WorkoutDay) => {
+            if (workout.title === 'Rest') return { label: 'Rest day', detail: '' };
+            const exercises = workout.exercises || [];
+            const loggedSets = exercises.reduce((acc, ex) => {
+              const weights = ex.setWeights || [];
+              return acc + weights.filter(w => (w || 0) > 0).length;
+            }, 0);
+            const totalSets = exercises.reduce((acc, ex) => acc + (ex.sets || 0), 0);
+            return {
+              label: `${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`,
+              detail: totalSets > 0 ? `${loggedSets}/${totalSets} sets logged` : '',
+            };
+          };
+
+          return (
+          <div
+            className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => { setIsHistoryOpen(false); setSelectedHistoryKey(null); }}
+          >
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-4xl p-8 rounded-[2.5rem] shadow-2xl border border-[#141414]/5 overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white w-full max-w-3xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h3 className="text-2xl font-bold text-[#141414]">Workout History</h3>
-                  <p className="text-sm text-[#141414]/40">Track your progress and review past sessions.</p>
+                  <p className="text-sm text-[#141414]/40">Every day you&apos;ve tracked, newest first.</p>
                 </div>
-                <button onClick={() => {
-                  setIsHistoryOpen(false);
-                  setSelectedHistoryDay(null);
-                }} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
+                <button
+                  onClick={() => { setIsHistoryOpen(false); setSelectedHistoryKey(null); }}
+                  className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors"
+                >
                   <X size={20} />
                 </button>
               </div>
-              
-              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Calendar View */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between px-2">
-                      <h4 className="font-bold text-[#141414]">{format(currentMonth, 'MMMM yyyy')}</h4>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-[#141414]/5 rounded-lg transition-colors">
-                          <ChevronLeft size={18} />
-                        </button>
-                        <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-[#141414]/5 rounded-lg transition-colors">
-                          <ChevronRight size={18} />
-                        </button>
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-7 gap-1">
-                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                        <div key={day} className="text-center py-2">
-                          <span className="text-[10px] font-bold text-[#141414]/30 uppercase tracking-widest">{day}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
+                <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+                  {visibleEntries.length === 0 && (
+                    <p className="text-sm text-[#141414]/40 text-center py-8">No workout history yet.</p>
+                  )}
+                  {visibleEntries.map(entry => {
+                    const summary = workoutSummary(entry.workout);
+                    const isSelected = selected?.key === entry.key;
+                    return (
+                      <button
+                        key={entry.key}
+                        onClick={() => setSelectedHistoryKey(entry.key)}
+                        className={`w-full p-4 text-left rounded-2xl transition-all border ${
+                          isSelected
+                            ? 'bg-[#141414] text-white border-transparent shadow-lg'
+                            : 'bg-white text-[#141414] border-[#141414]/5 hover:border-[#141414]/20'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-bold">
+                            {entry.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </span>
+                          <span className={`text-xs font-bold ${isSelected ? 'text-white/60' : 'text-[#141414]/40'}`}>
+                            {entry.date.toLocaleDateString('en-US', { year: 'numeric' })}
+                          </span>
                         </div>
-                      ))}
-                      {(() => {
-                        const monthStart = startOfMonth(currentMonth);
-                        const monthEnd = endOfMonth(monthStart);
-                        const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-                        const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
-                        const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+                        <div className={`flex gap-3 text-[10px] font-medium ${isSelected ? 'text-white/60' : 'text-[#141414]/40'}`}>
+                          <span>{summary.label}</span>
+                          {summary.detail && (
+                            <>
+                              <span>·</span>
+                              <span>{summary.detail}</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                        return calendarDays.map((date, idx) => {
-                          // Find if there's a workout for this date
-                          let workoutDay: WorkoutDay | null = null;
-                          workoutPlans.forEach(plan => {
-                            const weekStart = parseISO(plan.weekStartDate);
-                            const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-                            plan.days.forEach((day, dIdx) => {
-                              const dayDate = addDays(weekStart, dIdx);
-                              if (isSameDay(dayDate, date)) {
-                                workoutDay = day;
-                              }
-                            });
-                          });
-
-                          const isCurrentMonth = isSameDay(startOfMonth(date), startOfMonth(currentMonth));
-                          const isSelected = selectedHistoryDay && isSameDay(selectedHistoryDay.date, date);
-
+                <div className="bg-[#141414]/[0.02] rounded-2xl p-6 overflow-y-auto custom-scrollbar">
+                  {selected ? (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">
+                          {selected.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                        <h4 className="text-xl font-bold text-[#141414]">{selected.workout.title}</h4>
+                      </div>
+                      {selected.workout.title === 'Rest' ? (
+                        <div className="py-8 text-center">
+                          <Zap className="text-blue-500 mx-auto mb-4" size={32} />
+                          <p className="text-sm text-[#141414]/60 leading-relaxed">
+                            {selected.workout.notes || "Focus on active recovery and mobility."}
+                          </p>
+                        </div>
+                      ) : (selected.workout.exercises || []).length === 0 ? (
+                        <p className="text-sm text-[#141414]/40">No exercises recorded for this day.</p>
+                      ) : (
+                        (selected.workout.exercises || []).map((ex, eIdx) => {
+                          const hasLogged = (ex.setWeights || []).some(w => (w || 0) > 0);
                           return (
-                            <button
-                              key={idx}
-                              disabled={!workoutDay}
-                              onClick={() => workoutDay && setSelectedHistoryDay({ date, workout: workoutDay })}
-                              className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-all relative ${
-                                !isCurrentMonth ? 'opacity-20' : ''
-                              } ${
-                                workoutDay 
-                                  ? isSelected 
-                                    ? 'bg-[#141414] text-white shadow-lg' 
-                                    : 'bg-[#141414]/5 hover:bg-[#141414]/10 text-[#141414]'
-                                  : 'text-[#141414]/20 cursor-default'
-                              }`}
-                            >
-                              <span className="text-xs font-bold">{format(date, 'd')}</span>
-                              {workoutDay && !isSelected && (
-                                <div className={`w-1 h-1 rounded-full ${workoutDay.title === 'Rest' ? 'bg-blue-400' : 'bg-green-500'}`} />
-                              )}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Day Details */}
-                  <div className="bg-[#141414]/5 rounded-3xl p-6 min-h-[400px]">
-                    {selectedHistoryDay ? (
-                      <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">
-                              {format(selectedHistoryDay.date, 'EEEE, MMM do')}
-                            </p>
-                            <h4 className="text-xl font-bold text-[#141414]">{selectedHistoryDay.workout.title}</h4>
-                          </div>
-                          <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                            selectedHistoryDay.workout.title === 'Rest' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
-                          }`}>
-                            {selectedHistoryDay.workout.title === 'Rest' ? 'Recovery' : 'Workout'}
-                          </div>
-                        </div>
-
-                        {selectedHistoryDay.workout.title === 'Rest' ? (
-                          <div className="py-8 text-center">
-                            <Zap className="text-blue-500 mx-auto mb-4" size={32} />
-                            <p className="text-sm text-[#141414]/60 leading-relaxed">
-                              {selectedHistoryDay.workout.notes || "Focus on active recovery and mobility."}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            {selectedHistoryDay.workout.exercises.map((ex, eIdx) => (
-                              <div key={eIdx} className="bg-white p-4 rounded-2xl border border-[#141414]/5">
-                                <div className="flex items-center justify-between mb-2">
+                            <div key={eIdx} className="bg-white p-4 rounded-xl border border-[#141414]/5">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
                                   <h5 className="font-bold text-[#141414]">{ex.name}</h5>
-                                  <span className="text-xs font-bold text-[#141414]/40">{ex.sets} Sets</span>
+                                  {hasLogged && (
+                                    <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-bold uppercase rounded">Logged</span>
+                                  )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {ex.setWeights?.map((w, sIdx) => (
-                                    <div key={sIdx} className="flex items-center justify-between px-3 py-2 bg-[#141414]/5 rounded-lg">
-                                      <span className="text-[10px] font-bold text-[#141414]/30">Set {sIdx + 1}</span>
-                                      <span className="text-xs font-bold text-[#141414]">{w}lb × {ex.setReps?.[sIdx] || 0}</span>
-                                    </div>
-                                  ))}
-                                </div>
+                                <span className="text-xs font-bold text-[#141414]/60">{ex.sets} sets</span>
                               </div>
-                            ))}
-                          </div>
-                        )}
+                              <div className="flex flex-wrap gap-1">
+                                {(ex.setWeights || []).map((w, sIdx) => (
+                                  <span key={sIdx} className="px-2 py-0.5 bg-[#141414]/5 rounded-full text-[10px] text-[#141414]/60">
+                                    Set {sIdx + 1}: {w || 0}lb × {ex.setReps?.[sIdx] || 0}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 bg-[#141414]/5 rounded-xl flex items-center justify-center mb-3">
+                        <Calendar className="text-[#141414]/20" size={22} />
                       </div>
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                        <div className="w-16 h-16 bg-[#141414]/5 rounded-2xl flex items-center justify-center mb-4">
-                          <Calendar className="text-[#141414]/20" size={32} />
-                        </div>
-                        <h4 className="font-bold text-[#141414] mb-2">Select a Day</h4>
-                        <p className="text-sm text-[#141414]/40">Click on a highlighted day in the calendar to view your workout details.</p>
-                      </div>
-                    )}
-                  </div>
+                      <p className="text-sm font-bold text-[#141414]">Select a day</p>
+                      <p className="text-xs text-[#141414]/40">Click any date on the left to see its workout.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
           </div>
-        )}
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
