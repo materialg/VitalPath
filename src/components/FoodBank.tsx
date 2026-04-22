@@ -18,6 +18,7 @@ export function FoodBank({ profile }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [expandedMobileId, setExpandedMobileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingItem, setEditingItem] = useState<FoodBankItem | null>(null);
   const [formData, setFormData] = useState<any>({
@@ -594,7 +595,7 @@ export function FoodBank({ profile }: Props) {
             </div>
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#141414]/5 bg-[#141414]/[0.02]">
@@ -697,6 +698,116 @@ export function FoodBank({ profile }: Props) {
               </AnimatePresence>
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile list */}
+        <div className="md:hidden divide-y divide-[#141414]/5">
+          {filteredItems.map(item => {
+            const isExpanded = expandedMobileId === item.id;
+            const unitLabel = item.servingUnit
+              ? (item.servingUnit === 'unit' ? (item.servingSize === 1 ? 'unit' : 'units') : item.servingUnit)
+              : 'unit';
+            return (
+              <div key={item.id} className={`${item.hidden ? 'opacity-50' : ''}`}>
+                <div className={`flex items-center gap-3 px-4 py-3 ${selectedIds.has(item.id) ? 'bg-[#141414]/[0.02]' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414] shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-[#141414] truncate">{item.name}</p>
+                      {item.hidden && (
+                        <span className="px-1.5 py-0.5 bg-[#141414]/10 text-[#141414]/60 text-[8px] font-bold uppercase rounded flex items-center gap-1 shrink-0">
+                          <EyeOff size={8} /> Hidden
+                        </span>
+                      )}
+                    </div>
+                    {item.mealTypes && item.mealTypes.length > 0 && (
+                      <div className="flex gap-1 mt-1">
+                        {item.mealTypes.map(type => (
+                          <span key={type} className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                            type === 'B' ? 'bg-blue-100 text-blue-700' :
+                            type === 'L' ? 'bg-orange-100 text-orange-700' :
+                            'bg-purple-100 text-purple-700'
+                          }`}>
+                            {type}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setExpandedMobileId(isExpanded ? null : item.id)}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      isExpanded ? 'bg-[#141414] text-white' : 'bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414]'
+                    }`}
+                    aria-label={isExpanded ? 'Hide details' : 'Show details'}
+                  >
+                    <Eye size={16} />
+                  </button>
+                </div>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                            <span className="text-[#141414]/50 font-medium">Serving</span>
+                            <span className="font-bold text-[#141414]">{item.servingSize} {unitLabel}</span>
+                          </div>
+                          <div className="flex justify-between bg-orange-50 rounded-lg px-3 py-2">
+                            <span className="text-orange-700/70 font-medium">Calories</span>
+                            <span className="font-bold text-orange-700">{item.calories}</span>
+                          </div>
+                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                            <span className="text-[#141414]/50 font-medium">Protein</span>
+                            <span className="font-bold text-[#141414]">{item.protein || 0}g</span>
+                          </div>
+                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                            <span className="text-[#141414]/50 font-medium">Carbs</span>
+                            <span className="font-bold text-[#141414]">{item.carbs || 0}g</span>
+                          </div>
+                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                            <span className="text-[#141414]/50 font-medium">Fats</span>
+                            <span className="font-bold text-[#141414]">{item.fats || 0}g</span>
+                          </div>
+                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                            <span className="text-[#141414]/50 font-medium">Fiber</span>
+                            <span className="font-bold text-[#141414]">{item.fiber || 0}g</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingItem(item);
+                              setFormData({ ...item, servingUnit: item.servingUnit || 'unit' });
+                            }}
+                            className="flex-1 py-2 bg-[#141414]/5 text-[#141414] rounded-xl font-bold text-sm hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Pencil size={14} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
 
         {filteredItems.length === 0 && !isAdding && (
