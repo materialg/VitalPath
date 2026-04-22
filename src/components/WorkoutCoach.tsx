@@ -429,20 +429,61 @@ export function WorkoutCoach({ profile }: Props) {
                         return (
                         <div key={idx} className="group">
                           <div
-                            onClick={() => toggleExerciseStatus(idx)}
-                            className={`flex flex-col gap-4 p-4 lg:p-6 rounded-2xl transition-all cursor-pointer ${
-                              isCompleted ? 'bg-green-50/50' : isExpanded ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : 'hover:bg-[#141414]/5'
+                            onClick={(e) => {
+                              if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+                              toggleExerciseStatus(idx);
+                            }}
+                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl transition-all md:cursor-pointer ${
+                              isCompleted ? 'bg-green-50/50' : isExpanded ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : 'md:hover:bg-[#141414]/5'
                             }`}
                           >
-                            <div className="flex items-start gap-3 lg:gap-4">
+                            <div className="flex items-center md:items-start gap-3 lg:gap-4">
                               <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm lg:text-base transition-all ${
                                 isCompleted ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
                               }`}>
                                 {isCompleted ? <Check size={18} /> : idx + 1}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 lg:gap-3 mb-0 lg:mb-2 flex-wrap">
-                                  <h4 className={`text-lg lg:text-xl font-bold ${isCompleted ? 'text-[#141414]/40 line-through' : 'text-[#141414]'}`}>
+
+                              {/* Mobile: stacked name + sets × reps, capped to number-box height */}
+                              <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
+                                <h4 className="text-base font-bold truncate text-[#141414] leading-tight">{ex.name}</h4>
+                                <p className="text-xs font-medium text-[#141414]/60 leading-tight">
+                                  {ex.sets} × {ex.reps} reps
+                                </p>
+                              </div>
+
+                              {/* Mobile: action icons replace tap-to-complete */}
+                              <div className="md:hidden flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExerciseStatus(idx);
+                                  }}
+                                  aria-label={isCompleted ? 'Mark exercise pending' : 'Mark exercise completed'}
+                                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                    isCompleted
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-[#141414]/5 text-[#141414]/50 active:bg-green-500 active:text-white'
+                                  }`}
+                                >
+                                  <Check size={18} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedExercise(isExpanded ? null : idx);
+                                  }}
+                                  aria-label={isExpanded ? 'Collapse exercise' : 'Edit exercise'}
+                                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 active:bg-[#141414]/10 transition-colors"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                              </div>
+
+                              {/* Desktop: full header with badge, pencil, notes */}
+                              <div className="flex-1 min-w-0 hidden md:block">
+                                <div className="flex items-center gap-2 lg:gap-3 mb-2 flex-wrap">
+                                  <h4 className="text-lg lg:text-xl font-bold text-[#141414]">
                                     {ex.name}
                                   </h4>
                                   {isCompleted && (
@@ -453,12 +494,12 @@ export function WorkoutCoach({ profile }: Props) {
                                       e.stopPropagation();
                                       setExpandedExercise(isExpanded ? null : idx);
                                     }}
-                                    className={`p-1.5 hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors ${isCompleted ? 'hidden md:inline-flex' : ''}`}
+                                    className="p-1.5 hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
                                   >
                                     <Pencil size={14} />
                                   </button>
                                 </div>
-                                <p className="hidden md:block text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
+                                <p className="text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
                               </div>
                             </div>
 
