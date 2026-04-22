@@ -481,6 +481,13 @@ export function MealPlanner({ profile }: Props) {
                           {/* Action icons — consistent across breakpoints */}
                           <div className="flex items-center gap-2 shrink-0">
                             <button
+                              onClick={() => setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) })}
+                              aria-label="Edit meal"
+                              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 hover:bg-[#141414]/10 hover:text-[#141414] transition-colors"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
                               onClick={() => toggleMealStatus(mIdx)}
                               aria-label={meal.status === 'completed' ? 'Mark meal pending' : 'Mark meal completed'}
                               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
@@ -490,13 +497,6 @@ export function MealPlanner({ profile }: Props) {
                               }`}
                             >
                               <Check size={18} />
-                            </button>
-                            <button
-                              onClick={() => setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) })}
-                              aria-label="Edit meal"
-                              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 hover:bg-[#141414]/10 hover:text-[#141414] transition-colors"
-                            >
-                              <Pencil size={16} />
                             </button>
                           </div>
                         </div>
