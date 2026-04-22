@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
@@ -15,10 +15,9 @@ export function WorkoutCoach({ profile }: Props) {
   const [activePlanId, setActivePlanId] = useState<string | null>(profile.activeWorkoutId || null);
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
-  const selectedDayRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    selectedDayRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }, [selectedDay, activePlanId]);
+  const selectedDayRef = useCallback((el: HTMLButtonElement | null) => {
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, []);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -454,7 +453,7 @@ export function WorkoutCoach({ profile }: Props) {
                                       e.stopPropagation();
                                       setExpandedExercise(isExpanded ? null : idx);
                                     }}
-                                    className="p-1.5 hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
+                                    className={`p-1.5 hover:bg-[#141414]/10 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors ${isCompleted ? 'hidden md:inline-flex' : ''}`}
                                   >
                                     <Pencil size={14} />
                                   </button>

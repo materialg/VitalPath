@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, getDocs, where, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
@@ -42,6 +42,9 @@ export function MealPlanner({ profile }: Props) {
   });
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
+  const selectedDayRef = useCallback((el: HTMLButtonElement | null) => {
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, []);
 
   const weekDateFor = (idx: number): Date | null => {
     const ws = activePlan?.weekStartDate;
@@ -286,17 +289,17 @@ export function MealPlanner({ profile }: Props) {
           {/* Day Selector */}
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
-              <div className="flex flex-col gap-4">
-                <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest px-2 mt-4 lg:mt-8">Select Day</h3>
+              <div className="flex flex-col gap-4 mt-4 lg:mt-8">
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
                   {activePlan?.days.map((day, idx) => {
                     return (
                       <button
                         key={idx}
+                        ref={selectedDay === idx ? selectedDayRef : undefined}
                         onClick={() => setSelectedDay(idx)}
                         className={`shrink-0 lg:w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                          selectedDay === idx 
-                            ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]' 
+                          selectedDay === idx
+                            ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
                             : 'text-[#141414]/40 hover:bg-white/50'
                         }`}
                       >
@@ -436,12 +439,12 @@ export function MealPlanner({ profile }: Props) {
                                 {meal.status === 'skipped' && (
                                   <span className="px-2 py-0.5 bg-red-50 text-red-600 text-[10px] font-bold uppercase rounded-md">Skipped</span>
                                 )}
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
                                   }}
-                                  className="p-1.5 hover:bg-[#141414]/5 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors"
+                                  className={`p-1.5 hover:bg-[#141414]/5 rounded-lg text-[#141414]/40 hover:text-[#141414] transition-colors ${meal.status === 'completed' ? 'hidden md:inline-flex' : ''}`}
                                 >
                                   <Pencil size={14} />
                                 </button>
