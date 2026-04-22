@@ -678,8 +678,8 @@ export function WorkoutCoach({ profile }: Props) {
       <AnimatePresence>
         {isHistoryOpen && (() => {
           const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-          const dayEntries: Array<{ key: string; date: Date; dayLabel: string; workout: WorkoutDay }> = [];
-          const seen = new Set<string>();
+          const workoutByDate = new Map<string, { workout: WorkoutDay; dayLabel: string }>();
+          let earliest: Date | null = null;
           for (const plan of workoutPlans) {
             if (!plan.weekStartDate || !Array.isArray(plan.days)) continue;
             const base = new Date(plan.weekStartDate + 'T00:00:00');
@@ -688,22 +688,34 @@ export function WorkoutCoach({ profile }: Props) {
               const date = new Date(base);
               date.setDate(base.getDate() + idx);
               const key = date.toLocaleDateString('en-CA');
-              if (seen.has(key)) return;
-              seen.add(key);
-              dayEntries.push({
-                key,
-                date,
-                dayLabel: DAY_NAMES[idx] || '',
-                workout: day,
-              });
+              if (!workoutByDate.has(key)) {
+                workoutByDate.set(key, { workout: day, dayLabel: DAY_NAMES[idx] || '' });
+              }
+              if (!earliest || date < earliest) earliest = new Date(date);
             });
           }
-          const todayKey = new Date().toLocaleDateString('en-CA');
-          const visibleEntries = dayEntries
-            .filter(e => e.key <= todayKey)
-            .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const start = earliest && earliest < today ? new Date(earliest) : new Date(today);
+          start.setHours(0, 0, 0, 0);
+
+          const visibleEntries: Array<{ key: string; date: Date; dayLabel: string; workout: WorkoutDay | null }> = [];
+          for (const cursor = new Date(start); cursor <= today; cursor.setDate(cursor.getDate() + 1)) {
+            const key = cursor.toLocaleDateString('en-CA');
+            const match = workoutByDate.get(key);
+            visibleEntries.push({
+              key,
+              date: new Date(cursor),
+              dayLabel: match?.dayLabel || DAY_NAMES[(cursor.getDay() + 6) % 7],
+              workout: match?.workout || null,
+            });
+          }
+          visibleEntries.sort((a, b) => b.date.getTime() - a.date.getTime());
+
           const selected = visibleEntries.find(e => e.key === selectedHistoryKey) || null;
-          const workoutSummary = (workout: WorkoutDay) => {
+          const workoutSummary = (workout: WorkoutDay | null) => {
+            if (!workout) return { label: 'No workout logged', detail: '' };
             if (workout.title === 'Rest') return { label: 'Rest day', detail: '' };
             const exercises = workout.exercises || [];
             const loggedSets = exercises.reduce((acc, ex) => {
@@ -789,9 +801,11 @@ export function WorkoutCoach({ profile }: Props) {
                         <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">
                           {selected.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
-                        <h4 className="text-xl font-bold text-[#141414]">{selected.workout.title}</h4>
+                        <h4 className="text-xl font-bold text-[#141414]">{selected.workout?.title || 'No workout logged'}</h4>
                       </div>
-                      {selected.workout.title === 'Rest' ? (
+                      {!selected.workout ? (
+                        <p className="text-sm text-[#141414]/40">No workout recorded for this day.</p>
+                      ) : selected.workout.title === 'Rest' ? (
                         <div className="py-8 text-center">
                           <Zap className="text-blue-500 mx-auto mb-4" size={32} />
                           <p className="text-sm text-[#141414]/60 leading-relaxed">
