@@ -334,25 +334,37 @@ export function MealPlanner({ profile }: Props) {
                     fiber: acc.fiber + (meal.fiber || 0),
                   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
+                  const remaining = Math.round(targets.dailyCalories - totals.calories);
                   return (
-                    <div className="flex items-center justify-between w-full mb-12">
-                      {/* fire icon */}
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
-                        <Flame size={22} className="text-orange-500" />
-                      </div>
-
-                      {/* mobile: compact summary */}
-                      <div className="flex-1 md:hidden flex items-center justify-center gap-3 px-3 min-w-0">
-                        <div className="flex flex-col items-center shrink-0">
-                          <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider">Kcal</p>
-                          <p className={`text-2xl font-black leading-none ${
+                    <div className="flex items-center justify-between w-full mb-12 gap-2 md:gap-4">
+                      {/* fire icon + total kcal */}
+                      <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
+                          <Flame size={22} className="text-orange-500" />
+                        </div>
+                        <div className="flex flex-col items-start leading-none">
+                          <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest">Kcal</p>
+                          <p className={`text-xl md:text-2xl font-black leading-none ${
                             totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]'
                           }`}>
                             {Math.round(totals.calories)}
                           </p>
                         </div>
-                        <div className="h-8 w-px bg-[#141414]/10 shrink-0" />
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] font-bold text-[#141414]/60">
+                      </div>
+
+                      {/* goal (calories remaining) */}
+                      <div className="flex flex-col items-start md:items-center leading-none shrink-0">
+                        <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest">Goal</p>
+                        <p className={`text-xl md:text-2xl font-black leading-none ${
+                          remaining < 0 ? 'text-red-500' : 'text-[#141414]'
+                        }`}>
+                          {remaining}
+                        </p>
+                      </div>
+
+                      {/* mobile: compact macros */}
+                      <div className="flex-1 md:hidden flex items-center justify-end min-w-0">
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-bold text-[#141414]/60">
                           <span>P {Math.round(totals.protein)}</span>
                           <span>C {Math.round(totals.carbs)}</span>
                           <span>F {Math.round(totals.fats)}</span>
@@ -360,10 +372,9 @@ export function MealPlanner({ profile }: Props) {
                         </div>
                       </div>
 
-                      {/* desktop: 5-column grid */}
+                      {/* desktop: macros */}
                       <div className="hidden md:flex flex-1 justify-around items-start px-2 lg:px-6">
                         {[
-                          { label: 'Daily Calories', value: Math.round(totals.calories), unit: 'kcal', isCalories: true },
                           { label: 'Protein', value: Math.round(totals.protein), unit: 'g' },
                           { label: 'Carbs', value: Math.round(totals.carbs), unit: 'g' },
                           { label: 'Fats', value: Math.round(totals.fats), unit: 'g' },
@@ -371,12 +382,8 @@ export function MealPlanner({ profile }: Props) {
                         ].map((stat, i) => (
                           <div key={i} className="text-center">
                             <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{stat.label}</p>
-                            <p className={`text-xl lg:text-2xl font-black whitespace-nowrap ${
-                              stat.isCalories && totals.calories > targets.dailyCalories
-                                ? 'text-red-500'
-                                : 'text-[#141414]'
-                            }`}>
-                              {stat.value}{stat.unit === 'kcal' ? ` ${stat.unit}` : stat.unit}
+                            <p className="text-xl lg:text-2xl font-black whitespace-nowrap text-[#141414]">
+                              {stat.value}{stat.unit}
                             </p>
                           </div>
                         ))}
@@ -791,9 +798,11 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         let val = parseFloat(ing.amount) || 0;
         const fbUnit = (food.servingUnit || 'unit').toLowerCase();
         
-        // Enforce whole numbers for units
+        // Enforce whole numbers for units, round up grams
         if (fbUnit === 'unit') {
           val = Math.round(val);
+        } else {
+          val = Math.ceil(val);
         }
 
         // Force the unit from the food bank over whatever is currently in the meal amount string
@@ -825,11 +834,13 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
     let val = parseFloat(newAmount) || 0;
     const unit = (food?.servingUnit || 'unit').toLowerCase();
     
-    // Enforce whole numbers for units
+    // Enforce whole numbers for units, round up grams
     if (unit === 'unit') {
       val = Math.round(val);
+    } else {
+      val = Math.ceil(val);
     }
-    
+
     newIngredients[idx].amount = `${val} ${unit === 'unit' ? (val === 1 ? 'unit' : 'units') : unit}`;
     newIngredients[idx].name = food?.name || ing.name; // Sync casing
     const totals = calculateTotals(newIngredients);
@@ -941,26 +952,35 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
+        <div className="grid grid-cols-6 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
+          {(() => {
+            const remaining = Math.round(targets.dailyCalories - (dayProgressOffset.calories + currentMeal.calories));
+            return (
+              <div className="text-center">
+                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Goal</p>
+                <p className={`text-sm md:text-lg font-bold ${remaining < 0 ? 'text-red-500' : 'text-[#141414]'}`}>{remaining}</p>
+              </div>
+            );
+          })()}
           <div className="text-center">
             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Kcal</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.calories}</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.calories)}</p>
           </div>
           <div className="text-center">
             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Protein</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.protein}g</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.protein)}g</p>
           </div>
           <div className="text-center">
             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Carbs</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.carbs}g</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.carbs)}g</p>
           </div>
           <div className="text-center">
             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.fats}g</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.fats)}g</p>
           </div>
           <div className="text-center">
             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fiber</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{currentMeal.fiber}g</p>
+            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.fiber)}g</p>
           </div>
         </div>
 
@@ -1002,7 +1022,7 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
                     <input
                       type="number"
                       inputMode="numeric"
-                      value={parseFloat(ing.amount) || 0}
+                      value={unit === 'unit' ? Math.round(parseFloat(ing.amount) || 0) : Math.ceil(parseFloat(ing.amount) || 0)}
                       step="1"
                       onChange={(e) => updateIngredientAmount(idx, e.target.value)}
                       className="w-16 bg-transparent border-none text-base font-bold text-right focus:ring-0 p-0 appearance-none"
