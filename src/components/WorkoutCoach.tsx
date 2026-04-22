@@ -438,7 +438,7 @@ export function WorkoutCoach({ profile }: Props) {
                             }`}
                           >
                             <div className="flex items-center md:items-start gap-3 lg:gap-4">
-                              <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm lg:text-base transition-all ${
+                              <div className={`hidden md:flex w-10 h-10 lg:w-12 lg:h-12 rounded-xl items-center justify-center shrink-0 font-bold text-sm lg:text-base transition-all ${
                                 isCompleted ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
                               }`}>
                                 {isCompleted ? <Check size={18} /> : idx + 1}

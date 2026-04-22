@@ -425,7 +425,7 @@ export function MealPlanner({ profile }: Props) {
                             meal.status === 'completed' ? 'bg-green-50/50' : 'md:hover:bg-[#141414]/5'
                           }`}
                         >
-                          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm md:text-base transition-all ${
+                          <div className={`hidden md:flex w-10 h-10 md:w-12 md:h-12 rounded-xl items-center justify-center shrink-0 font-bold text-sm md:text-base transition-all ${
                             meal.status === 'completed' ? 'bg-green-500 text-white' : 'bg-[#141414] text-white'
                           }`}>
                             {meal.status === 'completed' ? <Check size={18} /> : mIdx + 1}
