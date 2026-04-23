@@ -753,20 +753,11 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onActio
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-          isCompleted ? 'bg-green-500 text-white' : colorClasses
-        }`}>
-          {isCompleted ? <Check size={20} /> : icon}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${colorClasses}`}>
+          {icon}
         </div>
         <div>
-          <div className="flex items-center gap-2">
-            <h4 className={`font-bold transition-all ${
-              isCompleted ? 'text-green-900/40 line-through' : 'text-[#141414]'
-            }`}>{title}</h4>
-            {isCompleted && (
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md shadow-sm">Completed</span>
-            )}
-          </div>
+          <h4 className="font-bold text-[#141414]">{title}</h4>
         </div>
       </div>
       <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
