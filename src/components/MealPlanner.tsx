@@ -335,55 +335,33 @@ export function MealPlanner({ profile }: Props) {
                   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 
                   const remaining = Math.round(targets.dailyCalories - totals.calories);
+                  const goalColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
+                  const stats: { label: string; value: number | string; className?: string }[] = [
+                    {
+                      label: 'Kcal',
+                      value: Math.round(totals.calories),
+                      className: totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]',
+                    },
+                    { label: 'Goal', value: remaining, className: goalColor },
+                    { label: 'Protein', value: `${Math.round(totals.protein)}g` },
+                    { label: 'Carbs', value: `${Math.round(totals.carbs)}g` },
+                    { label: 'Fats', value: `${Math.round(totals.fats)}g` },
+                    { label: 'Fiber', value: `${Math.round(totals.fiber)}g` },
+                  ];
                   return (
-                    <div className="flex items-center justify-between w-full mb-12 gap-2 md:gap-4">
-                      {/* fire icon + total kcal */}
-                      <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
-                          <Flame size={22} className="text-orange-500" />
-                        </div>
-                        <div className="flex flex-col items-start leading-none">
-                          <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest">Kcal</p>
-                          <p className={`text-xl md:text-2xl font-black leading-none ${
-                            totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]'
-                          }`}>
-                            {Math.round(totals.calories)}
-                          </p>
-                        </div>
+                    <div className="flex items-center gap-2 md:gap-3 w-full mb-8 md:mb-12">
+                      {/* fire icon */}
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
+                        <Flame size={22} className="text-orange-500" />
                       </div>
 
-                      {/* goal (calories remaining) */}
-                      <div className="flex flex-col items-start md:items-center leading-none shrink-0">
-                        <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest">Goal</p>
-                        <p className={`text-xl md:text-2xl font-black leading-none ${
-                          remaining < 0 ? 'text-red-500' : 'text-[#141414]'
-                        }`}>
-                          {remaining}
-                        </p>
-                      </div>
-
-                      {/* mobile: compact macros */}
-                      <div className="flex-1 md:hidden flex items-center justify-end min-w-0">
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-bold text-[#141414]/60">
-                          <span>P {Math.round(totals.protein)}</span>
-                          <span>C {Math.round(totals.carbs)}</span>
-                          <span>F {Math.round(totals.fats)}</span>
-                          <span>Fib {Math.round(totals.fiber)}</span>
-                        </div>
-                      </div>
-
-                      {/* desktop: macros */}
-                      <div className="hidden md:flex flex-1 justify-around items-start px-2 lg:px-6">
-                        {[
-                          { label: 'Protein', value: Math.round(totals.protein), unit: 'g' },
-                          { label: 'Carbs', value: Math.round(totals.carbs), unit: 'g' },
-                          { label: 'Fats', value: Math.round(totals.fats), unit: 'g' },
-                          { label: 'Fiber', value: Math.round(totals.fiber), unit: 'g' }
-                        ].map((stat, i) => (
-                          <div key={i} className="text-center">
-                            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{stat.label}</p>
-                            <p className="text-xl lg:text-2xl font-black whitespace-nowrap text-[#141414]">
-                              {stat.value}{stat.unit}
+                      {/* evenly-spaced stats */}
+                      <div className="flex-1 grid grid-cols-6 gap-1 md:gap-4 min-w-0">
+                        {stats.map((stat, i) => (
+                          <div key={i} className="text-center min-w-0">
+                            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">{stat.label}</p>
+                            <p className={`text-sm md:text-2xl font-black whitespace-nowrap ${stat.className ?? 'text-[#141414]'}`}>
+                              {stat.value}
                             </p>
                           </div>
                         ))}
@@ -955,10 +933,11 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         <div className="grid grid-cols-6 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
           {(() => {
             const remaining = Math.round(targets.dailyCalories - (dayProgressOffset.calories + currentMeal.calories));
+            const goalColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
             return (
               <div className="text-center">
                 <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Goal</p>
-                <p className={`text-sm md:text-lg font-bold ${remaining < 0 ? 'text-red-500' : 'text-[#141414]'}`}>{remaining}</p>
+                <p className={`text-sm md:text-lg font-bold ${goalColor}`}>{remaining}</p>
               </div>
             );
           })()}
