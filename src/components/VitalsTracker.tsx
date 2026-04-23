@@ -50,10 +50,12 @@ export function VitalsTracker({ profile }: Props) {
     }
   };
 
-  const chartData = [...vitals].reverse().map(log => ({
-    ...log,
-    displayDate: new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  }));
+  const chartData = [...vitals].reverse().map(log => {
+    const d = new Date(log.date);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return { ...log, displayDate: `${mm}/${dd}` };
+  });
 
   const selectedHistoryLog = vitals.find(v => v.id === selectedHistoryId) || null;
 
@@ -92,7 +94,8 @@ export function VitalsTracker({ profile }: Props) {
                     tickLine={false}
                     tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
                     width={32}
-                    domain={['dataMin - 5', 'dataMax + 5']}
+                    allowDecimals={false}
+                    domain={[(dataMin: number) => Math.floor(dataMin - 2), (dataMax: number) => Math.ceil(dataMax + 2)]}
                   />
                   <Tooltip
                     contentStyle={{
@@ -146,7 +149,9 @@ export function VitalsTracker({ profile }: Props) {
                     tickLine={false}
                     tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
                     width={32}
-                    domain={['dataMin - 2', 'dataMax + 2']}
+                    allowDecimals={false}
+                    tickCount={4}
+                    domain={[(dataMin: number) => Math.floor(dataMin - 1), (dataMax: number) => Math.ceil(dataMax + 1)]}
                   />
                   <Tooltip
                     contentStyle={{
