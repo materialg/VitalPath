@@ -236,13 +236,13 @@ export function Dashboard({ profile, onNavigate }: Props) {
         />
         <StatCard
           progress={100}
-          label="Steps Goal"
+          label={<><span className="lg:hidden">Steps</span><span className="hidden lg:inline">Steps Goal</span></>}
           value={formatStepsGoal(profile.dailyStepsGoal || 10000)}
           color="text-blue-500"
         />
         <StatCard
           progress={100}
-          label="Daily Target"
+          label={<><span className="lg:hidden">Target</span><span className="hidden lg:inline">Daily Target</span></>}
           value={`${currentTargets.dailyCalories} cal`}
           color="text-red-500"
         />
@@ -968,7 +968,7 @@ function formatStepsGoal(steps: number): string {
   return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
 }
 
-function StatCard({ progress, label, value, color }: { progress?: number, label: string, value: string, color?: string }) {
+function StatCard({ progress, label, value, color }: { progress?: number, label: React.ReactNode, value: string, color?: string }) {
   return (
     <div className="bg-white p-3 lg:p-6 rounded-2xl lg:rounded-3xl border border-[#141414]/5 shadow-sm flex flex-col lg:flex-row items-center lg:items-start gap-2 lg:gap-4 text-center lg:text-left">
       {progress !== undefined && (
