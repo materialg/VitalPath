@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Flame, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Quote, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
+import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
@@ -16,28 +16,13 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const [vitals, setVitals] = useState<VitalLog[]>([]);
   const [latestMealPlan, setLatestMealPlan] = useState<MealPlan | null>(null);
   const [latestWorkout, setLatestWorkout] = useState<WorkoutPlan | null>(null);
-  const [quote, setQuote] = useState({ text: "", author: "" });
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
   const [editingMeal, setEditingMeal] = useState<{ mIdx: number; meal: Meal } | null>(null);
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
 
-  const quotes = [
-    { text: "Discipline equals freedom.", author: "Jocko Willink" },
-    { text: "The only person you should try to be better than is the person you were yesterday.", author: "Matty Mullins" },
-    { text: "Pain is temporary. Pride is forever.", author: "Unknown" },
-    { text: "Don't stop when you're tired. Stop when you're finished.", author: "David Goggins" },
-    { text: "Your body is a reflection of your lifestyle.", author: "Unknown" },
-    { text: "Weakness is a choice. Strength is a responsibility.", author: "Unknown" },
-    { text: "The world doesn't care about your excuses. It cares about your results.", author: "Unknown" },
-    { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke" },
-    { text: "Success is not owned, it's leased. And rent is due every day.", author: "J.J. Watt" },
-    { text: "Be the man you would want your son to be.", author: "Unknown" }
-  ];
-
   useEffect(() => {
-    setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     const vitalsQuery = query(
       collection(db, 'users', profile.uid, 'vitals'),
       orderBy('date', 'desc'),
@@ -267,86 +252,57 @@ export function Dashboard({ profile, onNavigate }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Daily TODO List */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
-                <ListTodo className="text-[#141414]" size={20} />
-              </div>
-              <h3 className="text-xl font-bold text-[#141414]">Daily TODO</h3>
-            </div>
-
-            <div className="space-y-4">
-              <TodoItem
-                icon={<Scale size={18} />}
-                title="Log Daily Vitals"
-                status={vitalsLoggedToday ? 'completed' : 'none'}
-                color="blue"
-                onAction={(action) => {
-                  if (action === 'approve') handleVitalsToggle();
-                  if (action === 'view') setShowVitalsModal(true);
-                }}
-              />
-
-              {todayMealPlan ? (
-                <TodoItem
-                  icon={<Utensils size={18} />}
-                  title="Daily Meals"
-                  status={todayMealPlan.meals.every(m => m.status === 'completed') ? 'completed' : 'none'}
-                  color="orange"
-                  onAction={(action) => {
-                    if (action === 'approve') handleAllMealsToggle();
-                    if (action === 'view') setShowMealModal(true);
-                  }}
-                />
-              ) : (
-                <TodoItem
-                  icon={<Utensils size={18} />}
-                  title="Today's Meal Plan"
-                  status="none"
-                  color="orange"
-                  onAction={() => onNavigate('meals')}
-                />
-              )}
-
-              <TodoItem
-                icon={<Dumbbell size={18} />}
-                title={todayWorkout ? todayWorkout.title : "Today's Workout"}
-                status={todayWorkout?.status || 'none'}
-                color="purple"
-                onAction={(action) => {
-                  if (action === 'approve') handleWorkoutToggle();
-                  if (action === 'view') setShowWorkoutModal(true);
-                }}
-              />
-            </div>
+      <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
+            <ListTodo className="text-[#141414]" size={20} />
           </div>
+          <h3 className="text-xl font-bold text-[#141414]">Daily TODO</h3>
         </div>
 
-        {/* Quick View */}
-        <div className="space-y-6">
-          <div className="bg-[#141414] p-8 rounded-3xl shadow-xl text-white">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                <Flame className="text-white" size={20} />
-              </div>
-              <h3 className="text-xl font-bold">Daily Focus</h3>
-            </div>
-            
-            <div className="mb-8 p-4 bg-white/5 rounded-2xl border border-white/10 italic relative">
-              <Quote className="absolute -top-2 -left-2 text-white/20" size={24} />
-              <p className="text-sm text-white/80 leading-relaxed">
-                "{quote.text}"
-              </p>
-              {quote.author && (
-                <p className="text-[10px] text-white/40 mt-2 not-italic text-right uppercase tracking-widest">
-                  — {quote.author}
-                </p>
-              )}
-            </div>
-          </div>
+        <div className="space-y-4">
+          <TodoItem
+            icon={<Scale size={18} />}
+            title="Log Daily Vitals"
+            status={vitalsLoggedToday ? 'completed' : 'none'}
+            color="blue"
+            onAction={(action) => {
+              if (action === 'approve') handleVitalsToggle();
+              if (action === 'view') setShowVitalsModal(true);
+            }}
+          />
+
+          {todayMealPlan ? (
+            <TodoItem
+              icon={<Utensils size={18} />}
+              title="Daily Meals"
+              status={todayMealPlan.meals.every(m => m.status === 'completed') ? 'completed' : 'none'}
+              color="orange"
+              onAction={(action) => {
+                if (action === 'approve') handleAllMealsToggle();
+                if (action === 'view') setShowMealModal(true);
+              }}
+            />
+          ) : (
+            <TodoItem
+              icon={<Utensils size={18} />}
+              title="Today's Meal Plan"
+              status="none"
+              color="orange"
+              onAction={() => onNavigate('meals')}
+            />
+          )}
+
+          <TodoItem
+            icon={<Dumbbell size={18} />}
+            title={todayWorkout ? todayWorkout.title : "Today's Workout"}
+            status={todayWorkout?.status || 'none'}
+            color="purple"
+            onAction={(action) => {
+              if (action === 'approve') handleWorkoutToggle();
+              if (action === 'view') setShowWorkoutModal(true);
+            }}
+          />
         </div>
       </div>
 
