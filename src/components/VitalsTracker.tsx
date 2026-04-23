@@ -63,14 +63,6 @@ export function VitalsTracker({ profile }: Props) {
         <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Vitals Tracker</h1>
       </header>
 
-      <button
-        onClick={() => setIsHistoryOpen(true)}
-        className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/60 hover:bg-[#141414]/5 border border-dashed border-[#141414]/10"
-      >
-        <span className="font-bold text-sm">View History</span>
-        <Calendar size={18} />
-      </button>
-
       {vitals.length > 1 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
@@ -96,7 +88,10 @@ export function VitalsTracker({ profile }: Props) {
                     minTickGap={30}
                   />
                   <YAxis
-                    hide
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
+                    width={32}
                     domain={['dataMin - 5', 'dataMax + 5']}
                   />
                   <Tooltip
@@ -147,7 +142,10 @@ export function VitalsTracker({ profile }: Props) {
                     minTickGap={30}
                   />
                   <YAxis
-                    hide
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
+                    width={32}
                     domain={['dataMin - 2', 'dataMax + 2']}
                   />
                   <Tooltip
@@ -182,6 +180,14 @@ export function VitalsTracker({ profile }: Props) {
           <p className="text-[#141414]/60 max-w-sm mx-auto">Log at least two measurements to start seeing your progress over time.</p>
         </div>
       )}
+
+      <button
+        onClick={() => setIsHistoryOpen(true)}
+        className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/60 hover:bg-[#141414]/5 border border-dashed border-[#141414]/10"
+      >
+        <span className="font-bold text-sm">View History</span>
+        <Calendar size={18} />
+      </button>
 
       <AnimatePresence>
         {isHistoryOpen && (
