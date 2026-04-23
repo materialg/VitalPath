@@ -343,10 +343,10 @@ export function MealPlanner({ profile }: Props) {
                       className: totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]',
                     },
                     { label: 'Goal', value: remaining, className: goalColor },
-                    { label: 'Protein', value: `${Math.round(totals.protein)}g` },
-                    { label: 'Carbs', value: `${Math.round(totals.carbs)}g` },
-                    { label: 'Fats', value: `${Math.round(totals.fats)}g` },
-                    { label: 'Fiber', value: `${Math.round(totals.fiber)}g` },
+                    { label: 'P', value: `${Math.round(totals.protein)}g` },
+                    { label: 'C', value: `${Math.round(totals.carbs)}g` },
+                    { label: 'F', value: `${Math.round(totals.fats)}g` },
+                    { label: 'Fib', value: `${Math.round(totals.fiber)}g` },
                   ];
                   return (
                     <div className="flex items-center gap-2 md:gap-3 w-full mb-8 md:mb-12">
