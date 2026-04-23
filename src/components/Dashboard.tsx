@@ -279,10 +279,9 @@ export function Dashboard({ profile, onNavigate }: Props) {
             </div>
 
             <div className="space-y-4">
-              <TodoItem 
+              <TodoItem
                 icon={<Scale size={18} />}
                 title="Log Daily Vitals"
-                description={vitalsLoggedToday ? "Vitals logged for today" : "Weight and body fat entry needed"}
                 status={vitalsLoggedToday ? 'completed' : 'none'}
                 color="blue"
                 onAction={(action) => {
@@ -290,12 +289,11 @@ export function Dashboard({ profile, onNavigate }: Props) {
                   if (action === 'view') setShowVitalsModal(true);
                 }}
               />
-              
+
               {todayMealPlan ? (
-                <TodoItem 
+                <TodoItem
                   icon={<Utensils size={18} />}
                   title="Daily Meals"
-                  description={todayMealPlan.meals.map(m => m.name).join(', ')}
                   status={todayMealPlan.meals.every(m => m.status === 'completed') ? 'completed' : 'none'}
                   color="orange"
                   onAction={(action) => {
@@ -304,20 +302,18 @@ export function Dashboard({ profile, onNavigate }: Props) {
                   }}
                 />
               ) : (
-                <TodoItem 
+                <TodoItem
                   icon={<Utensils size={18} />}
                   title="Today's Meal Plan"
-                  description="No meal plan generated"
                   status="none"
                   color="orange"
                   onAction={() => onNavigate('meals')}
                 />
               )}
 
-              <TodoItem 
+              <TodoItem
                 icon={<Dumbbell size={18} />}
                 title={todayWorkout ? todayWorkout.title : "Today's Workout"}
-                description={todayWorkout ? `${todayWorkout.exercises.length} exercises` : "No workout scheduled"}
                 status={todayWorkout?.status || 'none'}
                 color="purple"
                 onAction={(action) => {
@@ -735,14 +731,13 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
 interface TodoItemProps {
   icon: React.ReactNode;
   title: string;
-  description: string;
   status: 'completed' | 'skipped' | 'none' | 'pending';
   color: string;
   onAction: (action: 'approve' | 'deny' | 'view') => void;
   showViewAction?: boolean;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, color, onAction, showViewAction = true }) => {
+const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onAction, showViewAction = true }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
     orange: 'bg-orange-50 text-orange-600',
@@ -772,12 +767,9 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, description, status, c
               <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded-md shadow-sm">Completed</span>
             )}
           </div>
-          <p className={`text-sm transition-all ${
-            isCompleted ? 'text-green-900/30' : 'text-[#141414]/60'
-          }`}>{description}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <ActionButton 
           icon={<Check size={16} />} 
           color={isCompleted ? "bg-green-500 text-white shadow-lg shadow-green-100" : "hover:bg-green-50 text-green-600"} 
