@@ -52,10 +52,28 @@ export function VitalsTracker({ profile }: Props) {
 
   const chartData = [...vitals].reverse().map(log => {
     const d = new Date(log.date);
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return { ...log, displayDate: `${mm}/${dd}` };
+    return { ...log, displayDate: `${d.getMonth() + 1}/${d.getDate()}` };
   });
+
+  const goalBF = profile.goalBodyFat || 15;
+  const latestLog = vitals[0];
+  const targetWeight = latestLog
+    ? Math.round((latestLog.weight * (1 - latestLog.bodyFat / 100)) / (1 - goalBF / 100))
+    : null;
+
+  const evenTicks = (min: number, max: number, count = 5) => {
+    const safeMax = max <= min ? min + count - 1 : max;
+    const step = Math.ceil((safeMax - min) / (count - 1));
+    return Array.from({ length: count }, (_, i) => min + step * i);
+  };
+
+  const weightTicks = vitals.length && targetWeight !== null
+    ? evenTicks(targetWeight, Math.max(...vitals.map(v => Math.ceil(v.weight))))
+    : undefined;
+
+  const bfTicks = vitals.length
+    ? evenTicks(goalBF, Math.max(...vitals.map(v => Math.ceil(v.bodyFat))))
+    : undefined;
 
   const selectedHistoryLog = vitals.find(v => v.id === selectedHistoryId) || null;
 
@@ -95,7 +113,8 @@ export function VitalsTracker({ profile }: Props) {
                     tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
                     width={32}
                     allowDecimals={false}
-                    domain={[(dataMin: number) => Math.floor(dataMin - 2), (dataMax: number) => Math.ceil(dataMax + 2)]}
+                    ticks={weightTicks}
+                    domain={weightTicks ? [weightTicks[0], weightTicks[weightTicks.length - 1]] : undefined}
                   />
                   <Tooltip
                     contentStyle={{
@@ -150,8 +169,8 @@ export function VitalsTracker({ profile }: Props) {
                     tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
                     width={32}
                     allowDecimals={false}
-                    tickCount={4}
-                    domain={[(dataMin: number) => Math.floor(dataMin - 1), (dataMax: number) => Math.ceil(dataMax + 1)]}
+                    ticks={bfTicks}
+                    domain={bfTicks ? [bfTicks[0], bfTicks[bfTicks.length - 1]] : undefined}
                   />
                   <Tooltip
                     contentStyle={{
