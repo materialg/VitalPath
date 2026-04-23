@@ -336,17 +336,17 @@ export function MealPlanner({ profile }: Props) {
 
                   const remaining = Math.round(targets.dailyCalories - totals.calories);
                   const goalColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
-                  const stats: { label: string; value: number | string; className?: string }[] = [
+                  const stats: { label: string; value: number; unit?: string; className?: string }[] = [
                     {
                       label: 'Kcal',
                       value: Math.round(totals.calories),
                       className: totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]',
                     },
                     { label: 'Goal', value: remaining, className: goalColor },
-                    { label: 'P', value: `${Math.round(totals.protein)}g` },
-                    { label: 'C', value: `${Math.round(totals.carbs)}g` },
-                    { label: 'F', value: `${Math.round(totals.fats)}g` },
-                    { label: 'Fib', value: `${Math.round(totals.fiber)}g` },
+                    { label: 'P', value: Math.round(totals.protein), unit: 'g' },
+                    { label: 'C', value: Math.round(totals.carbs), unit: 'g' },
+                    { label: 'F', value: Math.round(totals.fats), unit: 'g' },
+                    { label: 'Fib', value: Math.round(totals.fiber), unit: 'g' },
                   ];
                   return (
                     <div className="flex items-center gap-2 md:gap-3 w-full mb-8 md:mb-12">
@@ -361,7 +361,7 @@ export function MealPlanner({ profile }: Props) {
                           <div key={i} className="text-center min-w-0">
                             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">{stat.label}</p>
                             <p className={`text-sm md:text-2xl font-black whitespace-nowrap ${stat.className ?? 'text-[#141414]'}`}>
-                              {stat.value}
+                              {stat.value}{stat.unit && <span className="hidden md:inline">{stat.unit}</span>}
                             </p>
                           </div>
                         ))}
