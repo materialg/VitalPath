@@ -291,9 +291,8 @@ export function WorkoutCoach({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+        <div className="text-center md:text-left">
           <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Workout Coach</h1>
-          <p className="text-[#141414]/60">Personalized training routines to maximize fat loss and muscle retention.</p>
         </div>
       </header>
 
@@ -304,7 +303,7 @@ export function WorkoutCoach({ profile }: Props) {
       )}
 
       {/* Daily Target Header (Consistent with Meal Planner) */}
-      <div className="bg-[#141414] p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
+      <div className="hidden md:block bg-[#141414] p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl transition-all group-hover:bg-white/10" />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-5 lg:mb-8">
@@ -325,21 +324,11 @@ export function WorkoutCoach({ profile }: Props) {
       </div>
 
       {workoutPlans.length > 0 ? (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Day Selector Sidebar */}
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
-              <button 
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="w-full px-6 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#141414]/10"
-              >
-                {isGenerating ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
-                ) : <Sparkles size={18} />}
-                {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
-              </button>
-
               <div className="flex flex-col gap-4 mt-4 lg:mt-8">
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
                   {activePlan?.days.map((day, idx) => (
@@ -358,14 +347,6 @@ export function WorkoutCoach({ profile }: Props) {
                     </button>
                   ))}
                 </div>
-                
-                <button
-                  onClick={() => setIsHistoryOpen(true)}
-                  className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-white/50 border border-dashed border-[#141414]/10"
-                >
-                  <span className="font-bold text-sm">View History</span>
-                  <Calendar size={18} />
-                </button>
               </div>
             </div>
           </div>
@@ -581,6 +562,26 @@ export function WorkoutCoach({ profile }: Props) {
             </div>
           </div>
         </div>
+
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="w-full px-6 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#141414]/10"
+        >
+          {isGenerating ? (
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
+          ) : <Sparkles size={18} />}
+          {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
+        </button>
+
+        <button
+          onClick={() => setIsHistoryOpen(true)}
+          className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-dashed border-[#141414]/10"
+        >
+          <span className="font-bold text-sm">View History</span>
+          <Calendar size={18} />
+        </button>
+        </>
       ) : (
         <div className="bg-white p-20 rounded-[3rem] border border-[#141414]/5 shadow-sm text-center">
           <div className="w-24 h-24 bg-[#141414]/5 rounded-full flex items-center justify-center mx-auto mb-8">
