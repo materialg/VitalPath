@@ -221,34 +221,26 @@ export function Dashboard({ profile, onNavigate }: Props) {
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto w-full">
-        <StatCard 
+      <div className="grid grid-cols-4 gap-3 lg:gap-6 max-w-6xl mx-auto w-full">
+        <StatCard
           progress={timelineProgress}
-          label="Timeline" 
-          value={`${daysLeft} Days`} 
-          subValue="Until Goal"
+          label="Timeline"
+          value={`${daysLeft} Days`}
           color="text-emerald-500"
         />
-        <StatCard 
+        <StatCard
           progress={bfProgress}
-          label="Body Fat" 
-          value={`${currentBF}%`} 
-          subValue={`Goal: ${profile.goalBodyFat}%`}
+          label="Body Fat"
+          value={`${currentBF}%`}
           color="text-orange-500"
         />
-        <StatCard 
-          progress={100}
-          label="Steps Goal" 
-          value={`${profile.dailyStepsGoal || 10000}`} 
-          subValue="Steps / Day"
-          color="text-blue-500"
+        <StatCard
+          label="Steps Goal"
+          value={formatStepsGoal(profile.dailyStepsGoal || 10000)}
         />
-        <StatCard 
-          progress={100}
-          label="Daily Target" 
-          value={`${currentTargets.dailyCalories} kcal`} 
-          subValue={`${currentTargets.macros.protein}g Protein`}
-          color="text-red-500"
+        <StatCard
+          label="Daily Target"
+          value={`${currentTargets.dailyCalories} cal`}
         />
       </div>
 
@@ -523,7 +515,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
             <div>
               <h3 className="text-2xl font-bold text-[#141414]">Today's Meals</h3>
               <p className={`text-[#141414]/60 ${targetCalories && totalCalories > targetCalories ? 'text-red-500' : ''}`}>
-                {dayName} • {totalCalories} kcal total
+                {dayName} • {totalCalories} cal total
               </p>
             </div>
           </div>
@@ -551,7 +543,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories || 0} kcal</span>
+                  <span className={`text-sm font-bold transition-all ${meal.status === 'completed' ? 'text-green-600' : 'text-orange-600'}`}>{meal.calories || 0} cal</span>
                 </div>
               </div>
 
@@ -966,41 +958,48 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
   );
 }
 
-function StatCard({ progress, label, value, subValue, color }: { progress: number, label: string, value: string, subValue: string, color: string }) {
+function formatStepsGoal(steps: number): string {
+  if (steps < 1000) return `${steps}`;
+  const k = steps / 1000;
+  return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
+}
+
+function StatCard({ progress, label, value, color }: { progress?: number, label: string, value: string, color?: string }) {
   return (
-    <div className="bg-white p-6 rounded-3xl border border-[#141414]/5 shadow-sm flex items-start gap-4">
-      <div className="w-14 h-14 bg-[#141414]/5 rounded-2xl flex items-center justify-center shrink-0 relative">
-        <svg className="w-full h-full -rotate-90">
-          <circle
-            cx="28"
-            cy="28"
-            r="22"
-            fill="transparent"
-            stroke="currentColor"
-            strokeWidth="4"
-            className="text-[#141414]/5"
-          />
-          <motion.circle
-            cx="28"
-            cy="28"
-            r="22"
-            fill="transparent"
-            stroke="currentColor"
-            strokeWidth="4"
-            strokeDasharray={138}
-            initial={{ strokeDashoffset: 138 }}
-            animate={{ strokeDashoffset: 138 - (138 * progress) / 100 }}
-            className={color}
-          />
-        </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-[#141414]">
-          {progress}%
-        </span>
-      </div>
-      <div>
-        <p className="text-sm font-medium text-[#141414]/40 uppercase tracking-wider mb-1">{label}</p>
-        <p className="text-2xl font-bold text-[#141414] tracking-tight">{value}</p>
-        <p className="text-xs text-[#141414]/40 mt-1">{subValue}</p>
+    <div className="bg-white p-3 lg:p-6 rounded-2xl lg:rounded-3xl border border-[#141414]/5 shadow-sm flex flex-col lg:flex-row items-center lg:items-start gap-2 lg:gap-4 text-center lg:text-left">
+      {progress !== undefined && (
+        <div className="w-10 h-10 lg:w-14 lg:h-14 bg-[#141414]/5 rounded-xl lg:rounded-2xl flex items-center justify-center shrink-0 relative">
+          <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
+            <circle
+              cx="28"
+              cy="28"
+              r="22"
+              fill="transparent"
+              stroke="currentColor"
+              strokeWidth="4"
+              className="text-[#141414]/5"
+            />
+            <motion.circle
+              cx="28"
+              cy="28"
+              r="22"
+              fill="transparent"
+              stroke="currentColor"
+              strokeWidth="4"
+              strokeDasharray={138}
+              initial={{ strokeDashoffset: 138 }}
+              animate={{ strokeDashoffset: 138 - (138 * progress) / 100 }}
+              className={color}
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[8px] lg:text-[10px] font-bold text-[#141414]">
+            {progress}%
+          </span>
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="text-[9px] lg:text-sm font-medium text-[#141414]/40 uppercase tracking-wider mb-0.5 lg:mb-1">{label}</p>
+        <p className="text-sm lg:text-2xl font-bold text-[#141414] tracking-tight">{value}</p>
       </div>
     </div>
   );

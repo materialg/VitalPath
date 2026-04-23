@@ -244,11 +244,11 @@ export function MealPlanner({ profile }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 lg:gap-6">
             <div>
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Deficit</p>
-              <p className="text-xl font-black text-orange-500">-{targets.dailyDeficit} <span className="text-xs font-normal opacity-40">kcal</span></p>
+              <p className="text-xl font-black text-orange-500">-{targets.dailyDeficit} <span className="text-xs font-normal opacity-40">cal</span></p>
             </div>
             <div>
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Target</p>
-              <p className="text-xl font-black text-green-400">{targets.dailyCalories} <span className="text-xs font-normal opacity-40">kcal</span></p>
+              <p className="text-xl font-black text-green-400">{targets.dailyCalories} <span className="text-xs font-normal opacity-40">cal</span></p>
             </div>
             <div>
               <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
@@ -412,7 +412,7 @@ export function MealPlanner({ profile }: Props) {
                               {MEAL_SLOT_NAMES[mIdx] || meal.name}
                             </h4>
                             <p className={`text-xs font-medium text-[#141414]/60 leading-tight ${isEmpty ? 'opacity-30' : ''}`}>
-                              {Math.round(meal.calories || 0)} kcal
+                              {Math.round(meal.calories || 0)} cal
                             </p>
                           </div>
 
@@ -428,7 +428,7 @@ export function MealPlanner({ profile }: Props) {
                                 )}
                               </div>
                               <div className={`text-right shrink-0 ${isEmpty ? 'opacity-30' : ''}`}>
-                                <p className="text-sm font-bold text-[#141414]">{Math.round(meal.calories || 0)} kcal</p>
+                                <p className="text-sm font-bold text-[#141414]">{Math.round(meal.calories || 0)} cal</p>
                                 <div className="flex gap-2 text-[10px] font-medium text-[#141414]/40 whitespace-nowrap">
                                   <span>P: {Math.round(meal.protein || 0)}g</span>
                                   <span>C: {Math.round(meal.carbs || 0)}g</span>
@@ -641,7 +641,7 @@ export function MealPlanner({ profile }: Props) {
                           </span>
                         </div>
                         <div className={`flex gap-3 text-[10px] font-medium ${isSelected ? 'text-white/60' : 'text-[#141414]/40'}`}>
-                          <span>{Math.round(totals.kcal)} kcal</span>
+                          <span>{Math.round(totals.kcal)} cal</span>
                           <span>·</span>
                           <span>{totals.completed}/{totals.total} logged</span>
                         </div>
@@ -673,7 +673,7 @@ export function MealPlanner({ profile }: Props) {
                                     <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[9px] font-bold uppercase rounded">Logged</span>
                                   )}
                                 </div>
-                                <span className="text-xs font-bold text-[#141414]/60">{Math.round(meal.calories || 0)} kcal</span>
+                                <span className="text-xs font-bold text-[#141414]/60">{Math.round(meal.calories || 0)} cal</span>
                               </div>
                               <div className="flex flex-wrap gap-1">
                                 {(meal.ingredientsWithAmounts || []).map((ing: any, iIdx: number) => (
