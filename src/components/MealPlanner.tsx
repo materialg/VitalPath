@@ -26,7 +26,7 @@ export function MealPlanner({ profile }: Props) {
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
   const [isCreatingWeek, setIsCreatingWeek] = useState(false);
   const MEAL_PLAN_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner", "Snack"];
 
   const emptyMealFor = (slotName: string) => ({
     name: slotName,
