@@ -770,24 +770,24 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onActio
         </div>
       </div>
       <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <ActionButton 
-          icon={<Check size={16} />} 
-          color={isCompleted ? "bg-green-500 text-white shadow-lg shadow-green-100" : "hover:bg-green-50 text-green-600"} 
-          onClick={(e) => {
-            e.stopPropagation();
-            onAction('approve');
-          }} 
-        />
         {showViewAction && (
-          <ActionButton 
-            icon={<Eye size={16} />} 
-            color="hover:bg-[#141414]/5 text-[#141414]/60" 
+          <ActionButton
+            icon={<Eye size={16} />}
+            color="hover:bg-[#141414]/5 text-[#141414]/60"
             onClick={(e) => {
               e.stopPropagation();
               onAction('view');
-            }} 
+            }}
           />
         )}
+        <ActionButton
+          icon={<Check size={16} />}
+          color={isCompleted ? "bg-green-500 text-white shadow-lg shadow-green-100" : "hover:bg-green-50 text-green-600"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction('approve');
+          }}
+        />
       </div>
     </div>
   );
