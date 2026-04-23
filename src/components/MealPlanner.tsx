@@ -450,11 +450,7 @@ export function MealPlanner({ profile }: Props) {
                                     );
                                   })
                                 : isEmpty
-                                  ? (
-                                      <span className="text-xs text-[#141414]/30 italic">
-                                        Tap the pencil to add items
-                                      </span>
-                                    )
+                                  ? null
                                   : (Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing: any, iIdx: number) => (
                                       <span key={iIdx} className="px-3 py-1 bg-white border border-[#141414]/10 rounded-full text-xs text-[#141414]/60 whitespace-nowrap">
                                         {ing}
