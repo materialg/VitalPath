@@ -235,12 +235,16 @@ export function Dashboard({ profile, onNavigate }: Props) {
           color="text-orange-500"
         />
         <StatCard
+          progress={100}
           label="Steps Goal"
           value={formatStepsGoal(profile.dailyStepsGoal || 10000)}
+          color="text-blue-500"
         />
         <StatCard
+          progress={100}
           label="Daily Target"
           value={`${currentTargets.dailyCalories} cal`}
+          color="text-red-500"
         />
       </div>
 
@@ -999,7 +1003,7 @@ function StatCard({ progress, label, value, color }: { progress?: number, label:
       )}
       <div className="min-w-0">
         <p className="text-[9px] lg:text-sm font-medium text-[#141414]/40 uppercase tracking-wider mb-0.5 lg:mb-1">{label}</p>
-        <p className="text-sm lg:text-2xl font-bold text-[#141414] tracking-tight">{value}</p>
+        <p className="text-sm lg:text-2xl font-bold text-[#141414] tracking-tight whitespace-nowrap">{value}</p>
       </div>
     </div>
   );
