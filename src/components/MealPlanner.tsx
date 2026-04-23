@@ -218,9 +218,8 @@ export function MealPlanner({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+        <div className="text-center md:text-left">
           <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Meal Planner</h1>
-          <p className="text-[#141414]/60">AI-generated nutrition tailored to your body fat goals.</p>
         </div>
       </header>
 
