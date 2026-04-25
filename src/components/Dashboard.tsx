@@ -222,6 +222,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
         </div>
       </header>
 
+      <div className="space-y-4">
+
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3 lg:gap-6 max-w-6xl mx-auto w-full">
         <StatCard
@@ -296,6 +298,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
             }}
           />
         </div>
+      </div>
+
       </div>
 
       <AnimatePresence>

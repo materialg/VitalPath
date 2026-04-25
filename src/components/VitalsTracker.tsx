@@ -61,7 +61,7 @@ export function VitalsTracker({ profile }: Props) {
   })();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <CompositionTrend vitals={filteredVitals} />
 
       <div

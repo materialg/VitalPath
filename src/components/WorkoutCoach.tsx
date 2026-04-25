@@ -296,6 +296,8 @@ export function WorkoutCoach({ profile }: Props) {
         </div>
       </header>
 
+      <div className="space-y-4">
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium">
           {error}
@@ -630,6 +632,8 @@ export function WorkoutCoach({ profile }: Props) {
           )}
         </div>
       )}
+
+      </div>
 
       {/* Lift Bank Picker */}
       <AnimatePresence>

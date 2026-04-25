@@ -223,6 +223,8 @@ export function MealPlanner({ profile }: Props) {
         </div>
       </header>
 
+      <div className="space-y-4">
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -588,6 +590,8 @@ export function MealPlanner({ profile }: Props) {
           <Calendar size={18} />
         </button>
       )}
+
+      </div>
 
       {/* History Modal */}
       <AnimatePresence>
