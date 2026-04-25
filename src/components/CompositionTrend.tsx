@@ -106,7 +106,7 @@ export function CompositionTrend({ vitals }: Props) {
 
   return (
     <div className="bg-white" style={cardStyle}>
-      <div className="flex items-center justify-end gap-3 mb-3 flex-wrap" style={{ fontSize: 12 }}>
+      <div className="flex items-center justify-center gap-3 mb-3 flex-wrap" style={{ fontSize: 12 }}>
         <span className="flex items-center gap-1.5">
           <span
             className="rounded-full shrink-0"
