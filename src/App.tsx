@@ -18,7 +18,7 @@ import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, Library, LineChart, X } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, Library, BarChart3, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -229,7 +229,7 @@ export default function App() {
           <NavItem
             active={activeTab === 'trends'}
             onClick={() => setActiveTab('trends')}
-            icon={<LineChart size={20} />}
+            icon={<BarChart3 size={20} />}
             label="Trends"
           />
           <NavItem
@@ -303,7 +303,7 @@ export default function App() {
         <MobileNavItem
           active={activeTab === 'trends'}
           onClick={() => setActiveTab('trends')}
-          icon={<LineChart size={20} />}
+          icon={<BarChart3 size={20} />}
         />
         <MobileNavItem
           active={activeTab === 'meals'}
