@@ -235,6 +235,30 @@ export function MealPlanner({ profile }: Props) {
         </div>
       )}
 
+      {/* Day Selector pills (mobile only, above target) */}
+      {mealPlans.length > 0 && activePlan && (
+        <div className="lg:hidden -mx-2 px-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 scroll-smooth">
+            <div aria-hidden className="shrink-0 w-[40vw]" />
+            {activePlan.days.map((day, idx) => (
+              <button
+                key={idx}
+                ref={selectedDay === idx ? selectedDayRef : undefined}
+                onClick={() => setSelectedDay(idx)}
+                className={`shrink-0 px-4 py-3 rounded-2xl transition-all ${
+                  selectedDay === idx
+                    ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                    : 'text-[#141414]/40 hover:bg-white/50'
+                }`}
+              >
+                <span className="font-bold whitespace-nowrap">{MEAL_PLAN_DAYS[idx] || day.day}</span>
+              </button>
+            ))}
+            <div aria-hidden className="shrink-0 w-[40vw]" />
+          </div>
+        </div>
+      )}
+
       {/* Daily Target - Always Visible */}
       <div className="bg-[#141414] text-white p-4 md:p-8 rounded-3xl shadow-xl overflow-hidden relative">
         <div className="relative z-10">
@@ -319,32 +343,23 @@ export function MealPlanner({ profile }: Props) {
 
       {mealPlans.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Day Selector */}
-          <div className="lg:col-span-1 space-y-8">
-            <div className="space-y-4">
-              <div className="flex flex-col gap-4 mt-4 lg:mt-8">
-                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
-                  <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
-                  {activePlan?.days.map((day, idx) => {
-                    return (
-                      <button
-                        key={idx}
-                        ref={selectedDay === idx ? selectedDayRef : undefined}
-                        onClick={() => setSelectedDay(idx)}
-                        className={`shrink-0 lg:w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                          selectedDay === idx
-                            ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
-                            : 'text-[#141414]/40 hover:bg-white/50'
-                        }`}
-                      >
-                        <span className="font-bold whitespace-nowrap lg:whitespace-normal">{MEAL_PLAN_DAYS[idx] || day.day}</span>
-                        <ChevronRight size={16} className={`hidden lg:block ${selectedDay === idx ? 'opacity-100' : 'opacity-0'}`} />
-                      </button>
-                    );
-                  })}
-                  <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
-                </div>
-              </div>
+          {/* Day Selector (desktop sidebar) */}
+          <div className="hidden lg:block lg:col-span-1">
+            <div className="flex flex-col gap-2">
+              {activePlan?.days.map((day, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDay(idx)}
+                  className={`w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
+                    selectedDay === idx
+                      ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                      : 'text-[#141414]/40 hover:bg-white/50'
+                  }`}
+                >
+                  <span className="font-bold">{MEAL_PLAN_DAYS[idx] || day.day}</span>
+                  <ChevronRight size={16} className={selectedDay === idx ? 'opacity-100' : 'opacity-0'} />
+                </button>
+              ))}
             </div>
           </div>
 
