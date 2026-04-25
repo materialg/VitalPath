@@ -207,22 +207,21 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="text-center lg:text-left">
-          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Welcome back, {profile.displayName.split(' ')[0]}</h1>
-        </div>
-        <div className="flex items-center justify-center lg:justify-start gap-3 bg-white p-2 rounded-2xl border border-[#141414]/5 shadow-sm">
-          <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
-            <Calendar className="text-[#141414]/40" size={20} />
-          </div>
-          <div className="pr-4">
-            <p className="text-xs font-medium text-[#141414]/40 uppercase tracking-wider">Today</p>
-            <p className="font-bold text-[#141414]">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</p>
-          </div>
-        </div>
+      <header className="text-center lg:text-left">
+        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Welcome back, {profile.displayName.split(' ')[0]}</h1>
       </header>
 
       <div className="space-y-4">
+
+      <div className="flex items-center justify-center lg:justify-start gap-3 bg-white p-2 rounded-2xl border border-[#141414]/5 shadow-sm">
+        <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
+          <Calendar className="text-[#141414]/40" size={20} />
+        </div>
+        <div className="pr-4">
+          <p className="text-xs font-medium text-[#141414]/40 uppercase tracking-wider">Today</p>
+          <p className="font-bold text-[#141414]">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</p>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3 lg:gap-6 max-w-6xl mx-auto w-full">
