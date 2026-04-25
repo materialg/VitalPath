@@ -258,6 +258,17 @@ export function Dashboard({ profile, onNavigate }: Props) {
             }}
           />
 
+          <TodoItem
+            icon={<Dumbbell size={18} />}
+            title={todayWorkout ? todayWorkout.title : "Today's Workout"}
+            status={todayWorkout?.status || 'none'}
+            color="purple"
+            onAction={(action) => {
+              if (action === 'approve') handleWorkoutToggle();
+              if (action === 'view') setShowWorkoutModal(true);
+            }}
+          />
+
           {todayMealPlan ? (
             <TodoItem
               icon={<Utensils size={18} />}
@@ -278,17 +289,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
               onAction={() => onNavigate('meals')}
             />
           )}
-
-          <TodoItem
-            icon={<Dumbbell size={18} />}
-            title={todayWorkout ? todayWorkout.title : "Today's Workout"}
-            status={todayWorkout?.status || 'none'}
-            color="purple"
-            onAction={(action) => {
-              if (action === 'approve') handleWorkoutToggle();
-              if (action === 'view') setShowWorkoutModal(true);
-            }}
-          />
         </div>
       </div>
 
