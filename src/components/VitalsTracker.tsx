@@ -15,6 +15,7 @@ export function VitalsTracker({ profile }: Props) {
   const [editingLog, setEditingLog] = useState<VitalLog | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const [range, setRange] = useState<'week' | 'all'>('all');
 
   useEffect(() => {
     const q = query(
@@ -44,9 +45,42 @@ export function VitalsTracker({ profile }: Props) {
 
   const selectedHistoryLog = vitals.find(v => v.id === selectedHistoryId) || null;
 
+  const filteredVitals = range === 'week'
+    ? vitals.filter(v => {
+        const ageMs = Date.now() - new Date(v.date).getTime();
+        return ageMs <= 7 * 24 * 60 * 60 * 1000;
+      })
+    : vitals;
+
   return (
     <div className="space-y-8">
-      <CompositionTrend vitals={vitals} />
+      <CompositionTrend vitals={filteredVitals} />
+
+      <div
+        className="bg-white p-1 flex gap-1"
+        style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 16 }}
+      >
+        <button
+          onClick={() => setRange('week')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+            range === 'week'
+              ? 'bg-[#141414] text-white'
+              : 'text-[#141414]/50 hover:text-[#141414]'
+          }`}
+        >
+          Week
+        </button>
+        <button
+          onClick={() => setRange('all')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+            range === 'all'
+              ? 'bg-[#141414] text-white'
+              : 'text-[#141414]/50 hover:text-[#141414]'
+          }`}
+        >
+          All Time
+        </button>
+      </div>
 
       <button
         onClick={() => setIsHistoryOpen(true)}
