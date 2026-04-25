@@ -322,6 +322,7 @@ export function MealPlanner({ profile }: Props) {
             <div className="space-y-4">
               <div className="flex flex-col gap-4 mt-4 lg:mt-8">
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar -mx-2 px-2 scroll-smooth">
+                  <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
                   {activePlan?.days.map((day, idx) => {
                     return (
                       <button
@@ -339,6 +340,7 @@ export function MealPlanner({ profile }: Props) {
                       </button>
                     );
                   })}
+                  <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
                 </div>
               </div>
             </div>
