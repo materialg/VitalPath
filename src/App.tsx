@@ -192,7 +192,14 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard profile={profile} onNavigate={setActiveTab} />;
-      case 'trends': return <VitalsTracker profile={profile} />;
+      case 'trends': return (
+        <div className="space-y-8">
+          <header className="text-center md:text-left">
+            <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Trends</h1>
+          </header>
+          <VitalsTracker profile={profile} />
+        </div>
+      );
       case 'meals': return <MealPlanner profile={profile} />;
       case 'foodbank': return <FoodBank profile={profile} />;
       case 'liftbank': return <LiftBank profile={profile} />;
