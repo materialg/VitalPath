@@ -27,9 +27,6 @@ const WEIGHT_TICKS = [180, 184, 189, 194];
 const BF_DOMAIN: [number, number] = [21, 27];
 const BF_TICKS = [21, 23, 25, 27];
 
-const formatMD = (ts: number) =>
-  new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
 const formatMDShort = (ts: number) => {
   const d = new Date(ts);
   return `${d.getMonth() + 1}/${d.getDate()}`;
@@ -105,51 +102,31 @@ export function CompositionTrend({ vitals }: Props) {
   const weightDelta = latest.weight - earliest.weight;
   const bfDelta = latest.bodyFat - earliest.bodyFat;
 
-  const dateRange = `${formatMD(minTs)} – ${formatMD(maxTs)}`;
   const total = chartData.length;
 
   return (
     <div className="bg-white" style={cardStyle}>
-      <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
-        <div>
-          <div
-            style={{
-              fontSize: 11,
-              letterSpacing: '0.5px',
-              color: TEXT_GRAY,
-              textTransform: 'uppercase',
-              fontWeight: 600
-            }}
-          >
-            Composition Trend
-          </div>
-          <div style={{ fontSize: 13, color: TEXT_GRAY, marginTop: 2 }}>
-            {dateRange}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3" style={{ fontSize: 12 }}>
-          <span className="flex items-center gap-1.5">
-            <span
-              className="rounded-full shrink-0"
-              style={{ width: 8, height: 8, background: WEIGHT_COLOR }}
-            />
-            <span style={{ color: TEXT_GRAY }}>Weight</span>
-            <span style={{ color: TEXT_DARK, fontWeight: 700 }}>
-              {latest.weight} lbs
-            </span>
+      <div className="flex items-center justify-end gap-3 mb-3 flex-wrap" style={{ fontSize: 12 }}>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="rounded-full shrink-0"
+            style={{ width: 8, height: 8, background: WEIGHT_COLOR }}
+          />
+          <span style={{ color: TEXT_GRAY }}>Weight</span>
+          <span style={{ color: TEXT_DARK, fontWeight: 700 }}>
+            {latest.weight} lbs
           </span>
-          <span className="flex items-center gap-1.5">
-            <span
-              className="rounded-full shrink-0"
-              style={{ width: 8, height: 8, background: BF_COLOR }}
-            />
-            <span style={{ color: TEXT_GRAY }}>BF%</span>
-            <span style={{ color: TEXT_DARK, fontWeight: 700 }}>
-              {latest.bodyFat}%
-            </span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className="rounded-full shrink-0"
+            style={{ width: 8, height: 8, background: BF_COLOR }}
+          />
+          <span style={{ color: TEXT_GRAY }}>BF%</span>
+          <span style={{ color: TEXT_DARK, fontWeight: 700 }}>
+            {latest.bodyFat}%
           </span>
-        </div>
+        </span>
       </div>
 
       <div style={{ height: 220, width: '100%' }}>

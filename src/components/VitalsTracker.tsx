@@ -45,12 +45,20 @@ export function VitalsTracker({ profile }: Props) {
 
   const selectedHistoryLog = vitals.find(v => v.id === selectedHistoryId) || null;
 
-  const filteredVitals = range === 'week'
-    ? vitals.filter(v => {
-        const ageMs = Date.now() - new Date(v.date).getTime();
-        return ageMs <= 7 * 24 * 60 * 60 * 1000;
-      })
-    : vitals;
+  const filteredVitals = (() => {
+    if (range !== 'week') return vitals;
+    const now = new Date();
+    const monOffset = (now.getDay() + 6) % 7;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - monOffset);
+    monday.setHours(0, 0, 0, 0);
+    const nextMonday = new Date(monday);
+    nextMonday.setDate(monday.getDate() + 7);
+    return vitals.filter(v => {
+      const ts = new Date(v.date).getTime();
+      return ts >= monday.getTime() && ts < nextMonday.getTime();
+    });
+  })();
 
   return (
     <div className="space-y-8">
