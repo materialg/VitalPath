@@ -60,9 +60,15 @@ export function VitalsTracker({ profile }: Props) {
     });
   })();
 
+  const goalBF = profile.goalBodyFat || 15;
+  const latestVital = vitals[0];
+  const goalWeight = latestVital
+    ? Math.round((latestVital.weight * (1 - latestVital.bodyFat / 100)) / (1 - goalBF / 100))
+    : 170;
+
   return (
     <div className="space-y-4">
-      <CompositionTrend vitals={filteredVitals} />
+      <CompositionTrend vitals={filteredVitals} goalWeight={goalWeight} goalBF={goalBF} />
 
       <div
         className="bg-white p-1 flex gap-1"

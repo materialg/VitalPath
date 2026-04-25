@@ -11,6 +11,8 @@ import {
 
 interface Props {
   vitals: VitalLog[];
+  goalWeight: number;
+  goalBF: number;
 }
 
 const WEIGHT_COLOR = '#4A8AE8';
@@ -22,10 +24,12 @@ const TEXT_DARK = '#111827';
 const TICK_GRAY = '#9CA3AF';
 const DELTA_BG = '#F3F4F6';
 
-const WEIGHT_DOMAIN: [number, number] = [180, 194];
-const WEIGHT_TICKS = [180, 184, 189, 194];
-const BF_DOMAIN: [number, number] = [21, 27];
-const BF_TICKS = [21, 23, 25, 27];
+function niceTicks(min: number, dataMax: number, count = 4): { domain: [number, number]; ticks: number[] } {
+  const max = Math.max(Math.ceil(dataMax), Math.ceil(min) + count - 1);
+  const step = (max - min) / (count - 1);
+  const ticks = Array.from({ length: count }, (_, i) => Math.round(min + i * step));
+  return { domain: [min, max], ticks };
+}
 
 const formatMDShort = (ts: number) => {
   const d = new Date(ts);
@@ -58,7 +62,7 @@ function formatDelta(d: number, suffix: string): string {
   return `${sign}${d.toFixed(1)}${suffix}`;
 }
 
-export function CompositionTrend({ vitals }: Props) {
+export function CompositionTrend({ vitals, goalWeight, goalBF }: Props) {
   const sorted = [...vitals]
     .filter(v => typeof v.weight === 'number' && typeof v.bodyFat === 'number')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -110,6 +114,9 @@ export function CompositionTrend({ vitals }: Props) {
   const latest = sorted[sorted.length - 1];
   const weightDelta = latest.weight - earliest.weight;
   const bfDelta = latest.bodyFat - earliest.bodyFat;
+
+  const weightAxis = niceTicks(goalWeight, Math.max(...sorted.map(v => v.weight)));
+  const bfAxis = niceTicks(goalBF, Math.max(...sorted.map(v => v.bodyFat)));
 
   const total = chartData.length;
 
@@ -175,8 +182,8 @@ export function CompositionTrend({ vitals }: Props) {
             <YAxis
               yAxisId="weight"
               orientation="left"
-              domain={WEIGHT_DOMAIN}
-              ticks={WEIGHT_TICKS}
+              domain={weightAxis.domain}
+              ticks={weightAxis.ticks}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 9, fill: TICK_GRAY }}
@@ -187,8 +194,8 @@ export function CompositionTrend({ vitals }: Props) {
             <YAxis
               yAxisId="bf"
               orientation="right"
-              domain={BF_DOMAIN}
-              ticks={BF_TICKS}
+              domain={bfAxis.domain}
+              ticks={bfAxis.ticks}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 9, fill: TICK_GRAY }}
