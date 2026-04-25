@@ -8,9 +8,10 @@ import { X, Target, Activity, User as UserIcon, Save, Scale, Calendar, Footprint
 interface Props {
   profile: UserProfile;
   onClose: () => void;
+  inline?: boolean;
 }
 
-export function ProfileSettingsModal({ profile, onClose }: Props) {
+export function ProfileSettingsModal({ profile, onClose, inline }: Props) {
   const [formData, setFormData] = useState({
     displayName: profile.displayName,
     goalBodyFat: profile.goalBodyFat || 15,
@@ -94,19 +95,9 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
     }
   };
 
-  return (
-    <div
-      className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={e => e.stopPropagation()}
-        className="bg-white w-full max-w-md p-6 md:p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[calc(100dvh-2rem)] overflow-y-auto my-auto"
-      >
-        <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
+  const body = (
+    <>
+      <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
           <div className="w-12 h-12 md:w-16 md:h-16 bg-[#141414] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
             {profile.photoURL ? (
               <img
@@ -242,6 +233,30 @@ export function ProfileSettingsModal({ profile, onClose }: Props) {
             </button>
           </div>
         </form>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="bg-white w-full max-w-md mx-auto p-6 md:p-8 rounded-3xl shadow-sm border border-[#141414]/5">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white w-full max-w-md p-6 md:p-8 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[calc(100dvh-2rem)] overflow-y-auto my-auto"
+      >
+        {body}
       </motion.div>
     </div>
   );

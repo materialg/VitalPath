@@ -202,6 +202,7 @@ export default function App() {
       case 'meals': return <MealPlanner profile={profile} />;
       case 'database': return <DatabaseView profile={profile} />;
       case 'workouts': return <WorkoutCoach profile={profile} />;
+      case 'settings': return <ProfileSettingsModal profile={profile} onClose={() => setActiveTab('dashboard')} inline />;
       default: return <Dashboard profile={profile} onNavigate={setActiveTab} />;
     }
   };
@@ -312,12 +313,11 @@ export default function App() {
           onClick={() => setActiveTab('database')}
           icon={<Database size={20} />}
         />
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-3 text-[#141414]/40"
-        >
-          <Settings size={20} />
-        </button>
+        <MobileNavItem
+          active={activeTab === 'settings'}
+          onClick={() => setActiveTab('settings')}
+          icon={<Settings size={20} />}
+        />
       </nav>
 
       {/* Main Content */}
