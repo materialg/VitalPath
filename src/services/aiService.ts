@@ -141,8 +141,8 @@ export function calculateDailyTargets(profile: any, weight: number, bodyFat: num
   const minCalories = profile.gender === 'male' ? 1500 : 1200;
   targetCalories = Math.max(minCalories, targetCalories);
 
-  const protein = Math.round(weight * 1.0); 
-  const fats = Math.round((targetCalories * 0.25) / 9); 
+  const protein = Math.round(leanBodyMass * 1.0);
+  const fats = Math.round((targetCalories * 0.30) / 9);
   const carbs = Math.round((targetCalories - (protein * 4) - (fats * 9)) / 4);
   const fiber = Math.round((targetCalories / 1000) * 14);
 
