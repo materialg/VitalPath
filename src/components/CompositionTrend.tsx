@@ -183,7 +183,7 @@ export function CompositionTrend({ vitals, goalWeight, goalBF }: Props) {
               yAxisId="weight"
               orientation="left"
               domain={weightAxis.domain}
-              ticks={weightAxis.ticks}
+              ticks={weightAxis.ticks.slice(1)}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 9, fill: TICK_GRAY }}
@@ -195,7 +195,7 @@ export function CompositionTrend({ vitals, goalWeight, goalBF }: Props) {
               yAxisId="bf"
               orientation="right"
               domain={bfAxis.domain}
-              ticks={bfAxis.ticks}
+              ticks={bfAxis.ticks.slice(1)}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 9, fill: TICK_GRAY }}
