@@ -93,9 +93,18 @@ export function CompositionTrend({ vitals }: Props) {
 
   const minTs = chartData[0].ts;
   const maxTs = chartData[chartData.length - 1].ts;
-  const xTicks = Array.from({ length: 5 }, (_, i) =>
-    Math.round(minTs + ((maxTs - minTs) * i) / 4)
-  );
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const xTicks = (() => {
+    if (maxTs - minTs > weekMs) {
+      const ticks: number[] = [];
+      for (let t = minTs; t <= maxTs; t += weekMs) ticks.push(t);
+      if (ticks[ticks.length - 1] < maxTs) ticks.push(maxTs);
+      return ticks;
+    }
+    return Array.from({ length: 5 }, (_, i) =>
+      Math.round(minTs + ((maxTs - minTs) * i) / 4)
+    );
+  })();
 
   const earliest = sorted[0];
   const latest = sorted[sorted.length - 1];
