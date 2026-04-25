@@ -205,7 +205,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-6">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="text-center lg:text-left">
+          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Welcome back, {profile.displayName.split(' ')[0]}</h1>
+        </div>
         <div className="flex items-center justify-center lg:justify-start gap-3 bg-white p-2 rounded-2xl border border-[#141414]/5 shadow-sm">
           <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
             <Calendar className="text-[#141414]/40" size={20} />
