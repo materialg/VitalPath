@@ -7,9 +7,10 @@ import { Plus, Trash2, Pencil, X, Save, Database, Flame, Eye, EyeOff } from 'luc
 
 interface Props {
   profile: UserProfile;
+  hideHeader?: boolean;
 }
 
-export function FoodBank({ profile }: Props) {
+export function FoodBank({ profile, hideHeader }: Props) {
   const [items, setItems] = useState<FoodBankItem[]>([]);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -372,7 +373,9 @@ export function FoodBank({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header className="space-y-4">
-        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight text-center">Food Bank</h1>
+        {!hideHeader && (
+          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight text-center">Food Bank</h1>
+        )}
         <div className="flex justify-center">
           <button
             onClick={() => {

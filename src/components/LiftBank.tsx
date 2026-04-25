@@ -17,6 +17,7 @@ import { Plus, Trash2, Pencil, X, Save, Library, Eye, EyeOff } from 'lucide-reac
 
 interface Props {
   profile: UserProfile;
+  hideHeader?: boolean;
 }
 
 const CATEGORY_OPTIONS: LiftCategory[] = ['push', 'pull', 'legs', 'core', 'cardio'];
@@ -38,7 +39,7 @@ const CATEGORY_BADGE: Record<LiftCategory, string> = {
   cardio: 'bg-pink-100 text-pink-700',
 };
 
-export function LiftBank({ profile }: Props) {
+export function LiftBank({ profile, hideHeader }: Props) {
   const [items, setItems] = useState<LiftBankItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
@@ -159,7 +160,9 @@ export function LiftBank({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header className="space-y-4">
-        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight text-center">Lift Bank</h1>
+        {!hideHeader && (
+          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight text-center">Lift Bank</h1>
+        )}
         <div className="flex justify-center">
           <button
             onClick={() => {
