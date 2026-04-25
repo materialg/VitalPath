@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
+import { VitalsTracker } from './VitalsTracker';
 
 interface Props {
   profile: UserProfile;
@@ -297,6 +298,8 @@ export function Dashboard({ profile, onNavigate }: Props) {
           />
         </div>
       </div>
+
+      <VitalsTracker profile={profile} />
 
       <AnimatePresence>
         {showVitalsModal && (

@@ -9,7 +9,6 @@ import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy,
 import { auth, db, signInWithGoogle, logout } from './firebase';
 import { UserProfile, VitalLog } from './types';
 import { Dashboard } from './components/Dashboard';
-import { VitalsTracker } from './components/VitalsTracker';
 import { MealPlanner } from './components/MealPlanner';
 import { WorkoutCoach } from './components/WorkoutCoach';
 import { FoodBank } from './components/FoodBank';
@@ -18,7 +17,7 @@ import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, LayoutDashboard, ShoppingCart, Settings, Database, Library, X } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, Library, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -192,7 +191,6 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard profile={profile} onNavigate={setActiveTab} />;
-      case 'vitals': return <VitalsTracker profile={profile} />;
       case 'meals': return <MealPlanner profile={profile} />;
       case 'foodbank': return <FoodBank profile={profile} />;
       case 'liftbank': return <LiftBank profile={profile} />;
@@ -213,17 +211,11 @@ export default function App() {
         </div>
 
         <div className="flex-1 px-3 space-y-1">
-          <NavItem 
-            active={activeTab === 'dashboard'} 
-            onClick={() => setActiveTab('dashboard')} 
-            icon={<LayoutDashboard size={20} />} 
-            label="Dashboard" 
-          />
-          <NavItem 
-            active={activeTab === 'vitals'} 
-            onClick={() => setActiveTab('vitals')} 
-            icon={<Activity size={20} />} 
-            label="Vitals" 
+          <NavItem
+            active={activeTab === 'dashboard'}
+            onClick={() => setActiveTab('dashboard')}
+            icon={<Activity size={20} />}
+            label="Dashboard"
           />
           <NavItem 
             active={activeTab === 'meals'} 
@@ -288,15 +280,10 @@ export default function App() {
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-6 left-4 right-4 bg-white/80 backdrop-blur-xl border border-[#141414]/10 rounded-2xl shadow-2xl z-50 flex items-center justify-around p-2">
-        <MobileNavItem 
-          active={activeTab === 'dashboard'} 
-          onClick={() => setActiveTab('dashboard')} 
-          icon={<LayoutDashboard size={20} />} 
-        />
-        <MobileNavItem 
-          active={activeTab === 'vitals'} 
-          onClick={() => setActiveTab('vitals')} 
-          icon={<Activity size={20} />} 
+        <MobileNavItem
+          active={activeTab === 'dashboard'}
+          onClick={() => setActiveTab('dashboard')}
+          icon={<Activity size={20} />}
         />
         <MobileNavItem 
           active={activeTab === 'meals'} 

@@ -79,10 +79,6 @@ export function VitalsTracker({ profile }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="text-center md:text-left">
-        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Vitals Tracker</h1>
-      </header>
-
       {vitals.length > 1 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
