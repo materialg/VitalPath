@@ -594,7 +594,7 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="flex items-center gap-3 p-4 bg-[#141414]/5 rounded-2xl">
             <Timer className="text-[#141414]/40" size={20} />
             <div>
