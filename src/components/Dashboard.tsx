@@ -556,18 +556,6 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
             </div>
           ))}
 
-          <div className="pt-4">
-            <button 
-              onClick={() => {
-                if (onConfirm) onConfirm();
-                onClose();
-              }}
-              className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 size={18} />
-              Confirm All Meals Completed
-            </button>
-          </div>
         </div>
       </motion.div>
     </div>
@@ -624,7 +612,6 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
         </div>
 
         <div className="space-y-4 mb-8">
-          <h4 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Exercise List</h4>
           {todayWorkout.title === 'Rest' ? (
             <div className="p-8 bg-blue-50 rounded-2xl text-center">
               <Zap className="text-blue-500 mx-auto mb-4" size={32} />
@@ -655,18 +642,6 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
           )}
         </div>
 
-        <div className="pt-4">
-          <button 
-            onClick={() => {
-              if (onConfirm) onConfirm();
-              onClose();
-            }}
-            className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
-          >
-            <CheckCircle2 size={18} />
-            Confirm & Mark Completed
-          </button>
-        </div>
       </motion.div>
     </div>
   );
