@@ -117,6 +117,9 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const todayEntry = vitals.find(v => isToday(v.date));
   const vitalsLoggedToday = !!todayEntry;
   const bfProgress = profile.goalBodyFat && currentBF ? Math.min(100, Math.round((profile.goalBodyFat / currentBF) * 100)) : 0;
+  const weightProgress = currentTargets.targetWeight && currentWeight
+    ? Math.min(100, Math.round((currentTargets.targetWeight / currentWeight) * 100))
+    : 0;
 
   const handleMealStatusToggle = async (mIdx: number) => {
     if (!latestMealPlan || !todayMealPlan) return;
@@ -221,7 +224,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-3 lg:gap-6 max-w-6xl mx-auto w-full">
+      <div className="grid grid-cols-3 gap-3 lg:gap-6 max-w-6xl mx-auto w-full">
         <StatCard
           progress={timelineProgress}
           label="Timeline"
@@ -235,16 +238,10 @@ export function Dashboard({ profile, onNavigate }: Props) {
           color="text-orange-500"
         />
         <StatCard
-          progress={100}
-          label={<><span className="lg:hidden">Steps</span><span className="hidden lg:inline">Steps Goal</span></>}
-          value={formatStepsGoal(profile.dailyStepsGoal || 10000)}
+          progress={weightProgress}
+          label="Weight"
+          value={`${currentWeight} lbs`}
           color="text-blue-500"
-        />
-        <StatCard
-          progress={100}
-          label={<><span className="lg:hidden">Target</span><span className="hidden lg:inline">Daily Target</span></>}
-          value={`${currentTargets.dailyCalories} cal`}
-          color="text-red-500"
         />
       </div>
 
@@ -964,17 +961,11 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
   );
 }
 
-function formatStepsGoal(steps: number): string {
-  if (steps < 1000) return `${steps}`;
-  const k = steps / 1000;
-  return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-}
-
 function StatCard({ progress, label, value, color }: { progress?: number, label: React.ReactNode, value: string, color?: string }) {
   return (
-    <div className="bg-white p-3 lg:p-6 rounded-2xl lg:rounded-3xl border border-[#141414]/5 shadow-sm flex flex-col lg:flex-row items-center lg:items-start gap-2 lg:gap-4 text-center lg:text-left">
+    <div className="bg-white p-4 lg:p-6 rounded-2xl lg:rounded-3xl border border-[#141414]/5 shadow-sm flex flex-col lg:flex-row items-center lg:items-start gap-3 lg:gap-4 text-center lg:text-left">
       {progress !== undefined && (
-        <div className="w-10 h-10 lg:w-14 lg:h-14 bg-[#141414]/5 rounded-xl lg:rounded-2xl flex items-center justify-center shrink-0 relative">
+        <div className="w-12 h-12 lg:w-14 lg:h-14 bg-[#141414]/5 rounded-xl lg:rounded-2xl flex items-center justify-center shrink-0 relative">
           <svg viewBox="0 0 56 56" className="w-full h-full -rotate-90">
             <circle
               cx="28"
@@ -998,14 +989,14 @@ function StatCard({ progress, label, value, color }: { progress?: number, label:
               className={color}
             />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[8px] lg:text-[10px] font-bold text-[#141414]">
+          <span className="absolute inset-0 flex items-center justify-center text-[10px] lg:text-[10px] font-bold text-[#141414]">
             {progress}%
           </span>
         </div>
       )}
       <div className="min-w-0">
-        <p className="text-[9px] lg:text-sm font-medium text-[#141414]/40 uppercase tracking-wider mb-0.5 lg:mb-1">{label}</p>
-        <p className="text-sm lg:text-2xl font-bold text-[#141414] tracking-tight whitespace-nowrap">{value}</p>
+        <p className="text-[10px] lg:text-sm font-medium text-[#141414]/40 uppercase tracking-wider mb-0.5 lg:mb-1">{label}</p>
+        <p className="text-base lg:text-2xl font-bold text-[#141414] tracking-tight whitespace-nowrap">{value}</p>
       </div>
     </div>
   );
