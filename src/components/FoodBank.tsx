@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, writeBatch, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, FoodBankItem, VitalLog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Pencil, X, Save, Search, Database, Scale, Flame, Zap, Upload, FileText, Loader2, Eye, EyeOff, Download } from 'lucide-react';
-import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import { Plus, Trash2, Pencil, X, Save, Database, Flame, Eye, EyeOff } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -15,11 +13,8 @@ export function FoodBank({ profile }: Props) {
   const [items, setItems] = useState<FoodBankItem[]>([]);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [expandedMobileId, setExpandedMobileId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingItem, setEditingItem] = useState<FoodBankItem | null>(null);
   const [formData, setFormData] = useState<any>({
     name: '',
@@ -357,10 +352,10 @@ export function FoodBank({ profile }: Props) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredItems.length) {
+    if (selectedIds.size === items.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredItems.map(i => i.id)));
+      setSelectedIds(new Set(items.map(i => i.id)));
     }
   };
 
@@ -374,201 +369,23 @@ export function FoodBank({ profile }: Props) {
     setSelectedIds(newSelected);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const data = event.target?.result;
-        let parsedData: any[] = [];
-
-        if (file.name.endsWith('.csv')) {
-          const result = Papa.parse(data as string, { header: true, skipEmptyLines: true });
-          parsedData = result.data;
-        } else {
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          parsedData = XLSX.utils.sheet_to_json(worksheet);
-        }
-
-        const batch = writeBatch(db);
-        const collectionRef = collection(db, 'users', profile.uid, 'foodBank');
-
-        parsedData.forEach((row: any) => {
-          // Flexible mapping
-          const name = row.Food || row.food || row.Name || row.name || row.Item || row.item || 'Unknown Food';
-          const calories = parseInt(row.Calories || row.calories || row.Cal || row.cal || row.Energy || row.energy || 0);
-          const protein = parseFloat(row.Protein || row.protein || row.Pro || row.pro || 0);
-          const carbs = parseFloat(row.Carbs || row.carbs || row.Carbohydrates || row.carbohydrates || 0);
-          const fats = parseFloat(row.Fats || row.fats || row.Fat || row.fat || 0);
-          const fiber = parseFloat(row.Fiber || row.fiber || row.Fib || row.fib || 0);
-          const rawServing = row.Serving || row.serving || row.ServingSize || row['Serving Size'] || row.serving_size || row.Portion || row.portion || '100g';
-          
-          let servingSize = 100;
-          let servingUnit: 'g' | 'oz' | 'unit' | 'ml' = 'g';
-
-          if (typeof rawServing === 'string') {
-            const match = rawServing.match(/(\d+\.?\d*)\s*(g|oz|unit|ml|eggs|pieces|pcs)?/i);
-            if (match) {
-              servingSize = parseFloat(match[1]);
-              const unit = match[2]?.toLowerCase();
-              if (unit === 'g') servingUnit = 'g';
-              else if (unit === 'oz') servingUnit = 'oz';
-              else if (unit === 'ml') servingUnit = 'ml';
-              else servingUnit = 'unit';
-            }
-          } else if (typeof rawServing === 'number') {
-            servingSize = rawServing;
-          }
-
-          const newDocRef = doc(collectionRef);
-          batch.set(newDocRef, {
-            name,
-            calories,
-            protein,
-            carbs,
-            fats,
-            fiber,
-            servingSize,
-            servingUnit
-          });
-        });
-
-        await batch.commit();
-        setIsUploading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      };
-
-      if (file.name.endsWith('.csv')) {
-        reader.readAsText(file);
-      } else {
-        reader.readAsBinaryString(file);
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setIsUploading(false);
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (items.length === 0) return;
-    
-    const exportData = items.map(({ id, ...rest }) => ({
-      Food: rest.name,
-      Serving: `${rest.servingSize}${rest.servingUnit}`,
-      Calories: rest.calories,
-      Protein: rest.protein,
-      Carbs: rest.carbs,
-      Fats: rest.fats,
-      Fiber: rest.fiber || 0,
-      MealTypes: (rest.mealTypes || []).join(',')
-    }));
-
-    const csv = Papa.unparse(exportData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `food_bank_export_${new Date().toLocaleDateString()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleExportExcel = () => {
-    if (items.length === 0) return;
-
-    const exportData = items.map(({ id, ...rest }) => ({
-      Food: rest.name,
-      Serving: `${rest.servingSize}${rest.servingUnit}`,
-      Calories: rest.calories,
-      Protein: rest.protein,
-      Carbs: rest.carbs,
-      Fats: rest.fats,
-      Fiber: rest.fiber || 0,
-      MealTypes: (rest.mealTypes || []).join(',')
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "FoodBank");
-    XLSX.writeFile(workbook, `food_bank_export_${new Date().toLocaleDateString()}.xlsx`);
-  };
-
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="space-y-8">
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Food Bank</h1>
-          <p className="text-[#141414]/60 text-sm lg:text-base">Store your favorite foods and their macros for personalized meal planning.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".csv, .xlsx, .xls"
-            className="hidden"
-          />
-          <button 
+      <header className="space-y-4">
+        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight text-center">Food Bank</h1>
+        <div className="flex justify-center">
+          <button
             onClick={() => {
               resetForm();
               setIsAdding(true);
             }}
-            className="flex-1 lg:flex-none px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+            className="w-full lg:w-auto px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
           >
             <Plus size={18} />
             Add Food
           </button>
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-full lg:w-auto px-6 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-            Bulk Upload
-          </button>
-          <div className="flex gap-2 w-full lg:w-auto">
-            <button 
-              onClick={handleExportCSV}
-              disabled={items.length === 0}
-              className="flex-1 lg:flex-none px-4 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              title="Export to CSV"
-            >
-              <Download size={18} />
-              CSV
-            </button>
-            <button 
-              onClick={handleExportExcel}
-              disabled={items.length === 0}
-              className="flex-1 lg:flex-none px-4 py-3 bg-white text-[#141414] border border-[#141414]/10 rounded-xl font-medium hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              title="Export to Excel"
-            >
-              <FileText size={18} />
-              Excel
-            </button>
-          </div>
         </div>
       </header>
-
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={20} />
-        <input 
-          type="text"
-          placeholder="Search your food bank..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-[#141414]/5 shadow-sm focus:ring-2 focus:ring-[#141414] transition-all"
-        />
-      </div>
 
       <div className="bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden">
         {selectedIds.size > 0 && (
@@ -602,7 +419,7 @@ export function FoodBank({ profile }: Props) {
                 <th className="px-6 py-4 w-10">
                   <input 
                     type="checkbox" 
-                    checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
+                    checked={items.length > 0 && selectedIds.size === items.length}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414]"
                   />
@@ -619,7 +436,7 @@ export function FoodBank({ profile }: Props) {
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {filteredItems.map((item) => (
+                {items.map((item) => (
                   <motion.tr 
                     key={item.id}
                     layout
@@ -702,7 +519,7 @@ export function FoodBank({ profile }: Props) {
 
         {/* Mobile list */}
         <div className="md:hidden divide-y divide-[#141414]/5">
-          {filteredItems.map(item => {
+          {items.map(item => {
             const isExpanded = expandedMobileId === item.id;
             const unitLabel = item.servingUnit
               ? (item.servingUnit === 'unit' ? (item.servingSize === 1 ? 'unit' : 'units') : item.servingUnit)
@@ -810,7 +627,7 @@ export function FoodBank({ profile }: Props) {
           })}
         </div>
 
-        {filteredItems.length === 0 && !isAdding && (
+        {items.length === 0 && !isAdding && (
           <div className="py-20 text-center space-y-4">
             <div className="w-16 h-16 bg-[#141414]/5 rounded-2xl flex items-center justify-center mx-auto">
               <Database className="text-[#141414]/20" size={32} />
