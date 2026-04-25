@@ -3,15 +3,8 @@ import { collection, query, orderBy, limit, onSnapshot, deleteDoc, doc, updateDo
 import { db } from '../firebase';
 import { UserProfile, VitalLog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, Scale, Activity, X, Save, TrendingUp, Calendar, Pencil } from 'lucide-react';
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  AreaChart,
-  Area
-} from 'recharts';
+import { Trash2, Scale, Activity, X, Save, Calendar, Pencil } from 'lucide-react';
+import { CompositionTrend } from './CompositionTrend';
 
 interface Props {
   profile: UserProfile;
@@ -49,134 +42,11 @@ export function VitalsTracker({ profile }: Props) {
     }
   };
 
-  const chartData = [...vitals].reverse().map(log => {
-    const d = new Date(log.date);
-    return { ...log, displayDate: `${d.getMonth() + 1}/${d.getDate()}` };
-  });
-
-  const goalBF = profile.goalBodyFat || 15;
-  const latestLog = vitals[0];
-  const targetWeight = latestLog
-    ? Math.round((latestLog.weight * (1 - latestLog.bodyFat / 100)) / (1 - goalBF / 100))
-    : null;
-
-  const evenTicks = (min: number, max: number, count = 5) => {
-    const safeMax = max <= min ? min + count - 1 : max;
-    const step = Math.ceil((safeMax - min) / (count - 1));
-    return Array.from({ length: count }, (_, i) => min + step * i);
-  };
-
-  const weightTicks = vitals.length && targetWeight !== null
-    ? evenTicks(targetWeight, Math.max(...vitals.map(v => Math.ceil(v.weight))))
-    : undefined;
-
-  const bfTicks = vitals.length
-    ? evenTicks(goalBF, Math.max(...vitals.map(v => Math.ceil(v.bodyFat))))
-    : undefined;
-
   const selectedHistoryLog = vitals.find(v => v.id === selectedHistoryId) || null;
 
   return (
     <div className="space-y-8">
-      {vitals.length > 1 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-            <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-8 flex items-center gap-2">
-              <Scale size={14} />
-              Weight Trend
-            </h3>
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#141414" strokeOpacity={0.05} />
-                  <XAxis
-                    dataKey="displayDate"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
-                    minTickGap={30}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
-                    width={32}
-                    allowDecimals={false}
-                    ticks={weightTicks}
-                    domain={weightTicks ? [weightTicks[0], weightTicks[weightTicks.length - 1]] : undefined}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="weight"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorWeight)"
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-            <h3 className="text-sm font-bold text-[#141414]/40 uppercase tracking-widest mb-8 flex items-center gap-2">
-              <Activity size={14} />
-              Body Fat Trend
-            </h3>
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorBF" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#141414" strokeOpacity={0.05} />
-                  <XAxis
-                    dataKey="displayDate"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
-                    minTickGap={30}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#141414', opacity: 0.4 }}
-                    width={32}
-                    allowDecimals={false}
-                    ticks={bfTicks}
-                    domain={bfTicks ? [bfTicks[0], bfTicks[bfTicks.length - 1]] : undefined}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="bodyFat"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorBF)"
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white p-12 rounded-3xl border border-[#141414]/5 shadow-sm text-center">
-          <TrendingUp className="mx-auto text-[#141414]/10 mb-4" size={48} />
-          <h3 className="text-lg font-bold text-[#141414] mb-2">Trends will appear here</h3>
-          <p className="text-[#141414]/60 max-w-sm mx-auto">Log at least two measurements to start seeing your progress over time.</p>
-        </div>
-      )}
+      <CompositionTrend vitals={vitals} />
 
       <button
         onClick={() => setIsHistoryOpen(true)}
