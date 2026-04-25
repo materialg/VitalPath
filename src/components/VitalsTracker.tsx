@@ -8,7 +8,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   AreaChart,
   Area
@@ -112,17 +111,6 @@ export function VitalsTracker({ profile }: Props) {
                     ticks={weightTicks}
                     domain={weightTicks ? [weightTicks[0], weightTicks[weightTicks.length - 1]] : undefined}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#141414',
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      color: '#fff'
-                    }}
-                    itemStyle={{ color: '#fff' }}
-                    labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
-                  />
                   <Area
                     type="monotone"
                     dataKey="weight"
@@ -167,17 +155,6 @@ export function VitalsTracker({ profile }: Props) {
                     allowDecimals={false}
                     ticks={bfTicks}
                     domain={bfTicks ? [bfTicks[0], bfTicks[bfTicks.length - 1]] : undefined}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#141414',
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      color: '#fff'
-                    }}
-                    itemStyle={{ color: '#fff' }}
-                    labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
                   />
                   <Area
                     type="monotone"
