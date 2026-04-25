@@ -256,7 +256,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
         <div className="space-y-4">
           <TodoItem
             icon={<Scale size={18} />}
-            title="Log Daily Vitals"
+            title="Vitals"
             status={vitalsLoggedToday ? 'completed' : 'none'}
             color="blue"
             onAction={(action) => {
@@ -268,7 +268,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
           {todayMealPlan ? (
             <TodoItem
               icon={<Utensils size={18} />}
-              title="Daily Meals"
+              title="Meals"
               status={todayMealPlan.meals.every(m => m.status === 'completed') ? 'completed' : 'none'}
               color="orange"
               onAction={(action) => {
