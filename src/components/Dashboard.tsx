@@ -246,13 +246,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
       </div>
 
       <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-[#141414]/5 rounded-xl flex items-center justify-center">
-            <ListTodo className="text-[#141414]" size={20} />
-          </div>
-          <h3 className="text-xl font-bold text-[#141414]">Daily TODO</h3>
-        </div>
-
         <div className="space-y-4">
           <TodoItem
             icon={<Scale size={18} />}
