@@ -237,9 +237,8 @@ export function MealPlanner({ profile }: Props) {
 
       {/* Day Selector date boxes (mobile only, above target) */}
       {mealPlans.length > 0 && activePlan && (
-        <div className="lg:hidden -mx-2 px-2">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            <div aria-hidden className="shrink-0 w-[40vw]" />
+        <div className="lg:hidden">
+          <div className="grid grid-cols-7 gap-1">
             {activePlan.days.map((day, idx) => {
               const date = weekDateFor(idx);
               const month = date ? date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
@@ -247,11 +246,10 @@ export function MealPlanner({ profile }: Props) {
               return (
                 <button
                   key={idx}
-                  ref={selectedDay === idx ? selectedDayRef : undefined}
                   onClick={() => setSelectedDay(idx)}
-                  className={`shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-all ${
+                  className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all ${
                     selectedDay === idx
-                      ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                      ? 'bg-white border border-[#141414]/5 text-[#141414]'
                       : 'text-[#141414]/40 hover:bg-white/50'
                   }`}
                 >
@@ -260,7 +258,6 @@ export function MealPlanner({ profile }: Props) {
                 </button>
               );
             })}
-            <div aria-hidden className="shrink-0 w-[40vw]" />
           </div>
         </div>
       )}
@@ -358,7 +355,7 @@ export function MealPlanner({ profile }: Props) {
                   onClick={() => setSelectedDay(idx)}
                   className={`w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
                     selectedDay === idx
-                      ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                      ? 'bg-white border border-[#141414]/5 text-[#141414]'
                       : 'text-[#141414]/40 hover:bg-white/50'
                   }`}
                 >
