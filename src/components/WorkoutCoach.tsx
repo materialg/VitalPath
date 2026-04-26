@@ -268,7 +268,7 @@ export function WorkoutCoach({ profile }: Props) {
     const day = { ...updatedDays[selectedDay] };
     const newExercise = {
       name: lift.name,
-      sets: lift.defaultSets || 3,
+      sets: lift.defaultSets || 4,
       reps: lift.defaultReps || '8-12',
       notes: lift.notes || '',
       prescribedWeight: 0,
@@ -919,7 +919,7 @@ export function WorkoutCoach({ profile }: Props) {
                       <div>
                         <p className="font-bold text-[#141414]">{lift.name}</p>
                         <p className="text-[10px] text-[#141414]/40 uppercase tracking-wider">
-                          {lift.category} · {lift.equipment || 'other'} · {lift.defaultSets ?? 3} × {lift.defaultReps || '8-12'}
+                          {lift.category} · {lift.equipment || 'other'} · {lift.defaultSets ?? 4} × {lift.defaultReps || '8-12'}
                         </p>
                       </div>
                       <Plus size={18} className="text-[#141414]/20" />
@@ -937,7 +937,7 @@ export function WorkoutCoach({ profile }: Props) {
                           <div>
                             <p className="font-bold text-[#141414]">{lift.name}</p>
                             <p className="text-[10px] text-[#141414]/40 uppercase tracking-wider">
-                              {lift.category} · {lift.equipment || 'other'} · {lift.defaultSets ?? 3} × {lift.defaultReps || '8-12'}
+                              {lift.category} · {lift.equipment || 'other'} · {lift.defaultSets ?? 4} × {lift.defaultReps || '8-12'}
                             </p>
                           </div>
                           <Plus size={18} className="text-[#141414]/20" />

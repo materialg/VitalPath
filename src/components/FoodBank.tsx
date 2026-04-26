@@ -460,10 +460,9 @@ export function FoodBank({ profile, hideHeader }: Props) {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#141414]/60">Food Name</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"

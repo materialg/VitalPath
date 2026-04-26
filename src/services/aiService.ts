@@ -265,7 +265,7 @@ export async function generateWorkoutPlan(
   };
 
   const exerciseFromLift = (lift: LiftBankItem) => {
-    const sets = lift.defaultSets || 3;
+    const sets = lift.defaultSets || 4;
     return {
       name: lift.name,
       sets,

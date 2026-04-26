@@ -323,7 +323,6 @@ export function LiftBank({ profile, hideHeader }: Props) {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#141414]/60">Lift Name</label>
                   <input
                     required
                     type="text"
@@ -370,30 +369,6 @@ export function LiftBank({ profile, hideHeader }: Props) {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Default Sets</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      value={formData.defaultSets}
-                      onChange={e => setFormData({ ...formData, defaultSets: e.target.value })}
-                      className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] text-center font-bold"
-                      placeholder="3"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Default Reps</label>
-                    <input
-                      type="text"
-                      value={formData.defaultReps}
-                      onChange={e => setFormData({ ...formData, defaultReps: e.target.value })}
-                      className="w-full p-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] text-center font-bold"
-                      placeholder="8-12"
-                    />
-                  </div>
-                </div>
 
                 <div className="flex gap-2">
                   <button
