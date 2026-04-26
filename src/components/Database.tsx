@@ -15,7 +15,7 @@ export function Database({ profile }: Props) {
   return (
     <div className="space-y-6">
       <header className="text-center lg:text-left">
-        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Database</h1>
+        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">💽 Database</h1>
       </header>
       <div className="flex justify-center">
         <div className="w-full lg:w-auto flex items-center gap-2 bg-white border border-[#141414]/5 rounded-2xl p-1.5 shadow-sm">
