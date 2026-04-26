@@ -39,7 +39,6 @@ const CATEGORY_BADGE: Record<LiftCategory, string> = {
 
 export function LiftBank({ profile, hideHeader }: Props) {
   const [items, setItems] = useState<LiftBankItem[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<LiftBankItem | null>(null);
   const [expandedMobileId, setExpandedMobileId] = useState<string | null>(null);
@@ -130,51 +129,13 @@ export function LiftBank({ profile, hideHeader }: Props) {
     await deleteDoc(doc(db, 'users', profile.uid, 'liftBank', id));
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedIds.size === 0) return;
-    const batch = writeBatch(db);
-    selectedIds.forEach(id => {
-      batch.delete(doc(db, 'users', profile.uid, 'liftBank', id));
-    });
-    await batch.commit();
-    setSelectedIds(new Set());
-  };
-
-  const handleToggleHideSelected = async () => {
-    if (selectedIds.size === 0) return;
-    const selectedItems = items.filter(i => selectedIds.has(i.id));
-    const allHidden = selectedItems.every(i => i.hidden);
-    const willHide = !allHidden;
-    const batch = writeBatch(db);
-    selectedIds.forEach(id => {
-      batch.update(doc(db, 'users', profile.uid, 'liftBank', id), { hidden: willHide });
-    });
-    await batch.commit();
-    setSelectedIds(new Set());
+  const handleToggleHidden = async (item: LiftBankItem) => {
+    await updateDoc(doc(db, 'users', profile.uid, 'liftBank', item.id), { hidden: !item.hidden });
   };
 
   const displayedItems = categoryFilter === 'all'
     ? items
     : items.filter(i => i.category === categoryFilter);
-
-  const toggleSelectAll = () => {
-    if (displayedItems.length > 0 && displayedItems.every(i => selectedIds.has(i.id))) {
-      const next = new Set(selectedIds);
-      displayedItems.forEach(i => next.delete(i.id));
-      setSelectedIds(next);
-    } else {
-      const next = new Set(selectedIds);
-      displayedItems.forEach(i => next.add(i.id));
-      setSelectedIds(next);
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
 
   return (
     <div className="space-y-8">
@@ -215,42 +176,10 @@ export function LiftBank({ profile, hideHeader }: Props) {
       </header>
 
       <div className="bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden">
-        {selectedIds.size > 0 && (
-          <div className="px-6 py-3 bg-[#141414] text-white flex items-center justify-between animate-in slide-in-from-top duration-300">
-            <span className="text-sm font-medium">{selectedIds.size} lifts selected</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleToggleHideSelected}
-                className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
-              >
-                {items.filter(i => selectedIds.has(i.id)).every(i => i.hidden) ? (
-                  <><Eye size={14} /> Unhide</>
-                ) : (
-                  <><EyeOff size={14} /> Hide</>
-                )}
-              </button>
-              <button
-                onClick={handleDeleteSelected}
-                className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
-              >
-                <Trash2 size={14} />
-                {selectedIds.size === 1 ? 'Delete Lift' : 'Delete Lifts'}
-              </button>
-            </div>
-          </div>
-        )}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#141414]/5 bg-[#141414]/[0.02]">
-                <th className="px-6 py-4 w-10">
-                  <input
-                    type="checkbox"
-                    checked={displayedItems.length > 0 && displayedItems.every(i => selectedIds.has(i.id))}
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414]"
-                  />
-                </th>
                 <th className="px-6 py-4 text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Lift</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest text-center">Category</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest text-center">Equipment</th>
@@ -268,16 +197,8 @@ export function LiftBank({ profile, hideHeader }: Props) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className={`group border-b border-[#141414]/5 hover:bg-[#141414]/[0.01] transition-colors ${selectedIds.has(item.id) ? 'bg-[#141414]/[0.02]' : ''} ${item.hidden ? 'opacity-50' : ''}`}
+                    className={`group border-b border-[#141414]/5 hover:bg-[#141414]/[0.01] transition-colors ${item.hidden ? 'opacity-50' : ''}`}
                   >
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.id)}
-                        onChange={() => toggleSelect(item.id)}
-                        className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414]"
-                      />
-                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-[#141414]">{item.name}</p>
@@ -330,13 +251,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
           {displayedItems.map(item => {
             return (
               <div key={item.id} className={`${item.hidden ? 'opacity-50' : ''}`}>
-                <div className={`flex items-center gap-3 px-4 py-3 ${selectedIds.has(item.id) ? 'bg-[#141414]/[0.02]' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => toggleSelect(item.id)}
-                    className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414] shrink-0"
-                  />
+                <div className="flex items-center gap-3 px-4 py-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-[#141414] truncate">{item.name}</p>
@@ -449,6 +364,16 @@ export function LiftBank({ profile, hideHeader }: Props) {
                     className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
                   >
                     <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleToggleHidden(item);
+                      setExpandedMobileId(null);
+                    }}
+                    aria-label={item.hidden ? 'Unhide' : 'Hide'}
+                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+                  >
+                    {item.hidden ? <Eye size={18} /> : <EyeOff size={18} />}
                   </button>
                   <button
                     onClick={() => {

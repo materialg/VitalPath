@@ -13,7 +13,6 @@ interface Props {
 export function FoodBank({ profile, hideHeader }: Props) {
   const [items, setItems] = useState<FoodBankItem[]>([]);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
   const [expandedMobileId, setExpandedMobileId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<FoodBankItem | null>(null);
@@ -222,109 +221,24 @@ export function FoodBank({ profile, hideHeader }: Props) {
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedIds.size === 0) return;
-    const itemsToDelete = items.filter(i => selectedIds.has(i.id));
+  const handleToggleHidden = async (item: FoodBankItem) => {
+    const willHide = !item.hidden;
     const batch = writeBatch(db);
-    
-    selectedIds.forEach(id => {
-      batch.delete(doc(db, 'users', profile.uid, 'foodBank', id));
-    });
+    batch.update(doc(db, 'users', profile.uid, 'foodBank', item.id), { hidden: willHide });
 
-    // Sync with meal plans
-    const mealPlansRef = collection(db, 'users', profile.uid, 'mealPlans');
-    const snap = await getDocs(mealPlansRef);
-    let hasMealPlanChanges = false;
-
-    snap.docs.forEach(planDoc => {
-      const plan = planDoc.data();
-      let planChanged = false;
-      
-      const updatedDays = plan.days.map((day: any) => ({
-        ...day,
-        meals: day.meals.map((meal: any) => {
-          const originalCount = meal.ingredientsWithAmounts?.length || 0;
-          const filteredIngs = meal.ingredientsWithAmounts?.filter((ing: any) => 
-            !itemsToDelete.some(it => it.name === ing.name)
-          ) || [];
-
-          if (filteredIngs.length !== originalCount) {
-            planChanged = true;
-            return {
-              ...meal,
-              ingredientsWithAmounts: filteredIngs,
-              ingredients: filteredIngs.map((i: any) => `${i.amount} ${i.name}`)
-            };
-          }
-          return meal;
-        })
-      }));
-
-      if (planChanged) {
-        hasMealPlanChanges = true;
-        batch.update(planDoc.ref, { days: updatedDays });
-      }
-    });
-
-    await batch.commit();
-
-    // Sync with grocery lists
-    const groceryListsRef = collection(db, 'users', profile.uid, 'groceryLists');
-    const gSnap = await getDocs(groceryListsRef);
-    const gBatch = writeBatch(db);
-    let gHasChanges = false;
-
-    gSnap.docs.forEach(gDoc => {
-      const list = gDoc.data();
-      const originalCount = list.items.length;
-      const updatedItems = list.items.filter((item: any) => 
-        !itemsToDelete.some(it => item.name.includes(it.name))
-      );
-
-      if (updatedItems.length !== originalCount) {
-        gHasChanges = true;
-        gBatch.update(gDoc.ref, { items: updatedItems });
-      }
-    });
-
-    if (gHasChanges) {
-      await gBatch.commit();
-    }
-
-    setSelectedIds(new Set());
-  };
-
-  const handleToggleHideSelected = async () => {
-    if (selectedIds.size === 0) return;
-    const batch = writeBatch(db);
-    
-    // Check if all selected are hidden to decide whether to hide or unhide
-    const selectedItems = items.filter(i => selectedIds.has(i.id));
-    const allHidden = selectedItems.every(i => i.hidden);
-    const willHide = !allHidden;
-    
-    selectedIds.forEach(id => {
-      batch.update(doc(db, 'users', profile.uid, 'foodBank', id), {
-        hidden: willHide
-      });
-    });
-
-    // If we are hiding items, remove them from existing meal plans (since they are "out of stock")
     if (willHide) {
       const mealPlansRef = collection(db, 'users', profile.uid, 'mealPlans');
       const snap = await getDocs(mealPlansRef);
-      
+
       snap.docs.forEach(planDoc => {
         const plan = planDoc.data();
         let planChanged = false;
-        
+
         const updatedDays = plan.days.map((day: any) => ({
           ...day,
           meals: day.meals.map((meal: any) => {
             const originalCount = meal.ingredientsWithAmounts?.length || 0;
-            const filteredIngs = meal.ingredientsWithAmounts?.filter((ing: any) => 
-              !selectedItems.some(it => it.name === ing.name)
-            ) || [];
+            const filteredIngs = meal.ingredientsWithAmounts?.filter((ing: any) => ing.name !== item.name) || [];
 
             if (filteredIngs.length !== originalCount) {
               planChanged = true;
@@ -342,32 +256,9 @@ export function FoodBank({ profile, hideHeader }: Props) {
           batch.update(planDoc.ref, { days: updatedDays });
         }
       });
-
-      // Commit the removals first
-      await batch.commit();
-    } else {
-      await batch.commit();
     }
 
-    setSelectedIds(new Set());
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === items.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(items.map(i => i.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
+    await batch.commit();
   };
 
   return (
@@ -391,42 +282,10 @@ export function FoodBank({ profile, hideHeader }: Props) {
       </header>
 
       <div className="bg-white rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden">
-        {selectedIds.size > 0 && (
-          <div className="px-6 py-3 bg-[#141414] text-white flex items-center justify-between animate-in slide-in-from-top duration-300">
-            <span className="text-sm font-medium">{selectedIds.size} items selected</span>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handleToggleHideSelected}
-                className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
-              >
-                {items.filter(i => selectedIds.has(i.id)).every(i => i.hidden) ? (
-                  <><Eye size={14} /> Unhide Items</>
-                ) : (
-                  <><EyeOff size={14} /> Hide Items</>
-                )}
-              </button>
-              <button 
-                onClick={handleDeleteSelected}
-                className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
-              >
-                <Trash2 size={14} />
-                {selectedIds.size === 1 ? 'Delete Item' : 'Delete Items'}
-              </button>
-            </div>
-          </div>
-        )}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#141414]/5 bg-[#141414]/[0.02]">
-                <th className="px-6 py-4 w-10">
-                  <input 
-                    type="checkbox" 
-                    checked={items.length > 0 && selectedIds.size === items.length}
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414]"
-                  />
-                </th>
                 <th className="px-6 py-4 text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Food Item</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest text-center">Serving</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest text-center">Calories</th>
@@ -440,22 +299,14 @@ export function FoodBank({ profile, hideHeader }: Props) {
             <tbody>
               <AnimatePresence mode="popLayout">
                 {items.map((item) => (
-                  <motion.tr 
+                  <motion.tr
                     key={item.id}
                     layout
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className={`group border-b border-[#141414]/5 hover:bg-[#141414]/[0.01] transition-colors ${selectedIds.has(item.id) ? 'bg-[#141414]/[0.02]' : ''} ${item.hidden ? 'opacity-50' : ''}`}
+                    className={`group border-b border-[#141414]/5 hover:bg-[#141414]/[0.01] transition-colors ${item.hidden ? 'opacity-50' : ''}`}
                   >
-                    <td className="px-6 py-4">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.has(item.id)}
-                        onChange={() => toggleSelect(item.id)}
-                        className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414]"
-                      />
-                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
@@ -525,13 +376,7 @@ export function FoodBank({ profile, hideHeader }: Props) {
           {items.map(item => {
             return (
               <div key={item.id} className={`${item.hidden ? 'opacity-50' : ''}`}>
-                <div className={`flex items-center gap-3 px-4 py-3 ${selectedIds.has(item.id) ? 'bg-[#141414]/[0.02]' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(item.id)}
-                    onChange={() => toggleSelect(item.id)}
-                    className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414] shrink-0"
-                  />
+                <div className="flex items-center gap-3 px-4 py-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-[#141414] truncate">{item.name}</p>
@@ -665,6 +510,16 @@ export function FoodBank({ profile, hideHeader }: Props) {
                     className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
                   >
                     <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleToggleHidden(item);
+                      setExpandedMobileId(null);
+                    }}
+                    aria-label={item.hidden ? 'Unhide' : 'Hide'}
+                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+                  >
+                    {item.hidden ? <Eye size={18} /> : <EyeOff size={18} />}
                   </button>
                   <button
                     onClick={() => {
