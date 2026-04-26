@@ -345,7 +345,7 @@ export function WorkoutCoach({ profile }: Props) {
                         onClick={() => setSelectedDay(idx)}
                         className={`aspect-square lg:aspect-auto rounded-2xl transition-all flex items-center justify-center lg:justify-between lg:w-full lg:h-auto lg:p-4 ${
                           selectedDay === idx
-                            ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                            ? 'bg-white border border-[#141414]/5 text-[#141414]'
                             : 'text-[#141414]/40 hover:bg-white/50'
                         }`}
                       >
