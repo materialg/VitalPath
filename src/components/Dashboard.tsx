@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -285,13 +285,13 @@ export function Dashboard({ profile, onNavigate }: Props) {
       return next;
     });
 
+    setShowWorkoutModal(false);
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
         days: newDays,
         restBackup: { day: todayWorkout.day, days: latestWorkout.days },
         updatedAt: new Date().toISOString(),
       }));
-      setShowWorkoutModal(false);
     } catch (err) {
       console.error('Failed to rest today:', err);
     }
@@ -299,13 +299,14 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
   const handleUndoRest = async () => {
     if (!latestWorkout || !latestWorkout.restBackup?.days?.length) return;
+    const restoredDays = latestWorkout.restBackup.days;
+    setShowWorkoutModal(false);
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
-        days: latestWorkout.restBackup.days,
-        restBackup: null,
+        days: restoredDays,
+        restBackup: deleteField(),
         updatedAt: new Date().toISOString(),
       } as any));
-      setShowWorkoutModal(false);
     } catch (err) {
       console.error('Failed to undo rest:', err);
     }
