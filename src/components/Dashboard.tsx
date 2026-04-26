@@ -298,10 +298,37 @@ export function Dashboard({ profile, onNavigate }: Props) {
   };
 
   const handleUndoRest = async () => {
-    if (!latestWorkout || !latestWorkout.restBackup) return;
+    if (!latestWorkout || !todayWorkout) return;
+    const calendarOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    let newDays: any[];
+    if (latestWorkout.restBackup?.days?.length) {
+      newDays = latestWorkout.restBackup.days;
+    } else {
+      const todayCal = calendarOrder.indexOf(todayWorkout.day);
+      if (todayCal === -1) return;
+      newDays = latestWorkout.days.map(d => {
+        const dCal = calendarOrder.indexOf(d.day);
+        if (dCal < todayCal) return d;
+        const sourceName = calendarOrder[dCal + 1];
+        const source = sourceName ? latestWorkout.days.find(x => x.day === sourceName) : undefined;
+        if (!source) {
+          return { day: d.day, title: 'Rest', exercises: [], status: 'pending' as const };
+        }
+        const next: any = {
+          day: d.day,
+          title: source.title,
+          exercises: source.exercises ?? [],
+        };
+        if (source.notes !== undefined) next.notes = source.notes;
+        if (source.status !== undefined) next.status = source.status;
+        return next;
+      });
+    }
+
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
-        days: latestWorkout.restBackup.days,
+        days: newDays,
         restBackup: null,
         updatedAt: new Date().toISOString(),
       } as any));
@@ -776,7 +803,7 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest, onUn
           </button>
         )}
 
-        {todayWorkout.title === 'Rest' && onUndoRest && workout.restBackup?.day === todayWorkout.day && (
+        {todayWorkout.title === 'Rest' && onUndoRest && (
           <button
             onClick={onUndoRest}
             className="w-full py-3 bg-[#141414]/5 text-[#141414] rounded-2xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
