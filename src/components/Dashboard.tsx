@@ -746,15 +746,21 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onActio
           <h4 className="font-bold text-[#141414]">{title}</h4>
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <ActionButton
-          icon={<Check size={16} />}
-          color={isCompleted ? "bg-green-500 text-white shadow-lg shadow-green-100" : "hover:bg-green-50 text-green-600"}
+      <div className="flex items-center gap-2 shrink-0">
+        <button
           onClick={(e) => {
             e.stopPropagation();
             onAction('approve');
           }}
-        />
+          aria-label={isCompleted ? 'Mark pending' : 'Mark completed'}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+            isCompleted
+              ? 'bg-green-500 text-white hover:bg-green-600'
+              : 'bg-[#141414]/5 text-[#141414]/50 hover:bg-green-500 hover:text-white'
+          }`}
+        >
+          <Check size={18} />
+        </button>
       </div>
     </div>
   );
