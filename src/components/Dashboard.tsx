@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye, Undo2, Download } from 'lucide-react';
+import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Undo2, Download } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
@@ -700,10 +700,9 @@ interface TodoItemProps {
   status: 'completed' | 'skipped' | 'none' | 'pending';
   color: string;
   onAction: (action: 'approve' | 'deny' | 'view') => void;
-  showViewAction?: boolean;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onAction, showViewAction = true }) => {
+const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onAction }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
     orange: 'bg-orange-50 text-orange-600',
@@ -736,16 +735,6 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onActio
         </div>
       </div>
       <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        {showViewAction && (
-          <ActionButton
-            icon={<Eye size={16} />}
-            color="hover:bg-[#141414]/5 text-[#141414]/60"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAction('view');
-            }}
-          />
-        )}
         <ActionButton
           icon={<Check size={16} />}
           color={isCompleted ? "bg-green-500 text-white shadow-lg shadow-green-100" : "hover:bg-green-50 text-green-600"}
