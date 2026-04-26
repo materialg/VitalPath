@@ -765,24 +765,30 @@ export function WorkoutCoach({ profile }: Props) {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsHistoryOpen(true)}
-          aria-label="View history"
-          className="w-full p-4 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10"
-        >
-          <Calendar size={18} />
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleRegenerate}
+            disabled={isGenerating || !activePlan}
+            aria-label={isGenerating ? 'Regenerating workouts' : 'Regenerate workouts'}
+            className="flex-1 p-3 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10 disabled:opacity-50 disabled:hover:bg-transparent"
+          >
+            {isGenerating ? (
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+                <Sparkles size={18} />
+              </motion.div>
+            ) : (
+              <Sparkles size={18} />
+            )}
+          </button>
 
-        <button
-          onClick={handleRegenerate}
-          disabled={isGenerating || !activePlan}
-          className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-dashed border-[#141414]/10 disabled:opacity-50 disabled:hover:bg-transparent"
-        >
-          <span className="font-bold text-sm">
-            {isGenerating ? 'Regenerating…' : 'Regenerate Workouts'}
-          </span>
-          <Sparkles size={18} />
-        </button>
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            aria-label="View history"
+            className="flex-1 p-3 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10"
+          >
+            <Calendar size={18} />
+          </button>
+        </div>
         </>
       ) : (
         <div className="bg-white p-20 rounded-[3rem] border border-[#141414]/5 shadow-sm text-center">
