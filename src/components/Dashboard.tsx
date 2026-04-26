@@ -253,9 +253,21 @@ export function Dashboard({ profile, onNavigate }: Props) {
       if (todayEntry) {
         await deleteDoc(doc(db, 'users', profile.uid, 'vitals', todayEntry.id));
       }
-    } else {
-      setShowVitalsModal(true);
+      return;
     }
+    if (vitals.length === 0) {
+      setShowVitalsModal(true);
+      return;
+    }
+    const isoDate = new Date().toISOString();
+    await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
+      date: isoDate,
+      weight: currentWeight,
+      bodyFat: currentBF,
+      createdAt: isoDate,
+      updatedAt: isoDate
+    });
+    await logDailyTarget(profile.uid, profile, currentWeight, currentBF, isoDate);
   };
 
   return (
