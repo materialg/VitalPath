@@ -343,7 +343,7 @@ export function MealPlanner({ profile }: Props) {
           {/* Mobile: compact header-style row */}
           <div className="md:hidden flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              <Target size={20} className="text-orange-500" />
+              <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
             </div>
             <div className="flex-1 grid grid-cols-5 gap-1 min-w-0">
               <div className="text-center min-w-0">
@@ -372,7 +372,7 @@ export function MealPlanner({ profile }: Props) {
           {/* Desktop: full grid with extras */}
           <div className="hidden md:block">
             <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Target size={20} className="text-orange-500" />
+              <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
               Daily Target
             </h3>
             <div className="grid md:grid-cols-4 lg:grid-cols-7 gap-4 lg:gap-6">
@@ -482,7 +482,7 @@ export function MealPlanner({ profile }: Props) {
                     <div className="flex items-center gap-2 md:gap-3 w-full">
                       {/* fire icon */}
                       <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
-                        <Flame size={22} className="text-orange-500" />
+                        <span className="text-2xl">🔥</span>
                       </div>
 
                       {/* evenly-spaced stats */}
