@@ -235,15 +235,17 @@ export function MealPlanner({ profile }: Props) {
         </div>
       )}
 
-      {/* Day Selector date wheel (mobile only, above target) */}
+      {/* Day Selector date wheel (mobile only, above target) — 28 days: 2 weeks back + 2 weeks forward */}
       {mealPlans.length > 0 && activePlan && (() => {
         const now = new Date();
         const todayMonday = new Date(now);
         todayMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
         todayMonday.setHours(0, 0, 0, 0);
-        const wheelDates = Array.from({ length: 14 }, (_, i) => {
-          const d = new Date(todayMonday);
-          d.setDate(todayMonday.getDate() + i);
+        const startMonday = new Date(todayMonday);
+        startMonday.setDate(todayMonday.getDate() - 14);
+        const wheelDates = Array.from({ length: 28 }, (_, i) => {
+          const d = new Date(startMonday);
+          d.setDate(startMonday.getDate() + i);
           return d;
         });
         const dayHasMeals = (day: any) =>

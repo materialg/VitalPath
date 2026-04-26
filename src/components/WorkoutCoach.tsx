@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
@@ -29,6 +29,7 @@ export function WorkoutCoach({ profile }: Props) {
   const [liftBank, setLiftBank] = useState<LiftBankItem[]>([]);
   const [isPickingLift, setIsPickingLift] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
+  const initialLoadRef = useRef(true);
 
   useEffect(() => {
     if (!profile.uid) return;
@@ -52,11 +53,30 @@ export function WorkoutCoach({ profile }: Props) {
     const unsubscribePlans = onSnapshot(qPlans, (snap) => {
       const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WorkoutPlan));
       setWorkoutPlans(plans);
-      
-      if (plans.length > 0) {
-        if (!activePlanId || !plans.find(p => p.id === activePlanId)) {
-          setActivePlanId(profile.activeWorkoutId || plans[0].id);
-        }
+
+      if (plans.length === 0) return;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const planForToday = plans.find(p => {
+        if (!p.weekStartDate) return false;
+        const ws = new Date(p.weekStartDate + 'T00:00:00');
+        ws.setHours(0, 0, 0, 0);
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 7);
+        return today >= ws && today < we;
+      });
+
+      // First snapshot after mount: prefer the plan that covers today,
+      // so the wheel can highlight + center on the current day.
+      if (initialLoadRef.current) {
+        initialLoadRef.current = false;
+        setActivePlanId(planForToday?.id || profile.activeWorkoutId || plans[0].id);
+        return;
+      }
+
+      if (!activePlanId || !plans.find(p => p.id === activePlanId)) {
+        setActivePlanId(planForToday?.id || profile.activeWorkoutId || plans[0].id);
       }
     });
 
@@ -336,7 +356,8 @@ export function WorkoutCoach({ profile }: Props) {
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:mt-8">
-                {/* Mobile: 14-day date wheel with cross-week plan navigation */}
+                {/* Mobile: 28-day wheel (2 weeks back + 2 weeks forward from today's Monday)
+                    with cross-week plan navigation, matching the Meal Planner. */}
                 {(() => {
                   const mondayOf = (d: Date) => {
                     const m = new Date(d);
@@ -345,71 +366,94 @@ export function WorkoutCoach({ profile }: Props) {
                     return m;
                   };
                   const todayMonday = mondayOf(new Date());
-                  const wheelDates = Array.from({ length: 14 }, (_, i) => {
-                    const d = new Date(todayMonday);
-                    d.setDate(todayMonday.getDate() + i);
+                  const startMonday = new Date(todayMonday);
+                  startMonday.setDate(todayMonday.getDate() - 14);
+                  const wheelDates = Array.from({ length: 28 }, (_, i) => {
+                    const d = new Date(startMonday);
+                    d.setDate(startMonday.getDate() + i);
                     return d;
                   });
                   const planForDate = (date: Date) => {
                     for (const p of workoutPlans) {
-                      if (!p.weekStartDate) continue;
-                      const monday = mondayOf(new Date(p.weekStartDate + 'T00:00:00'));
-                      const nextMonday = new Date(monday);
-                      nextMonday.setDate(monday.getDate() + 7);
-                      if (date >= monday && date < nextMonday) return p;
+                      if (!p.weekStartDate || !Array.isArray(p.days)) continue;
+                      const ws = new Date(p.weekStartDate + 'T00:00:00');
+                      ws.setHours(0, 0, 0, 0);
+                      const we = new Date(ws);
+                      we.setDate(ws.getDate() + 7);
+                      if (date >= ws && date < we) return p;
                     }
                     return null;
                   };
                   const selectedAbs = activePlan?.weekStartDate ? (() => {
-                    const monday = mondayOf(new Date(activePlan.weekStartDate + 'T00:00:00'));
-                    monday.setDate(monday.getDate() + selectedDay);
-                    return monday;
+                    const ws = new Date(activePlan.weekStartDate + 'T00:00:00');
+                    ws.setHours(0, 0, 0, 0);
+                    ws.setDate(ws.getDate() + selectedDay);
+                    return ws;
                   })() : null;
                   const handlePick = async (d: Date) => {
                     const p = planForDate(d);
-                    if (!p) return;
-                    const monday = mondayOf(new Date(p.weekStartDate + 'T00:00:00'));
-                    const dayInPlan = Math.round((d.getTime() - monday.getTime()) / 86400000);
+                    if (!p) {
+                      const monday = mondayOf(d);
+                      const wsLabel = monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      const ok = window.confirm(`No workout plan for the week of ${wsLabel}. Create an empty week?`);
+                      if (!ok) return;
+                      const wsStr = monday.toLocaleDateString('en-CA');
+                      const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                      const days = dayNames.map(day => ({ day, title: 'Rest', exercises: [] }));
+                      const newPlan = {
+                        days,
+                        weekStartDate: wsStr,
+                        updatedAt: new Date().toISOString(),
+                      };
+                      const docRef = await addDoc(collection(db, 'users', profile.uid, 'workouts'), newPlan);
+                      await updateDoc(doc(db, 'users', profile.uid), { activeWorkoutId: docRef.id });
+                      setActivePlanId(docRef.id);
+                      const dayInPlan = Math.round((d.getTime() - new Date(wsStr + 'T00:00:00').getTime()) / 86400000);
+                      setSelectedDay(dayInPlan);
+                      return;
+                    }
                     if (p.id !== activePlanId) await handlePlanSelect(p.id);
+                    const ws = new Date(p.weekStartDate + 'T00:00:00');
+                    ws.setHours(0, 0, 0, 0);
+                    const dayInPlan = Math.round((d.getTime() - ws.getTime()) / 86400000);
                     setSelectedDay(dayInPlan);
                   };
                   return (
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 scroll-smooth lg:hidden">
-                      <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
-                      {wheelDates.map((d, idx) => {
-                        const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-                        const dayNum = d.getDate();
-                        const isSelected = selectedAbs ? d.getTime() === selectedAbs.getTime() : false;
-                        const hasPlan = !!planForDate(d);
-                        return (
-                          <button
-                            key={idx}
-                            ref={isSelected ? selectedDayRef : null}
-                            onClick={() => handlePick(d)}
-                            disabled={!hasPlan}
-                            className={`relative shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-200 ${
-                              isSelected
-                                ? 'text-[#141414]'
-                                : hasPlan
-                                  ? 'text-[#141414]/40 hover:bg-white/50'
-                                  : 'text-[#141414]/20'
-                            }`}
-                          >
-                            {isSelected && (
-                              <motion.div
-                                layoutId="workout-day-pill"
-                                className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
-                                transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                              />
-                            )}
-                            <div className="relative flex flex-col items-center leading-none">
-                              <span className="text-[9px] font-bold uppercase">{weekday}</span>
-                              <span className="text-base font-black mt-0.5">{dayNum}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                      <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+                    <div className="lg:hidden -mx-4 px-4">
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                        <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+                        {wheelDates.map((d, idx) => {
+                          const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+                          const dayNum = d.getDate();
+                          const isSelected = selectedAbs ? d.getTime() === selectedAbs.getTime() : false;
+                          const hasPlan = !!planForDate(d);
+                          return (
+                            <button
+                              key={idx}
+                              ref={isSelected ? selectedDayRef : undefined}
+                              onClick={() => handlePick(d)}
+                              className={`relative shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
+                                isSelected
+                                  ? 'text-[#141414]'
+                                  : hasPlan
+                                    ? 'text-[#141414]/40 hover:bg-white/50'
+                                    : 'text-[#141414]/25 hover:bg-white/50'
+                              }`}
+                            >
+                              {isSelected && (
+                                <motion.div
+                                  layoutId="workout-day-pill"
+                                  className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
+                                  transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                                />
+                              )}
+                              <span className="relative text-[9px] font-bold uppercase leading-none">{weekday}</span>
+                              <span className="relative text-base font-black leading-tight">{dayNum}</span>
+                            </button>
+                          );
+                        })}
+                        <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+                      </div>
                     </div>
                   );
                 })()}
