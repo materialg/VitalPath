@@ -88,9 +88,13 @@ export function WorkoutCoach({ profile }: Props) {
     setError(null);
     try {
       const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, activePlan);
+      const monday = new Date();
+      monday.setHours(0, 0, 0, 0);
+      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+      const tzOffsetMs = monday.getTimezoneOffset() * 60_000;
       const newPlan = {
         ...plan,
-        weekStartDate: new Date().toISOString().split('T')[0],
+        weekStartDate: new Date(monday.getTime() - tzOffsetMs).toISOString().split('T')[0],
         updatedAt: new Date().toISOString(),
       };
       const docRef = await addDoc(collection(db, 'users', profile.uid, 'workouts'), newPlan);
@@ -334,10 +338,13 @@ export function WorkoutCoach({ profile }: Props) {
               <div className="flex flex-col gap-4 lg:mt-8">
                 {/* Mobile: 14-day date wheel with cross-week plan navigation */}
                 {(() => {
-                  const now = new Date();
-                  const todayMonday = new Date(now);
-                  todayMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-                  todayMonday.setHours(0, 0, 0, 0);
+                  const mondayOf = (d: Date) => {
+                    const m = new Date(d);
+                    m.setHours(0, 0, 0, 0);
+                    m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+                    return m;
+                  };
+                  const todayMonday = mondayOf(new Date());
                   const wheelDates = Array.from({ length: 14 }, (_, i) => {
                     const d = new Date(todayMonday);
                     d.setDate(todayMonday.getDate() + i);
@@ -346,24 +353,23 @@ export function WorkoutCoach({ profile }: Props) {
                   const planForDate = (date: Date) => {
                     for (const p of workoutPlans) {
                       if (!p.weekStartDate) continue;
-                      const ws = new Date(p.weekStartDate + 'T00:00:00');
-                      const we = new Date(ws);
-                      we.setDate(ws.getDate() + 7);
-                      if (date >= ws && date < we) return p;
+                      const monday = mondayOf(new Date(p.weekStartDate + 'T00:00:00'));
+                      const nextMonday = new Date(monday);
+                      nextMonday.setDate(monday.getDate() + 7);
+                      if (date >= monday && date < nextMonday) return p;
                     }
                     return null;
                   };
                   const selectedAbs = activePlan?.weekStartDate ? (() => {
-                    const ws = new Date(activePlan.weekStartDate + 'T00:00:00');
-                    ws.setDate(ws.getDate() + selectedDay);
-                    ws.setHours(0, 0, 0, 0);
-                    return ws;
+                    const monday = mondayOf(new Date(activePlan.weekStartDate + 'T00:00:00'));
+                    monday.setDate(monday.getDate() + selectedDay);
+                    return monday;
                   })() : null;
                   const handlePick = async (d: Date) => {
                     const p = planForDate(d);
                     if (!p) return;
-                    const ws = new Date(p.weekStartDate + 'T00:00:00');
-                    const dayInPlan = Math.round((d.getTime() - ws.getTime()) / 86400000);
+                    const monday = mondayOf(new Date(p.weekStartDate + 'T00:00:00'));
+                    const dayInPlan = Math.round((d.getTime() - monday.getTime()) / 86400000);
                     if (p.id !== activePlanId) await handlePlanSelect(p.id);
                     setSelectedDay(dayInPlan);
                   };
@@ -820,6 +826,8 @@ export function WorkoutCoach({ profile }: Props) {
             } else if (plan.weekStartDate) {
               base = new Date(plan.weekStartDate + 'T00:00:00');
               if (isNaN(base.getTime())) continue;
+              base.setHours(0, 0, 0, 0);
+              base.setDate(base.getDate() - ((base.getDay() + 6) % 7));
             } else {
               continue;
             }
