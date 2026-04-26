@@ -332,7 +332,8 @@ export function WorkoutCoach({ profile }: Props) {
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:mt-8">
-                <div className="grid grid-cols-7 gap-1 lg:flex lg:flex-col lg:gap-2">
+                <div className="flex gap-2 overflow-x-auto lg:overflow-visible lg:flex-col no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 scroll-smooth">
+                  <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)] lg:hidden" />
                   {activePlan?.days.map((day, idx) => {
                     const now = new Date();
                     const d = new Date(now);
@@ -343,8 +344,9 @@ export function WorkoutCoach({ profile }: Props) {
                     return (
                       <button
                         key={idx}
+                        ref={isSelected ? selectedDayRef : null}
                         onClick={() => setSelectedDay(idx)}
-                        className={`relative aspect-square lg:aspect-auto rounded-2xl flex items-center justify-center lg:justify-between lg:w-full lg:h-auto lg:p-4 transition-colors duration-200 ${
+                        className={`relative shrink-0 w-14 h-14 lg:w-full lg:h-auto rounded-2xl flex items-center justify-center lg:justify-between lg:p-4 transition-colors duration-200 ${
                           isSelected
                             ? 'text-[#141414]'
                             : 'text-[#141414]/40 hover:bg-white/50'
@@ -365,6 +367,7 @@ export function WorkoutCoach({ profile }: Props) {
                       </button>
                     );
                   })}
+                  <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)] lg:hidden" />
                 </div>
               </div>
             </div>

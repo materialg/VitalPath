@@ -237,8 +237,9 @@ export function MealPlanner({ profile }: Props) {
 
       {/* Day Selector date boxes (mobile only, above target) */}
       {mealPlans.length > 0 && activePlan && (
-        <div className="lg:hidden">
-          <div className="grid grid-cols-7 gap-1">
+        <div className="lg:hidden -mx-4 px-4">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+            <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
             {activePlan.days.map((day, idx) => {
               const date = weekDateFor(idx);
               const weekday = date ? date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() : '';
@@ -247,8 +248,9 @@ export function MealPlanner({ profile }: Props) {
               return (
                 <button
                   key={idx}
+                  ref={isSelected ? selectedDayRef : undefined}
                   onClick={() => setSelectedDay(idx)}
-                  className={`relative aspect-square rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
+                  className={`relative shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
                     isSelected
                       ? 'text-[#141414]'
                       : 'text-[#141414]/40 hover:bg-white/50'
@@ -266,6 +268,7 @@ export function MealPlanner({ profile }: Props) {
                 </button>
               );
             })}
+            <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
           </div>
         </div>
       )}
