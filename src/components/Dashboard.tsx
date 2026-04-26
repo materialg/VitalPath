@@ -438,7 +438,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
              onEditMeal={(mIdx) => {
                const safe = safeMeals(todayMealPlan.meals, foodBankItems);
                setEditingMeal({ mIdx, meal: safe[mIdx] });
-               setShowMealModal(false);
              }}
              onConfirm={async () => {
                if (!latestMealPlan || !todayMealPlan) return;
