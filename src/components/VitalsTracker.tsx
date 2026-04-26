@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, VitalLog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, Scale, Activity, X, Save, Calendar, Pencil } from 'lucide-react';
-import { CompositionTrend } from './CompositionTrend';
+import TrendCard from './TrendCard';
 
 interface Props {
   profile: UserProfile;
@@ -15,7 +15,6 @@ export function VitalsTracker({ profile }: Props) {
   const [editingLog, setEditingLog] = useState<VitalLog | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
-  const [range, setRange] = useState<'week' | 'all'>('all');
 
   useEffect(() => {
     const q = query(
@@ -45,56 +44,26 @@ export function VitalsTracker({ profile }: Props) {
 
   const selectedHistoryLog = vitals.find(v => v.id === selectedHistoryId) || null;
 
-  const filteredVitals = (() => {
-    if (range !== 'week') return vitals;
-    const now = new Date();
-    const monOffset = (now.getDay() + 6) % 7;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - monOffset);
-    monday.setHours(0, 0, 0, 0);
-    const nextMonday = new Date(monday);
-    nextMonday.setDate(monday.getDate() + 7);
-    return vitals.filter(v => {
-      const ts = new Date(v.date).getTime();
-      return ts >= monday.getTime() && ts < nextMonday.getTime();
-    });
-  })();
+  const last14Asc = [...vitals]
+    .filter(v => typeof v.weight === 'number' && typeof v.bodyFat === 'number')
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(-14);
 
-  const goalBF = profile.goalBodyFat || 15;
-  const latestVital = vitals[0];
-  const goalWeight = latestVital
-    ? Math.round((latestVital.weight * (1 - latestVital.bodyFat / 100)) / (1 - goalBF / 100))
-    : 170;
+  const weightData = last14Asc.map(v => ({ date: v.date, value: v.weight }));
+  const bfData = last14Asc.map(v => ({ date: v.date, value: v.bodyFat }));
 
   return (
     <div className="space-y-4">
-      <CompositionTrend vitals={filteredVitals} goalWeight={goalWeight} goalBF={goalBF} />
-
-      <div
-        className="bg-white p-1 flex gap-1"
-        style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 16 }}
-      >
-        <button
-          onClick={() => setRange('week')}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-            range === 'week'
-              ? 'bg-[#141414] text-white'
-              : 'text-[#141414]/50 hover:text-[#141414]'
-          }`}
+      {last14Asc.length >= 2 ? (
+        <TrendCard weightData={weightData} bfData={bfData} />
+      ) : (
+        <div
+          className="bg-white flex items-center justify-center text-sm text-center px-4"
+          style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 16, height: 220, color: '#9CA3AF' }}
         >
-          Week
-        </button>
-        <button
-          onClick={() => setRange('all')}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-            range === 'all'
-              ? 'bg-[#141414] text-white'
-              : 'text-[#141414]/50 hover:text-[#141414]'
-          }`}
-        >
-          All Time
-        </button>
-      </div>
+          Log at least two measurements to see your composition trend.
+        </div>
+      )}
 
       <button
         onClick={() => setIsHistoryOpen(true)}
