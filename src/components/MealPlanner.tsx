@@ -235,43 +235,81 @@ export function MealPlanner({ profile }: Props) {
         </div>
       )}
 
-      {/* Day Selector date boxes (mobile only, above target) */}
-      {mealPlans.length > 0 && activePlan && (
-        <div className="lg:hidden -mx-4 px-4">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
-            <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
-            {activePlan.days.map((day, idx) => {
-              const date = weekDateFor(idx);
-              const weekday = date ? date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() : '';
-              const dayNum = date ? date.getDate() : idx + 1;
-              const isSelected = selectedDay === idx;
-              return (
-                <button
-                  key={idx}
-                  ref={isSelected ? selectedDayRef : undefined}
-                  onClick={() => setSelectedDay(idx)}
-                  className={`relative shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
-                    isSelected
-                      ? 'text-[#141414]'
-                      : 'text-[#141414]/40 hover:bg-white/50'
-                  }`}
-                >
-                  {isSelected && (
-                    <motion.div
-                      layoutId="meal-day-pill-mobile"
-                      className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
-                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                    />
-                  )}
-                  <span className="relative text-[9px] font-bold uppercase leading-none">{weekday}</span>
-                  <span className="relative text-base font-black leading-tight">{dayNum}</span>
-                </button>
-              );
-            })}
-            <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+      {/* Day Selector date wheel (mobile only, above target) */}
+      {mealPlans.length > 0 && activePlan && (() => {
+        const now = new Date();
+        const todayMonday = new Date(now);
+        todayMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+        todayMonday.setHours(0, 0, 0, 0);
+        const wheelDates = Array.from({ length: 14 }, (_, i) => {
+          const d = new Date(todayMonday);
+          d.setDate(todayMonday.getDate() + i);
+          return d;
+        });
+        const planForDate = (date: Date) => {
+          for (const p of mealPlans) {
+            if (!p.weekStartDate) continue;
+            const ws = new Date(p.weekStartDate + 'T00:00:00');
+            const we = new Date(ws);
+            we.setDate(ws.getDate() + 7);
+            if (date >= ws && date < we) return p;
+          }
+          return null;
+        };
+        const selectedAbs = activePlan.weekStartDate ? (() => {
+          const ws = new Date(activePlan.weekStartDate + 'T00:00:00');
+          ws.setDate(ws.getDate() + selectedDay);
+          ws.setHours(0, 0, 0, 0);
+          return ws;
+        })() : null;
+        const handlePick = async (d: Date) => {
+          const p = planForDate(d);
+          if (!p) return;
+          const ws = new Date(p.weekStartDate + 'T00:00:00');
+          const dayInPlan = Math.round((d.getTime() - ws.getTime()) / 86400000);
+          if (p.id !== activePlanId) await handlePlanSelect(p.id);
+          setSelectedDay(dayInPlan);
+        };
+        return (
+          <div className="lg:hidden -mx-4 px-4">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+              <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+              {wheelDates.map((d, idx) => {
+                const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+                const dayNum = d.getDate();
+                const isSelected = selectedAbs ? d.getTime() === selectedAbs.getTime() : false;
+                const hasPlan = !!planForDate(d);
+                return (
+                  <button
+                    key={idx}
+                    ref={isSelected ? selectedDayRef : undefined}
+                    onClick={() => handlePick(d)}
+                    disabled={!hasPlan}
+                    className={`relative shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
+                      isSelected
+                        ? 'text-[#141414]'
+                        : hasPlan
+                          ? 'text-[#141414]/40 hover:bg-white/50'
+                          : 'text-[#141414]/20'
+                    }`}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        layoutId="meal-day-pill-mobile"
+                        className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
+                        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative text-[9px] font-bold uppercase leading-none">{weekday}</span>
+                    <span className="relative text-base font-black leading-tight">{dayNum}</span>
+                  </button>
+                );
+              })}
+              <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Daily Target - Always Visible */}
       <div className="bg-[#141414] text-white p-4 md:p-8 rounded-3xl shadow-xl overflow-hidden relative">

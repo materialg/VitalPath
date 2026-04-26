@@ -332,21 +332,91 @@ export function WorkoutCoach({ profile }: Props) {
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:mt-8">
-                <div className="flex gap-2 overflow-x-auto lg:overflow-visible lg:flex-col no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0 scroll-smooth">
-                  <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)] lg:hidden" />
+                {/* Mobile: 14-day date wheel with cross-week plan navigation */}
+                {(() => {
+                  const now = new Date();
+                  const todayMonday = new Date(now);
+                  todayMonday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+                  todayMonday.setHours(0, 0, 0, 0);
+                  const wheelDates = Array.from({ length: 14 }, (_, i) => {
+                    const d = new Date(todayMonday);
+                    d.setDate(todayMonday.getDate() + i);
+                    return d;
+                  });
+                  const planForDate = (date: Date) => {
+                    for (const p of workoutPlans) {
+                      if (!p.weekStartDate) continue;
+                      const ws = new Date(p.weekStartDate + 'T00:00:00');
+                      const we = new Date(ws);
+                      we.setDate(ws.getDate() + 7);
+                      if (date >= ws && date < we) return p;
+                    }
+                    return null;
+                  };
+                  const selectedAbs = activePlan?.weekStartDate ? (() => {
+                    const ws = new Date(activePlan.weekStartDate + 'T00:00:00');
+                    ws.setDate(ws.getDate() + selectedDay);
+                    ws.setHours(0, 0, 0, 0);
+                    return ws;
+                  })() : null;
+                  const handlePick = async (d: Date) => {
+                    const p = planForDate(d);
+                    if (!p) return;
+                    const ws = new Date(p.weekStartDate + 'T00:00:00');
+                    const dayInPlan = Math.round((d.getTime() - ws.getTime()) / 86400000);
+                    if (p.id !== activePlanId) await handlePlanSelect(p.id);
+                    setSelectedDay(dayInPlan);
+                  };
+                  return (
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 scroll-smooth lg:hidden">
+                      <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+                      {wheelDates.map((d, idx) => {
+                        const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+                        const dayNum = d.getDate();
+                        const isSelected = selectedAbs ? d.getTime() === selectedAbs.getTime() : false;
+                        const hasPlan = !!planForDate(d);
+                        return (
+                          <button
+                            key={idx}
+                            ref={isSelected ? selectedDayRef : null}
+                            onClick={() => handlePick(d)}
+                            disabled={!hasPlan}
+                            className={`relative shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-200 ${
+                              isSelected
+                                ? 'text-[#141414]'
+                                : hasPlan
+                                  ? 'text-[#141414]/40 hover:bg-white/50'
+                                  : 'text-[#141414]/20'
+                            }`}
+                          >
+                            {isSelected && (
+                              <motion.div
+                                layoutId="workout-day-pill"
+                                className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
+                                transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                              />
+                            )}
+                            <div className="relative flex flex-col items-center leading-none">
+                              <span className="text-[9px] font-bold uppercase">{weekday}</span>
+                              <span className="text-base font-black mt-0.5">{dayNum}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                      <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
+                    </div>
+                  );
+                })()}
+
+                {/* Desktop: vertical sidebar showing the active plan's 7 days */}
+                <div className="hidden lg:flex lg:flex-col lg:gap-2">
                   {activePlan?.days.map((day, idx) => {
-                    const now = new Date();
-                    const d = new Date(now);
-                    d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + idx);
-                    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-                    const dayNum = d.getDate();
                     const isSelected = selectedDay === idx;
                     return (
                       <button
                         key={idx}
-                        ref={isSelected ? selectedDayRef : null}
                         onClick={() => setSelectedDay(idx)}
-                        className={`relative shrink-0 w-14 h-14 lg:w-full lg:h-auto rounded-2xl flex items-center justify-center lg:justify-between lg:p-4 transition-colors duration-200 ${
+                        className={`relative w-full p-4 rounded-2xl flex items-center justify-between transition-colors duration-200 ${
                           isSelected
                             ? 'text-[#141414]'
                             : 'text-[#141414]/40 hover:bg-white/50'
@@ -354,20 +424,16 @@ export function WorkoutCoach({ profile }: Props) {
                       >
                         {isSelected && (
                           <motion.div
-                            layoutId="workout-day-pill"
+                            layoutId="workout-day-pill-desktop"
                             className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
                             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                           />
                         )}
-                        <div className="relative flex flex-col items-center lg:items-start leading-none">
-                          <span className="text-[9px] lg:text-[10px] font-bold uppercase">{weekday}</span>
-                          <span className="text-base lg:text-lg font-black mt-0.5">{dayNum}</span>
-                        </div>
-                        <ChevronRight size={16} className={`relative hidden lg:block transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                        <span className="relative font-bold">{day.day}</span>
+                        <ChevronRight size={16} className={`relative transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
                       </button>
                     );
                   })}
-                  <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)] lg:hidden" />
                 </div>
               </div>
             </div>
