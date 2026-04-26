@@ -1024,9 +1024,9 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         onClick={e => e.stopPropagation()}
       >
         <div className="p-4 md:p-8 pb-0 md:pb-0">
-        <div className="mb-4 md:mb-6 min-w-0 -ml-0.5">
+        <div className="mb-4 md:mb-6 min-w-0 text-center">
           <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate tracking-tight">Edit {currentMeal.name}</h3>
-          <p className="hidden md:block text-sm text-[#141414]/40 ml-0.5">Customize ingredients and portions.</p>
+          <p className="hidden md:block text-sm text-[#141414]/40">Customize ingredients and portions.</p>
         </div>
 
         {(() => {

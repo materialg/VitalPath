@@ -429,12 +429,17 @@ export function Dashboard({ profile, onNavigate }: Props) {
           />
         )}
         {showMealModal && todayMealPlan && (
-          <MealModal 
+          <MealModal
              key="meal-modal"
              meals={safeMeals(todayMealPlan.meals, foodBankItems)}
              dayName={todayMealPlan.day}
              targetCalories={currentTargets.dailyCalories}
-             onClose={() => setShowMealModal(false)} 
+             onClose={() => setShowMealModal(false)}
+             onEditMeal={(mIdx) => {
+               const safe = safeMeals(todayMealPlan.meals, foodBankItems);
+               setEditingMeal({ mIdx, meal: safe[mIdx] });
+               setShowMealModal(false);
+             }}
              onConfirm={async () => {
                if (!latestMealPlan || !todayMealPlan) return;
                const updatedDays = [...latestMealPlan.days];
@@ -612,7 +617,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
   );
 }
 
-function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggleMeal }: { meals: Meal[], dayName: string, targetCalories?: number, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, key?: React.Key }) {
+function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggleMeal, onEditMeal }: { meals: Meal[], dayName: string, targetCalories?: number, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, onEditMeal?: (idx: number) => void, key?: React.Key }) {
   const safe = (meals || []).filter(Boolean);
   const totalCalories = safe.reduce((sum, m) => sum + (m?.calories || 0), 0);
   const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner"];
@@ -652,11 +657,24 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
 
         <div className="space-y-6">
           {safe.map((meal, mIdx) => (
-            <div key={mIdx} className={`p-6 rounded-2xl space-y-4 transition-all ${meal.status === 'completed' ? 'bg-green-50/50 border border-green-100' : 'bg-[#141414]/5'}`}>
+            <div
+              key={mIdx}
+              onClick={() => onEditMeal?.(mIdx)}
+              role={onEditMeal ? 'button' : undefined}
+              tabIndex={onEditMeal ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (!onEditMeal) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onEditMeal(mIdx);
+                }
+              }}
+              className={`p-6 rounded-2xl space-y-4 transition-all ${onEditMeal ? 'cursor-pointer hover:ring-2 hover:ring-[#141414]/10' : ''} ${meal.status === 'completed' ? 'bg-green-50/50 border border-green-100' : 'bg-[#141414]/5'}`}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => onToggleMeal?.(mIdx)}
+                    onClick={(e) => { e.stopPropagation(); onToggleMeal?.(mIdx); }}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-all ${
                       meal.status === 'completed' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white text-orange-600 shadow-sm'
                     }`}
