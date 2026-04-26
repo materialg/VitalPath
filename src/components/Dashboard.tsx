@@ -297,16 +297,16 @@ export function Dashboard({ profile, onNavigate }: Props) {
           color="text-emerald-500"
         />
         <StatCard
-          progress={bfProgress}
-          label="Body Fat"
-          value={`${currentBF}%`}
-          color="text-orange-500"
-        />
-        <StatCard
           progress={weightProgress}
           label="Weight"
           value={`${currentWeight} lbs`}
           color="text-blue-500"
+        />
+        <StatCard
+          progress={bfProgress}
+          label="Body Fat"
+          value={`${currentBF}%`}
+          color="text-orange-500"
         />
       </div>
 
