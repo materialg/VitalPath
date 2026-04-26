@@ -670,7 +670,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                   onEditMeal(mIdx);
                 }
               }}
-              className={`p-6 rounded-2xl space-y-4 transition-all ${onEditMeal ? 'cursor-pointer hover:ring-2 hover:ring-[#141414]/10' : ''} ${meal.status === 'completed' ? 'bg-green-50/50 border border-green-100' : 'bg-[#141414]/5'}`}
+              className={`p-5 rounded-2xl transition-all ${onEditMeal ? 'cursor-pointer hover:ring-2 hover:ring-[#141414]/10' : ''} ${meal.status === 'completed' ? 'bg-green-50/50 border border-green-100' : 'bg-[#141414]/5'}`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -692,13 +692,6 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {(Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5">
-                    {ing}
-                  </span>
-                ))}
-              </div>
             </div>
           ))}
 
