@@ -345,8 +345,8 @@ export function MealPlanner({ profile }: Props) {
             <div className="w-10 h-10 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
               <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
             </div>
-            <div className="flex-1 grid grid-cols-5 gap-1 md:gap-4 min-w-0">
-              <div className="text-center min-w-0 col-span-2">
+            <div className="flex-1 grid grid-cols-4 gap-1 md:gap-4 min-w-0">
+              <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Target</p>
                 <p className="text-sm font-black text-green-500 whitespace-nowrap">{targets.dailyCalories}</p>
               </div>
@@ -459,12 +459,7 @@ export function MealPlanner({ profile }: Props) {
                   const remaining = Math.round(targets.dailyCalories - totals.calories);
                   const goalColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
                   const stats: { label: string; value: number; unit?: string; className?: string }[] = [
-                    {
-                      label: 'Kcal',
-                      value: Math.round(totals.calories),
-                      className: totals.calories > targets.dailyCalories ? 'text-red-500' : 'text-[#141414]',
-                    },
-                    { label: 'Goal', value: remaining, className: goalColor },
+                    { label: 'Kcal', value: remaining, className: goalColor },
                     { label: 'P', value: Math.round(totals.protein), unit: 'g' },
                     { label: 'C', value: Math.round(totals.carbs), unit: 'g' },
                     { label: 'F', value: Math.round(totals.fats), unit: 'g' },
@@ -477,7 +472,7 @@ export function MealPlanner({ profile }: Props) {
                       </div>
 
                       {/* evenly-spaced stats */}
-                      <div className="flex-1 grid grid-cols-5 gap-1 md:gap-4 min-w-0">
+                      <div className="flex-1 grid grid-cols-4 gap-1 md:gap-4 min-w-0">
                         {stats.map((stat, i) => (
                           <div key={i} className="text-center min-w-0">
                             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">{stat.label}</p>
