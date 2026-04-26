@@ -1033,7 +1033,7 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           <div className="hidden md:block absolute top-4 left-4">
             <Flame size={14} className="text-orange-500" />
           </div>
-          <div className="grid grid-cols-5 gap-2 md:gap-4">
+          <div className="grid grid-cols-4 gap-2 md:gap-4">
             <div className="text-center">
               <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Total</p>
               <p className={`text-sm md:text-lg font-bold ${(dayProgressOffset.calories + currentMeal.calories) > targets.dailyCalories ? 'text-red-500' : 'text-white'}`}>
@@ -1052,14 +1052,10 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
               <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
               <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.fats + currentMeal.fats)}g</p>
             </div>
-            <div className="text-center">
-              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Fiber</p>
-              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.fiber + currentMeal.fiber)}g</p>
-            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-6 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
+        <div className="grid grid-cols-5 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
           {(() => {
             const remaining = Math.round(targets.dailyCalories - (dayProgressOffset.calories + currentMeal.calories));
             const goalColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
@@ -1085,10 +1081,6 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           <div className="text-center">
             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
             <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.fats)}g</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fiber</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.fiber)}g</p>
           </div>
         </div>
 

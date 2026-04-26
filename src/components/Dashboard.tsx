@@ -865,13 +865,12 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
           <p className="text-sm text-[#141414]/40 ml-0.5">Customize ingredients and portions.</p>
         </div>
 
-        <div className="grid grid-cols-5 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
+        <div className="grid grid-cols-4 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
           {[
             { label: 'Calories', val: currentMeal.calories, unit: '' },
             { label: 'Protein', val: currentMeal.protein, unit: 'g' },
             { label: 'Carbs', val: currentMeal.carbs, unit: 'g' },
             { label: 'Fats', val: currentMeal.fats, unit: 'g' },
-            { label: 'Fiber', val: currentMeal.fiber, unit: 'g' }
           ].map((s, i) => (
             <div key={i} className="text-center">
               <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{s.label}</p>
