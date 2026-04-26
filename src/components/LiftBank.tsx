@@ -189,7 +189,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
               setIsAdding(true);
             }}
             aria-label="Add Lift"
-            className="w-full lg:w-auto px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center"
+            className="w-full lg:w-auto px-6 py-3 border-2 border-solid border-[#141414]/10 text-[#141414]/40 rounded-xl font-medium hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
           >
             <Plus size={18} />
           </button>
