@@ -525,8 +525,10 @@ export function MealPlanner({ profile }: Props) {
                       return (
                       <div key={mIdx} className="group">
                         <div
-                          className={`flex items-center md:items-start gap-3 md:gap-4 p-3 md:p-6 rounded-2xl transition-all ${
-                            meal.status === 'completed' ? 'bg-green-50/50' : ''
+                          className={`flex items-center md:items-start gap-3 md:gap-4 p-3 md:p-6 rounded-2xl border transition-all ${
+                            meal.status === 'completed'
+                              ? 'bg-green-50/50 border-green-100'
+                              : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
                           }`}
                         >
                           {/* Mobile: stacked name + calories, capped to action-box height */}

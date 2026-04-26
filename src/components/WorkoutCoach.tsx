@@ -612,8 +612,12 @@ export function WorkoutCoach({ profile }: Props) {
                         return (
                         <div key={idx} className="group">
                           <div
-                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl transition-all ${
-                              isCompleted ? 'bg-green-50/50' : isExpanded ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10' : ''
+                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl border transition-all ${
+                              isCompleted
+                                ? 'bg-green-50/50 border-green-100'
+                                : isExpanded
+                                  ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10 border-transparent'
+                                  : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
                             }`}
                           >
                             <div className="flex items-center md:items-start gap-3 lg:gap-4">
