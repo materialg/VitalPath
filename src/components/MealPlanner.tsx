@@ -364,7 +364,7 @@ export function MealPlanner({ profile }: Props) {
           </div>
 
           {/* Day Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-8">
             <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
               <div className="flex flex-wrap gap-4 lg:gap-8">
                 {(() => {
