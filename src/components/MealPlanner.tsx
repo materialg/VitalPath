@@ -366,7 +366,7 @@ export function MealPlanner({ profile }: Props) {
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-              <div className="flex flex-wrap gap-4 lg:gap-8 mb-8">
+              <div className="flex flex-wrap gap-4 lg:gap-8">
                 {(() => {
                   const totals = dayMeals.reduce((acc, meal) => ({
                     calories: acc.calories + (meal.calories || 0),
@@ -391,7 +391,7 @@ export function MealPlanner({ profile }: Props) {
                     { label: 'Fib', value: Math.round(totals.fiber), unit: 'g' },
                   ];
                   return (
-                    <div className="flex items-center gap-2 md:gap-3 w-full mb-8 md:mb-12">
+                    <div className="flex items-center gap-2 md:gap-3 w-full">
                       {/* fire icon */}
                       <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
                         <Flame size={22} className="text-orange-500" />
@@ -427,7 +427,9 @@ export function MealPlanner({ profile }: Props) {
                   );
                 })()}
               </div>
+            </div>
 
+            <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
               <div className="space-y-8 relative">
                 <AnimatePresence mode="wait">
                   <motion.div
