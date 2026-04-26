@@ -227,28 +227,28 @@ export default function App() {
             label="Dashboard"
           />
           <NavItem
-            active={activeTab === 'trends'}
-            onClick={() => setActiveTab('trends')}
-            icon={<BarChart3 size={20} />}
-            label="Trends"
+            active={activeTab === 'meals'}
+            onClick={() => setActiveTab('meals')}
+            icon={<Utensils size={20} />}
+            label="Meal Plan"
           />
           <NavItem
-            active={activeTab === 'meals'}
-            onClick={() => setActiveTab('meals')} 
-            icon={<Utensils size={20} />} 
-            label="Meal Plan" 
-          />
-          <NavItem 
-            active={activeTab === 'workouts'} 
-            onClick={() => setActiveTab('workouts')} 
-            icon={<Dumbbell size={20} />} 
-            label="Workouts" 
+            active={activeTab === 'workouts'}
+            onClick={() => setActiveTab('workouts')}
+            icon={<Dumbbell size={20} />}
+            label="Workouts"
           />
           <NavItem
             active={activeTab === 'database'}
             onClick={() => setActiveTab('database')}
             icon={<Database size={20} />}
             label="Database"
+          />
+          <NavItem
+            active={activeTab === 'trends'}
+            onClick={() => setActiveTab('trends')}
+            icon={<BarChart3 size={20} />}
+            label="Trends"
           />
         </div>
 
@@ -295,24 +295,24 @@ export default function App() {
           icon={<Activity size={20} />}
         />
         <MobileNavItem
-          active={activeTab === 'trends'}
-          onClick={() => setActiveTab('trends')}
-          icon={<BarChart3 size={20} />}
+          active={activeTab === 'meals'}
+          onClick={() => setActiveTab('meals')}
+          icon={<Utensils size={20} />}
         />
         <MobileNavItem
-          active={activeTab === 'meals'}
-          onClick={() => setActiveTab('meals')} 
-          icon={<Utensils size={20} />} 
-        />
-        <MobileNavItem 
-          active={activeTab === 'workouts'} 
-          onClick={() => setActiveTab('workouts')} 
-          icon={<Dumbbell size={20} />} 
+          active={activeTab === 'workouts'}
+          onClick={() => setActiveTab('workouts')}
+          icon={<Dumbbell size={20} />}
         />
         <MobileNavItem
           active={activeTab === 'database'}
           onClick={() => setActiveTab('database')}
           icon={<Database size={20} />}
+        />
+        <MobileNavItem
+          active={activeTab === 'trends'}
+          onClick={() => setActiveTab('trends')}
+          icon={<BarChart3 size={20} />}
         />
         <MobileNavItem
           active={activeTab === 'settings'}
