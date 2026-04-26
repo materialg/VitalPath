@@ -778,10 +778,10 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest, onUn
         {todayWorkout.title === 'Rest' && onUndoRest && workout.restBackup?.day === todayWorkout.day && (
           <button
             onClick={onUndoRest}
-            className="w-full py-3 bg-[#141414]/5 text-[#141414] rounded-2xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+            aria-label="Undo Rest"
+            className="w-full py-3 bg-[#141414]/5 text-[#141414] rounded-2xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
           >
             <span className="text-lg leading-none">↩️</span>
-            Undo Rest
           </button>
         )}
 
