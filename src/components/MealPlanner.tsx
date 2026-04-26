@@ -263,10 +263,13 @@ export function MealPlanner({ profile }: Props) {
           return ws;
         })() : null;
         const handlePick = async (d: Date) => {
-          let p = planForDate(d);
+          const p = planForDate(d);
           if (!p) {
             const monday = new Date(d);
             monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+            const wsLabel = monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const ok = window.confirm(`No plan for the week of ${wsLabel}. Create an empty week?`);
+            if (!ok) return;
             const wsStr = monday.toLocaleDateString('en-CA');
             const days = MEAL_PLAN_DAYS.map(day => ({ day, meals: [] }));
             const newPlan = stripUndefined({
@@ -279,10 +282,11 @@ export function MealPlanner({ profile }: Props) {
             const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
             await updateDoc(doc(db, 'users', profile.uid), { activeMealPlanId: docRef.id });
             setActivePlanId(docRef.id);
-            p = { id: docRef.id, ...newPlan } as MealPlan;
-          } else if (p.id !== activePlanId) {
-            await handlePlanSelect(p.id);
+            const dayInPlan = Math.round((d.getTime() - new Date(wsStr + 'T00:00:00').getTime()) / 86400000);
+            setSelectedDay(dayInPlan);
+            return;
           }
+          if (p.id !== activePlanId) await handlePlanSelect(p.id);
           const ws = new Date(p.weekStartDate + 'T00:00:00');
           const dayInPlan = Math.round((d.getTime() - ws.getTime()) / 86400000);
           setSelectedDay(dayInPlan);
