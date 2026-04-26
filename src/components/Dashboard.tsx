@@ -258,25 +258,30 @@ export function Dashboard({ profile, onNavigate }: Props) {
       const dCal = calendarOrder.indexOf(d.day);
       if (dCal < todayCal) return d;
       if (dCal === todayCal) {
-        return { ...d, title: 'Rest', exercises: [], status: 'pending' as const };
+        return { day: d.day, title: 'Rest', exercises: [], status: 'pending' as const };
       }
       const sourceName = calendarOrder[dCal - 1];
       const source = latestWorkout.days.find(x => x.day === sourceName);
       if (!source) return d;
-      return {
-        ...d,
+      const next: any = {
+        day: d.day,
         title: source.title,
-        exercises: source.exercises,
-        notes: source.notes,
-        status: source.status,
+        exercises: source.exercises ?? [],
       };
+      if (source.notes !== undefined) next.notes = source.notes;
+      if (source.status !== undefined) next.status = source.status;
+      return next;
     });
 
-    await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), {
-      days: newDays,
-      updatedAt: new Date().toISOString(),
-    });
-    setShowWorkoutModal(false);
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
+        days: newDays,
+        updatedAt: new Date().toISOString(),
+      }));
+      setShowWorkoutModal(false);
+    } catch (err) {
+      console.error('Failed to rest today:', err);
+    }
   };
 
   const handleVitalsToggle = async () => {
