@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, collection, query, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, logout } from '../firebase';
 import { UserProfile, ActivityLevel, Gender, VitalLog } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Target, Activity, User as UserIcon, Save, Scale, Calendar, Footprints } from 'lucide-react';
+import { X, Target, Activity, User as UserIcon, Save, Scale, Calendar, Footprints, LogOut } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -222,14 +222,22 @@ export function ProfileSettingsModal({ profile, onClose, inline }: Props) {
             </div>
           </div>
 
-          <div className="pt-4">
-            <button 
+          <div className="pt-4 space-y-3">
+            <button
               type="submit"
               disabled={isSubmitting}
               className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save size={18} />
               {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="w-full py-4 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+            >
+              <LogOut size={18} />
+              Log Out
             </button>
           </div>
         </form>
