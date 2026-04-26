@@ -683,9 +683,9 @@ export function MealPlanner({ profile }: Props) {
         <button
           onClick={() => setIsHistoryOpen(true)}
           aria-label="View history"
-          className="w-full p-4 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10"
+          className="w-full p-4 flex items-center justify-center rounded-2xl transition-all bg-white border border-[#141414]/5 shadow-sm hover:bg-[#141414]/5"
         >
-          <Calendar size={18} />
+          <span className="text-xl leading-none">📓</span>
         </button>
       )}
 
