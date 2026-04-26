@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
@@ -10,6 +10,31 @@ import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 interface Props {
   profile: UserProfile;
   onNavigate: (tab: string) => void;
+}
+
+function normalizeLiftTokens(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(t => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
+}
+
+function resolveLiftName(name: string, bank: LiftBankItem[]): string {
+  if (!bank.length) return name;
+  const exTokens = new Set(normalizeLiftTokens(name));
+  let best: { name: string; score: number } | null = null;
+  for (const lift of bank) {
+    if (lift.hidden) continue;
+    const bTokens = normalizeLiftTokens(lift.name);
+    if (!bTokens.length) continue;
+    const allMatch = bTokens.every(t => exTokens.has(t));
+    if (allMatch && (!best || bTokens.length > best.score)) {
+      best = { name: lift.name, score: bTokens.length };
+    }
+  }
+  return best?.name || name;
 }
 
 export function Dashboard({ profile, onNavigate }: Props) {
@@ -83,6 +108,37 @@ export function Dashboard({ profile, onNavigate }: Props) {
       unsubscribeLiftBank();
     };
   }, [profile.uid]);
+
+  const reconcileInFlight = useRef(false);
+  useEffect(() => {
+    if (!latestWorkout || liftBankItems.length === 0) return;
+    if (reconcileInFlight.current) return;
+
+    let changed = false;
+    const newDays = latestWorkout.days.map(day => {
+      if (!Array.isArray(day.exercises)) return day;
+      const newExercises = day.exercises.map(ex => {
+        const resolved = resolveLiftName(ex.name, liftBankItems);
+        if (resolved !== ex.name) {
+          changed = true;
+          return { ...ex, name: resolved };
+        }
+        return ex;
+      });
+      return { ...day, exercises: newExercises };
+    });
+
+    if (!changed) return;
+    reconcileInFlight.current = true;
+    updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), {
+      days: newDays,
+      updatedAt: new Date().toISOString(),
+    })
+      .catch(err => console.error('Failed to reconcile workout names:', err))
+      .finally(() => {
+        reconcileInFlight.current = false;
+      });
+  }, [latestWorkout, liftBankItems, profile.uid]);
 
   const currentWeight = vitals.length > 0 ? vitals[vitals.length - 1].weight : 180;
   const startWeight = vitals.length > 0 ? vitals[0].weight : 180;
@@ -569,31 +625,6 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
       </motion.div>
     </div>
   );
-}
-
-function normalizeLiftTokens(s: string): string[] {
-  return s
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map(t => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
-}
-
-function resolveLiftName(name: string, bank: LiftBankItem[]): string {
-  if (!bank.length) return name;
-  const exTokens = new Set(normalizeLiftTokens(name));
-  let best: { name: string; score: number } | null = null;
-  for (const lift of bank) {
-    if (lift.hidden) continue;
-    const bTokens = normalizeLiftTokens(lift.name);
-    if (!bTokens.length) continue;
-    const allMatch = bTokens.every(t => exTokens.has(t));
-    if (allMatch && (!best || bTokens.length > best.score)) {
-      best = { name: lift.name, score: bTokens.length };
-    }
-  }
-  return best?.name || name;
 }
 
 function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, key?: React.Key }) {
