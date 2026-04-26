@@ -220,7 +220,7 @@ export function MealPlanner({ profile }: Props) {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center justify-center md:justify-start gap-3">
           <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
-            <Utensils className="w-6 h-6 text-orange-500" />
+            <span className="text-2xl leading-none">🍴</span>
           </div>
           <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Meal Planner</h1>
         </div>
