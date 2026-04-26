@@ -511,7 +511,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
             <div>
               <h3 className="text-2xl font-bold text-[#141414]">Today's Meals</h3>
               <p className={`text-[#141414]/60 ${targetCalories && totalCalories > targetCalories ? 'text-red-500' : ''}`}>
-                {dayName} • {targetCalories
+                {targetCalories
                   ? (totalCalories > targetCalories
                       ? `${totalCalories - targetCalories} cal over`
                       : `${targetCalories - totalCalories} cal remaining`)
