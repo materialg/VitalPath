@@ -621,12 +621,9 @@ export function WorkoutCoach({ profile }: Props) {
                                 : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
                             }`}
                           >
-                            {/* Mobile: stacked name + sets × reps, capped to action-box height */}
+                            {/* Mobile: name only */}
                             <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
                               <h4 className="text-base font-bold truncate text-[#141414] leading-tight">{ex.name}</h4>
-                              <p className="text-xs font-medium text-[#141414]/60 leading-tight">
-                                {ex.sets} × {ex.reps} reps
-                              </p>
                             </div>
 
                             {/* Desktop: full header with badge, notes */}
