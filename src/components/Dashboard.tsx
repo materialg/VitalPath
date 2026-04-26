@@ -74,20 +74,32 @@ export function Dashboard({ profile, onNavigate }: Props) {
       }
     });
 
-    const workoutQuery = profile.activeWorkoutId
-      ? query(collection(db, 'users', profile.uid, 'workouts'), where('__name__', '==', profile.activeWorkoutId))
-      : query(collection(db, 'users', profile.uid, 'workouts'), orderBy('updatedAt', 'desc'), limit(1));
+    const workoutQuery = query(
+      collection(db, 'users', profile.uid, 'workouts'),
+      orderBy('updatedAt', 'desc'),
+      limit(10)
+    );
 
     const unsubscribeWorkouts = onSnapshot(workoutQuery, (snap) => {
-      if (!snap.empty) {
-        setLatestWorkout({ id: snap.docs[0].id, ...snap.docs[0].data() } as WorkoutPlan);
-      } else if (profile.activeWorkoutId) {
-        // Fallback if active plan not found
-        const fallbackQuery = query(collection(db, 'users', profile.uid, 'workouts'), orderBy('updatedAt', 'desc'), limit(1));
-        getDocs(fallbackQuery).then(s => {
-          if (!s.empty) setLatestWorkout({ id: s.docs[0].id, ...s.docs[0].data() } as WorkoutPlan);
-        });
-      }
+      if (snap.empty) return;
+      const plans = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkoutPlan));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const planCoversToday = (p: WorkoutPlan) => {
+        if (!p.weekStartDate) return false;
+        const ws = new Date(p.weekStartDate + 'T00:00:00');
+        ws.setHours(0, 0, 0, 0);
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 7);
+        return today >= ws && today < we;
+      };
+      const isPlanStub = (p: WorkoutPlan) =>
+        !Array.isArray(p.days) || !p.days.some(d => Array.isArray(d.exercises) && d.exercises.length > 0);
+      const planForToday = plans.find(p => planCoversToday(p) && !isPlanStub(p))
+        || plans.find(planCoversToday)
+        || plans.find(p => p.id === profile.activeWorkoutId)
+        || plans[0];
+      if (planForToday) setLatestWorkout(planForToday);
     });
 
     const foodBankQuery = query(collection(db, 'users', profile.uid, 'foodBank'));
@@ -258,7 +270,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       const dCal = calendarOrder.indexOf(d.day);
       if (dCal < todayCal) return d;
       if (dCal === todayCal) {
-        return { day: d.day, title: 'Rest', exercises: [], status: 'pending' as const };
+        return { day: d.day, title: 'Rest', exercises: [], status: 'completed' as const };
       }
       const sourceName = calendarOrder[dCal - 1];
       const source = latestWorkout.days.find(x => x.day === sourceName);
@@ -686,7 +698,10 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest }: { 
             </div>
             <div>
               <h3 className="text-2xl font-bold text-[#141414]">{todayWorkout.title}</h3>
-              <p className="text-[#141414]/60">{todayWorkout.day} • {todayWorkout.exercises.length} Exercises</p>
+              <p className="text-[#141414]/60">
+                {todayWorkout.day}
+                {todayWorkout.title !== 'Rest' && ` • ${todayWorkout.exercises.length} Exercises`}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
@@ -694,22 +709,24 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest }: { 
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center gap-3 p-4 bg-[#141414]/5 rounded-2xl">
-            <Timer className="text-[#141414]/40" size={20} />
-            <div>
-              <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Duration</p>
-              <p className="font-bold text-[#141414]">45-60 mins</p>
+        {todayWorkout.title !== 'Rest' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="flex items-center gap-3 p-4 bg-[#141414]/5 rounded-2xl">
+              <Timer className="text-[#141414]/40" size={20} />
+              <div>
+                <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Duration</p>
+                <p className="font-bold text-[#141414]">45-60 mins</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-[#141414]/5 rounded-2xl">
+              <Zap className="text-[#141414]/40" size={20} />
+              <div>
+                <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Intensity</p>
+                <p className="font-bold text-[#141414]">Moderate-High</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-4 bg-[#141414]/5 rounded-2xl">
-            <Zap className="text-[#141414]/40" size={20} />
-            <div>
-              <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Intensity</p>
-              <p className="font-bold text-[#141414]">Moderate-High</p>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="space-y-2 mb-6">
           {todayWorkout.title === 'Rest' ? (
