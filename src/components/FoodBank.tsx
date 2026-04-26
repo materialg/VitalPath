@@ -558,9 +558,9 @@ export function FoodBank({ profile, hideHeader }: Props) {
                   <button
                     onClick={() => setExpandedMobileId(item.id)}
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414]"
-                    aria-label="Show details"
+                    aria-label="Edit"
                   >
-                    <Eye size={16} />
+                    <Pencil size={16} />
                   </button>
                 </div>
               </div>
@@ -623,7 +623,7 @@ export function FoodBank({ profile, hideHeader }: Props) {
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414] text-white hover:bg-[#141414]/90 transition-colors"
                     aria-label="Close details"
                   >
-                    <Eye size={16} />
+                    <Pencil size={16} />
                   </button>
                 </div>
 

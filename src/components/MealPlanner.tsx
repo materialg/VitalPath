@@ -5,7 +5,7 @@ import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChefHat, Flame, Info, History, Calendar, X, Check, Trash2, Plus, Search, Undo2, Download, Utensils } from 'lucide-react';
+import { ChevronRight, ChefHat, Info, History, Calendar, X, Check, Trash2, Plus, Search, Undo2, Download } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -1029,60 +1029,34 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           <p className="hidden md:block text-sm text-[#141414]/40 ml-0.5">Customize ingredients and portions.</p>
         </div>
 
-        <div className="mb-3 md:mb-6 p-3 md:p-4 bg-[#141414] text-white rounded-2xl relative shadow-xl">
-          <div className="hidden md:block absolute top-4 left-4">
-            <Flame size={14} className="text-orange-500" />
-          </div>
-          <div className="grid grid-cols-4 gap-2 md:gap-4">
-            <div className="text-center">
-              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Total</p>
-              <p className={`text-sm md:text-lg font-bold ${(dayProgressOffset.calories + currentMeal.calories) > targets.dailyCalories ? 'text-red-500' : 'text-white'}`}>
-                {Math.round(dayProgressOffset.calories + currentMeal.calories)}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Protein</p>
-              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.protein + currentMeal.protein)}g</p>
-            </div>
-            <div className="text-center">
-              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Carbs</p>
-              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.carbs + currentMeal.carbs)}g</p>
-            </div>
-            <div className="text-center">
-              <p className="text-white/40 text-[9px] md:text-[10px] font-bold uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
-              <p className="text-sm md:text-lg font-bold text-white">{Math.round(dayProgressOffset.fats + currentMeal.fats)}g</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-5 gap-2 md:gap-4 mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl">
-          {(() => {
-            const remaining = Math.round(targets.dailyCalories - (dayProgressOffset.calories + currentMeal.calories));
-            const goalColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
-            return (
-              <div className="text-center">
-                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Goal</p>
-                <p className={`text-sm md:text-lg font-bold ${goalColor}`}>{remaining}</p>
+        {(() => {
+          const remaining = Math.round(targets.dailyCalories - (dayProgressOffset.calories + currentMeal.calories));
+          const targetColor = remaining > 0 ? 'text-green-500' : remaining < 0 ? 'text-red-500' : 'text-[#141414]';
+          const stats: { label: string; value: number | string; unit?: string; className?: string }[] = [
+            { label: 'Target', value: remaining, className: targetColor },
+            { label: 'Kcal', value: Math.round(currentMeal.calories) },
+            { label: 'P', value: Math.round(currentMeal.protein), unit: 'g' },
+            { label: 'C', value: Math.round(currentMeal.carbs), unit: 'g' },
+            { label: 'F', value: Math.round(currentMeal.fats), unit: 'g' },
+          ];
+          return (
+            <div className="mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl flex items-center gap-2 md:gap-3">
+              <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center shrink-0">
+                <span className="text-2xl md:text-3xl leading-none">🔥</span>
               </div>
-            );
-          })()}
-          <div className="text-center">
-            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Kcal</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.calories)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Protein</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.protein)}g</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Carbs</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.carbs)}g</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Fats</p>
-            <p className="text-sm md:text-lg font-bold text-[#141414]">{Math.round(currentMeal.fats)}g</p>
-          </div>
-        </div>
+              <div className="flex-1 grid grid-cols-5 gap-1 md:gap-4 min-w-0">
+                {stats.map((stat, i) => (
+                  <div key={i} className="text-center min-w-0">
+                    <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">{stat.label}</p>
+                    <p className={`text-sm md:text-lg font-black whitespace-nowrap ${stat.className ?? 'text-[#141414]'}`}>
+                      {stat.value}{stat.unit && <span className="hidden md:inline">{stat.unit}</span>}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
           {currentMeal.ingredientsWithAmounts.map((ing: any, idx: number) => {
