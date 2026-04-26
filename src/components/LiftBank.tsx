@@ -395,17 +395,6 @@ export function LiftBank({ profile, hideHeader }: Props) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#141414]/60">Notes (optional)</label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                    rows={2}
-                    className="w-full px-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] resize-none"
-                    placeholder="Cues, variations, or limitations"
-                  />
-                </div>
-
                 <div className="flex gap-2">
                   <button
                     type="submit"
