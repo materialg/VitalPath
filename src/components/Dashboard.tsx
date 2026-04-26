@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Undo2, Download } from 'lucide-react';
+import { TrendingDown, Target, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
@@ -949,132 +949,165 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
   };
 
   return (
-    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div 
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-stretch md:items-center justify-center md:p-4" onClick={onClose}>
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-2xl rounded-none md:rounded-3xl shadow-2xl border-0 md:border md:border-[#141414]/5 h-[100dvh] md:h-auto md:max-h-[90vh] overflow-y-auto overscroll-contain"
         onClick={e => e.stopPropagation()}
       >
-        <div className="mb-6 -ml-0.5">
-          <h3 className="text-2xl font-bold text-[#141414] tracking-tight">Edit {mealName || currentMeal.name}</h3>
+        <div className="p-4 md:p-8 pb-0 md:pb-0">
+        <div className="mb-4 md:mb-6 min-w-0 text-center">
+          <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate tracking-tight text-center">Edit {mealName || currentMeal.name}</h3>
+          <p className="hidden md:block text-sm text-[#141414]/40 text-center">Customize ingredients and portions.</p>
         </div>
 
-        <div className="flex items-center gap-3 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
-          <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
-            <span className="text-xl leading-none">🔥</span>
+        <div className="mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl flex items-center gap-2 md:gap-3">
+          <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center shrink-0">
+            <span className="text-2xl md:text-3xl leading-none">🔥</span>
           </div>
-          <div className="flex-1 grid grid-cols-5 gap-2">
+          <div className="flex-1 grid grid-cols-5 gap-1 md:gap-4 min-w-0">
             {[
-              { label: 'Target', val: targetCalories ?? '—', highlight: true },
-              { label: 'Kcal', val: currentMeal.calories },
-              { label: 'P', val: currentMeal.protein },
-              { label: 'C', val: currentMeal.carbs },
-              { label: 'F', val: currentMeal.fats },
-            ].map((s, i) => (
-              <div key={i} className="text-center">
-                <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{s.label}</p>
-                <p className={`text-base font-bold ${s.highlight ? 'text-emerald-500' : 'text-[#141414]'}`}>{s.val}</p>
+              { label: 'Target', value: targetCalories ?? '—', className: 'text-green-500' },
+              { label: 'Kcal', value: Math.round(currentMeal.calories) },
+              { label: 'P', value: Math.round(currentMeal.protein), unit: 'g' },
+              { label: 'C', value: Math.round(currentMeal.carbs), unit: 'g' },
+              { label: 'F', value: Math.round(currentMeal.fats), unit: 'g' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center min-w-0">
+                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">{stat.label}</p>
+                <p className={`text-sm md:text-lg font-black whitespace-nowrap ${stat.className ?? 'text-[#141414]'}`}>
+                  {stat.value}{stat.unit && <span className="hidden md:inline">{stat.unit}</span>}
+                </p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
+        <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
           {(currentMeal.ingredientsWithAmounts || []).map((ing: any, idx: number) => {
             const food = findFoodItem(ing.name);
             const unit = (food?.servingUnit || 'unit').toLowerCase();
+            const unitLabel = unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit;
             return (
-              <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-[#141414]/5 rounded-2xl group">
-                <div className="flex-1">
-                  <p className="font-bold text-[#141414]">{food?.name || ing.name}</p>
-                  <p className="text-xs text-[#141414]/40">
+              <div key={idx} className="p-3 md:p-4 bg-white border border-[#141414]/5 rounded-2xl">
+                <div className="min-w-0 mb-3">
+                  <p className="font-bold text-[#141414] truncate">{food?.name || ing.name}</p>
+                  <p className="text-xs text-[#141414]/40 truncate">
                     {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-[#141414]/5 rounded-xl p-1 gap-1">
-                    <button 
-                      onClick={() => updateIngredientAmount(idx, (parseFloat(ing.amount) - (food?.servingSize || 1)).toString())}
-                      className="w-8 h-8 rounded-lg hover:bg-white transition-colors flex items-center justify-center text-[#141414]"
-                    >-</button>
-                    <input 
-                      type="number"
-                      value={parseFloat(ing.amount) || 0}
-                      onChange={(e) => updateIngredientAmount(idx, e.target.value)}
-                      className="w-16 bg-transparent border-none text-center font-bold text-sm focus:ring-0 p-0"
-                    />
-                    <button 
-                      onClick={() => updateIngredientAmount(idx, (parseFloat(ing.amount) + (food?.servingSize || 1)).toString())}
-                      className="w-8 h-8 rounded-lg hover:bg-white transition-colors flex items-center justify-center text-[#141414]"
-                    >+</button>
+                  <div className="flex-1 min-w-0 flex items-center justify-between bg-[#141414]/5 rounded-xl p-1 gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const val = parseFloat(ing.amount) || 0;
+                        updateIngredientAmount(idx, `${Math.max(0, val - 1)}`);
+                      }}
+                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
+                    >
+                      −
+                    </button>
+                    <div className="flex-1 flex items-center justify-center gap-1 min-w-0">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={unit === 'unit' ? Math.round(parseFloat(ing.amount) || 0) : Math.ceil(parseFloat(ing.amount) || 0)}
+                        step="1"
+                        onChange={(e) => updateIngredientAmount(idx, e.target.value)}
+                        className="w-12 bg-transparent border-none text-base font-bold text-right focus:ring-0 p-0 appearance-none"
+                      />
+                      <span className="text-[10px] font-bold text-[#141414]/40 uppercase truncate">{unitLabel}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const val = parseFloat(ing.amount) || 0;
+                        updateIngredientAmount(idx, `${val + 1}`);
+                      }}
+                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
+                    >
+                      +
+                    </button>
                   </div>
-                  <button onClick={() => removeIngredient(idx)} className="p-2 text-red-400 hover:text-red-600 transition-colors">
-                    <Trash2 size={18} />
+                  <button
+                    type="button"
+                    onClick={() => removeIngredient(idx)}
+                    className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shrink-0"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
             );
           })}
+
+          {showFoodBank ? (
+            <div className="p-4 border-2 border-dashed border-[#141414]/10 rounded-2xl space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search food bank..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                {filteredFoodBank.map(food => (
+                  <button
+                    key={food.id}
+                    onClick={() => addIngredient(food)}
+                    className="flex items-center justify-between p-3 hover:bg-[#141414]/5 rounded-xl text-left transition-colors"
+                  >
+                    <div>
+                      <p className="font-bold text-sm text-[#141414]">{food.name}</p>
+                      <p className="text-[10px] text-[#141414]/40">{food.calories} cal / {food.servingSize}{food.servingUnit}</p>
+                    </div>
+                    <Plus size={16} className="text-[#141414]/20" />
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowFoodBank(false)}
+                className="w-full py-2 text-sm font-bold text-[#141414]/40 hover:text-[#141414]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowFoodBank(true)}
+              className="w-full py-4 border-2 border-solid border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
+              aria-label="Add food"
+            >
+              <Plus size={18} />
+            </button>
+          )}
         </div>
 
-        <div className="space-y-4">
-          <div className="relative">
-            <button
-              onClick={() => setShowFoodBank(!showFoodBank)}
-              aria-label="Add ingredient"
-              className="w-full py-4 px-6 bg-white border border-[#141414]/10 text-[#141414] rounded-xl font-medium flex items-center justify-center hover:bg-[#141414]/5 transition-colors"
-            >
-              <Plus size={20} className="text-[#141414]/40" />
-            </button>
-
-            <AnimatePresence>
-              {showFoodBank && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-full left-0 right-0 mb-4 bg-white rounded-3xl shadow-2xl border border-[#141414]/10 p-4 z-50 overflow-hidden flex flex-col max-h-[400px]"
-                >
-                  <div className="relative mb-4">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-                    <input 
-                      type="text"
-                      placeholder="Search food bank..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-                    />
-                  </div>
-                  <div className="flex-1 overflow-y-auto space-y-1 pr-2">
-                    {filteredFoodBank.map(food => (
-                      <button 
-                        key={food.id}
-                        onClick={() => addIngredient(food)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-[#141414]/5 rounded-xl transition-colors text-left"
-                      >
-                        <div>
-                          <p className="font-bold text-[#141414]">{food.name}</p>
-                          <p className="text-xs text-[#141414]/40">{food.calories} cal / {food.servingSize}{food.servingUnit}</p>
-                        </div>
-                        <Plus size={18} className="text-[#141414]/20" />
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="flex gap-4">
-            <button onClick={onClose} aria-label="Cancel" className="flex-1 py-4 px-6 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center">
-              <Undo2 size={20} />
-            </button>
-            <button onClick={handleSave} aria-label="Save changes" className="flex-[2] py-4 px-6 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center">
-              <Download size={20} />
-            </button>
-          </div>
+        </div>
+        <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
+          <button
+            onClick={onClose}
+            aria-label="Cancel"
+            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+          >
+            <span className="text-xl leading-none">❌</span>
+          </button>
+          <button
+            onClick={handleSave}
+            aria-label="Save changes"
+            className="flex-1 py-3 md:py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10 flex items-center justify-center"
+          >
+            <span className="text-xl leading-none">✅</span>
+          </button>
         </div>
       </motion.div>
     </div>
