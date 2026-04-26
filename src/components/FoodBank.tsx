@@ -443,10 +443,14 @@ export function FoodBank({ profile, hideHeader }: Props) {
               className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl border border-[#141414]/5"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-[#141414]">{editingItem ? 'Edit Food' : 'Add New Food'}</h3>
-                <button onClick={() => { 
-                  setIsAdding(false); 
+              <div className="flex items-center justify-between mb-6">
+                {editingItem ? (
+                  <span />
+                ) : (
+                  <h3 className="text-2xl font-bold text-[#141414]">Add New Food</h3>
+                )}
+                <button onClick={() => {
+                  setIsAdding(false);
                   setEditingItem(null);
                   resetForm();
                 }} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
@@ -470,26 +474,32 @@ export function FoodBank({ profile, hideHeader }: Props) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-[#141414]/60">Meal Designation</label>
                   <div className="flex gap-2">
-                    {['B', 'L', 'D'].map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          const current = formData.mealTypes || [];
-                          const next = current.includes(type as any)
-                            ? current.filter(t => t !== type)
-                            : [...current, type as any];
-                          setFormData({ ...formData, mealTypes: next });
-                        }}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
-                          formData.mealTypes?.includes(type as any)
-                            ? 'bg-[#141414] text-white border-[#141414]'
-                            : 'bg-white text-[#141414]/40 border-[#141414]/5 hover:border-[#141414]/20'
-                        }`}
-                      >
-                        {type === 'B' ? 'Breakfast' : type === 'L' ? 'Lunch' : 'Dinner'}
-                      </button>
-                    ))}
+                    {(['B', 'L', 'D'] as const).map((type) => {
+                      const selected = formData.mealTypes?.includes(type);
+                      const activeColor =
+                        type === 'B' ? 'bg-blue-100 text-blue-700' :
+                        type === 'L' ? 'bg-orange-100 text-orange-700' :
+                        'bg-purple-100 text-purple-700';
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            const current = formData.mealTypes || [];
+                            const next = current.includes(type)
+                              ? current.filter((t: any) => t !== type)
+                              : [...current, type];
+                            setFormData({ ...formData, mealTypes: next });
+                          }}
+                          aria-label={type === 'B' ? 'Breakfast' : type === 'L' ? 'Lunch' : 'Dinner'}
+                          className={`w-9 h-9 rounded text-xs font-black transition-all flex items-center justify-center ${
+                            selected ? activeColor : 'bg-[#141414]/5 text-[#141414]/30 hover:text-[#141414]/60'
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
