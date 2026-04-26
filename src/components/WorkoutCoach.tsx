@@ -163,6 +163,20 @@ export function WorkoutCoach({ profile }: Props) {
     }
   };
 
+  const handleRegenerate = async () => {
+    if (!activePlan || !activePlanId) return;
+    if (isGenerating) return;
+    const ok = window.confirm("Regenerate this week's workouts? Your current plan will be replaced.");
+    if (!ok) return;
+    const wsStr = activePlan.weekStartDate;
+    try {
+      await deleteDoc(doc(db, 'users', profile.uid, 'workouts', activePlanId));
+    } catch (err) {
+      console.warn('Failed to delete current plan, continuing:', err);
+    }
+    await handleGenerate(wsStr);
+  };
+
   // Auto-generate the current week's plan once per session if the user
   // already has prior plans but none cover today with real content (a new
   // week rolled over, or only an empty stub exists). First-time users still
@@ -709,20 +723,20 @@ export function WorkoutCoach({ profile }: Props) {
                                           e.stopPropagation();
                                           addSet(idx);
                                         }}
-                                        className="w-full py-3 rounded-xl border-2 border-dashed border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                                        title="Add set"
+                                        className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
                                       >
                                         <Plus size={16} />
-                                        Add Set
                                       </button>
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           removeExercise(idx);
                                         }}
-                                        className="w-full py-3 rounded-xl border-2 border-dashed border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                                        title="Delete exercise"
+                                        className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
                                       >
                                         <Trash2 size={16} />
-                                        Delete Exercise
                                       </button>
                                     </div>
                                   </div>
@@ -756,6 +770,17 @@ export function WorkoutCoach({ profile }: Props) {
         >
           <span className="font-bold text-sm">View History</span>
           <Calendar size={18} />
+        </button>
+
+        <button
+          onClick={handleRegenerate}
+          disabled={isGenerating || !activePlan}
+          className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-dashed border-[#141414]/10 disabled:opacity-50 disabled:hover:bg-transparent"
+        >
+          <span className="font-bold text-sm">
+            {isGenerating ? 'Regenerating…' : 'Regenerate Workouts'}
+          </span>
+          <Sparkles size={18} />
         </button>
         </>
       ) : (

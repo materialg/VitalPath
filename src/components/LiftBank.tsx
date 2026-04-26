@@ -20,7 +20,7 @@ interface Props {
   hideHeader?: boolean;
 }
 
-const CATEGORY_OPTIONS: LiftCategory[] = ['push', 'pull', 'legs', 'core', 'cardio'];
+const CATEGORY_OPTIONS: LiftCategory[] = ['push', 'pull', 'legs'];
 const EQUIPMENT_OPTIONS: LiftEquipment[] = [
   'barbell',
   'dumbbell',
@@ -35,8 +35,6 @@ const CATEGORY_BADGE: Record<LiftCategory, string> = {
   push: 'bg-orange-100 text-orange-700',
   pull: 'bg-blue-100 text-blue-700',
   legs: 'bg-purple-100 text-purple-700',
-  core: 'bg-emerald-100 text-emerald-700',
-  cardio: 'bg-pink-100 text-pink-700',
 };
 
 export function LiftBank({ profile, hideHeader }: Props) {
