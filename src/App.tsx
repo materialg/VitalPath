@@ -193,11 +193,8 @@ export default function App() {
       case 'dashboard': return <Dashboard profile={profile} onNavigate={setActiveTab} />;
       case 'trends': return (
         <div className="space-y-8">
-          <header className="flex items-center justify-center md:justify-start gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
-              <span className="text-2xl leading-none">📈</span>
-            </div>
-            <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Trends</h1>
+          <header className="text-center lg:text-left">
+            <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">📈 Trends</h1>
           </header>
           <VitalsTracker profile={profile} />
         </div>
