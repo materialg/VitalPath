@@ -79,7 +79,7 @@ service cloud.firestore {
 
     function isValidLiftBankItem(data) {
       return (!('name' in data) || (data.name is string && data.name.size() <= 128))
-        && (!('category' in data) || (data.category in ['push', 'pull', 'legs', 'core', 'cardio']))
+        && (!('category' in data) || (data.category in ['push', 'pull', 'legs']))
         && (!('equipment' in data) || (data.equipment in ['barbell', 'dumbbell', 'bodyweight', 'machine', 'cable', 'kettlebell', 'other']))
         && (!('defaultSets' in data) || (data.defaultSets is number && data.defaultSets >= 0 && data.defaultSets <= 20))
         && (!('defaultReps' in data) || (data.defaultReps is string && data.defaultReps.size() <= 32))

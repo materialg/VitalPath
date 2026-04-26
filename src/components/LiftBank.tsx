@@ -76,7 +76,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
     setEditingItem(item);
     setFormData({
       name: item.name,
-      category: item.category || 'push',
+      category: CATEGORY_OPTIONS.includes(item.category as LiftCategory) ? item.category : 'push',
       equipment: item.equipment || 'barbell',
       defaultSets: item.defaultSets ?? '',
       defaultReps: item.defaultReps ?? '',

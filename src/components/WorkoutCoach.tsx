@@ -258,8 +258,6 @@ export function WorkoutCoach({ profile }: Props) {
     if (lower === 'rest') return null;
     if (lower.includes('pull')) return 'pull';
     if (lower.includes('leg')) return 'legs';
-    if (lower.includes('core') || lower.includes('abs')) return 'core';
-    if (lower.includes('cardio')) return 'cardio';
     if (lower.includes('push')) return 'push';
     return null;
   };

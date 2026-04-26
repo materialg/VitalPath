@@ -6,8 +6,6 @@ function inferCategoryFromDayTitle(title: string): LiftCategory {
   const lower = (title || '').toLowerCase();
   if (lower.includes('pull')) return 'pull';
   if (lower.includes('leg')) return 'legs';
-  if (lower.includes('core') || lower.includes('abs')) return 'core';
-  if (lower.includes('cardio')) return 'cardio';
   return 'push';
 }
 
