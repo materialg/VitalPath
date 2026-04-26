@@ -693,7 +693,6 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout:
                   {idx + 1}
                 </div>
                 <h5 className="flex-1 font-bold text-[#141414] truncate">{resolveLiftName(ex.name, liftBank)}</h5>
-                <p className="font-bold text-[#141414] whitespace-nowrap">{ex.sets} × {ex.reps}</p>
               </div>
             ))
           )}
