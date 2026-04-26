@@ -55,8 +55,20 @@ export function LiftBank({ profile, hideHeader }: Props) {
 
   useEffect(() => {
     const q = query(collection(db, 'users', profile.uid, 'liftBank'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() } as LiftBankItem)));
+    const unsubscribe = onSnapshot(q, async (snap) => {
+      const next = snap.docs.map(d => ({ id: d.id, ...d.data() } as LiftBankItem));
+      setItems(next);
+
+      const stale = snap.docs.filter(d => {
+        const c = (d.data() as any).category;
+        return c === 'core' || c === 'cardio';
+      });
+      if (stale.length > 0) {
+        const batch = writeBatch(db);
+        const now = new Date().toISOString();
+        stale.forEach(d => batch.update(d.ref, { category: 'push', updatedAt: now }));
+        try { await batch.commit(); } catch (err) { console.warn('Lift category migration failed:', err); }
+      }
     });
     return () => unsubscribe();
   }, [profile.uid]);
@@ -76,7 +88,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
     setEditingItem(item);
     setFormData({
       name: item.name,
-      category: CATEGORY_OPTIONS.includes(item.category as LiftCategory) ? item.category : 'push',
+      category: item.category || 'push',
       equipment: item.equipment || 'barbell',
       defaultSets: item.defaultSets ?? '',
       defaultReps: item.defaultReps ?? '',
