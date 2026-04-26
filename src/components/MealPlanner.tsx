@@ -246,15 +246,21 @@ export function MealPlanner({ profile }: Props) {
           d.setDate(todayMonday.getDate() + i);
           return d;
         });
+        const dayHasMeals = (day: any) =>
+          Array.isArray(day?.meals) && day.meals.some((m: any) => (m?.ingredientsWithAmounts?.length ?? 0) > 0);
         const planForDate = (date: Date) => {
+          let fallback: MealPlan | null = null;
           for (const p of mealPlans) {
-            if (!p.weekStartDate) continue;
+            if (!p.weekStartDate || !Array.isArray(p.days)) continue;
             const ws = new Date(p.weekStartDate + 'T00:00:00');
             const we = new Date(ws);
             we.setDate(ws.getDate() + 7);
-            if (date >= ws && date < we) return p;
+            if (date < ws || date >= we) continue;
+            const dayInPlan = Math.round((date.getTime() - ws.getTime()) / 86400000);
+            if (dayHasMeals(p.days[dayInPlan])) return p;
+            if (!fallback) fallback = p;
           }
-          return null;
+          return fallback;
         };
         const selectedAbs = activePlan.weekStartDate ? (() => {
           const ws = new Date(activePlan.weekStartDate + 'T00:00:00');
@@ -681,8 +687,9 @@ export function MealPlanner({ profile }: Props) {
       {/* History Modal */}
       <AnimatePresence>
         {isHistoryOpen && (() => {
-          const dayEntries: Array<{ key: string; date: Date; dayLabel: string; meals: any[] }> = [];
-          const seen = new Set<string>();
+          const byKey = new Map<string, { entry: { key: string; date: Date; dayLabel: string; meals: any[]; planId: string; dayInPlan: number }; hasData: boolean }>();
+          const dayHasData = (meals: any[]) =>
+            meals.some(m => (m?.ingredientsWithAmounts?.length ?? 0) > 0);
           for (const plan of mealPlans) {
             if (!plan.weekStartDate || !Array.isArray(plan.days)) continue;
             const base = new Date(plan.weekStartDate + 'T00:00:00');
@@ -691,16 +698,23 @@ export function MealPlanner({ profile }: Props) {
               const date = new Date(base);
               date.setDate(base.getDate() + idx);
               const key = date.toLocaleDateString('en-CA');
-              if (seen.has(key)) return;
-              seen.add(key);
-              dayEntries.push({
+              const meals = Array.isArray(day.meals) ? day.meals : [];
+              const hasData = dayHasData(meals);
+              const entry = {
                 key,
                 date,
                 dayLabel: MEAL_PLAN_DAYS[idx] || day.day || '',
-                meals: Array.isArray(day.meals) ? day.meals : [],
-              });
+                meals,
+                planId: plan.id,
+                dayInPlan: idx,
+              };
+              const existing = byKey.get(key);
+              if (!existing || (!existing.hasData && hasData)) {
+                byKey.set(key, { entry, hasData });
+              }
             });
           }
+          const dayEntries = Array.from(byKey.values()).map(v => v.entry);
           const todayKey = new Date().toLocaleDateString('en-CA');
           const visibleEntries = dayEntries
             .filter(e => e.key <= todayKey)
@@ -749,7 +763,14 @@ export function MealPlanner({ profile }: Props) {
                     return (
                       <button
                         key={entry.key}
-                        onClick={() => setSelectedHistoryKey(entry.key)}
+                        onClick={async () => {
+                          setSelectedHistoryKey(entry.key);
+                          if (entry.planId !== activePlanId) {
+                            await handlePlanSelect(entry.planId);
+                          }
+                          setSelectedDay(entry.dayInPlan);
+                          setIsHistoryOpen(false);
+                        }}
                         className={`w-full p-4 text-left rounded-2xl transition-all border ${
                           isSelected
                             ? 'bg-[#141414] text-white border-transparent shadow-lg'
