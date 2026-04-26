@@ -13,7 +13,7 @@ import {
 import { db } from '../firebase';
 import { UserProfile, LiftBankItem, LiftCategory, LiftEquipment } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Pencil, X, Save, Library, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Library, EyeOff } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -41,7 +41,6 @@ export function LiftBank({ profile, hideHeader }: Props) {
   const [items, setItems] = useState<LiftBankItem[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<LiftBankItem | null>(null);
-  const [expandedMobileId, setExpandedMobileId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<LiftCategory | 'all'>('all');
   const [formData, setFormData] = useState<any>({
     name: '',
@@ -268,7 +267,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
                     </div>
                   </div>
                   <button
-                    onClick={() => setExpandedMobileId(item.id)}
+                    onClick={() => openForEdit(item)}
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414]"
                     aria-label="Edit"
                   >
@@ -292,105 +291,6 @@ export function LiftBank({ profile, hideHeader }: Props) {
           </div>
         )}
       </div>
-
-      {/* Detail Popout Modal */}
-      <AnimatePresence>
-        {expandedMobileId && (() => {
-          const item = items.find(i => i.id === expandedMobileId);
-          if (!item) return null;
-          return (
-            <div
-              className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setExpandedMobileId(null)}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white w-full max-w-md p-6 rounded-3xl shadow-2xl border border-[#141414]/5"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-3 mb-6">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-2xl font-bold text-[#141414] truncate">{item.name}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${CATEGORY_BADGE[item.category] || 'bg-[#141414]/5 text-[#141414]/60'}`}>
-                        {item.category}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setExpandedMobileId(null)}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414] text-white hover:bg-[#141414]/90 transition-colors"
-                    aria-label="Close details"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                    <span className="text-[#141414]/50 font-medium">Category</span>
-                    <span className="font-bold text-[#141414] capitalize">{item.category}</span>
-                  </div>
-                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                    <span className="text-[#141414]/50 font-medium">Equipment</span>
-                    <span className="font-bold text-[#141414] capitalize">{item.equipment || '—'}</span>
-                  </div>
-                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                    <span className="text-[#141414]/50 font-medium">Sets</span>
-                    <span className="font-bold text-[#141414]">{item.defaultSets ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                    <span className="text-[#141414]/50 font-medium">Reps</span>
-                    <span className="font-bold text-[#141414]">{item.defaultReps || '—'}</span>
-                  </div>
-                </div>
-
-                {item.notes && (
-                  <div className="bg-[#141414]/[0.03] rounded-lg px-3 py-2 mb-4">
-                    <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Notes</p>
-                    <p className="text-sm text-[#141414]/80 leading-relaxed">{item.notes}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      openForEdit(item);
-                      setExpandedMobileId(null);
-                    }}
-                    aria-label="Edit"
-                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleToggleHidden(item);
-                      setExpandedMobileId(null);
-                    }}
-                    aria-label={item.hidden ? 'Unhide' : 'Hide'}
-                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
-                  >
-                    {item.hidden ? <Eye size={18} /> : <EyeOff size={18} />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleDelete(item.id);
-                      setExpandedMobileId(null);
-                    }}
-                    aria-label="Delete"
-                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all flex items-center justify-center"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          );
-        })()}
-      </AnimatePresence>
 
       <AnimatePresence>
         {(isAdding || editingItem) && (
@@ -499,13 +399,29 @@ export function LiftBank({ profile, hideHeader }: Props) {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
-                >
-                  <Save size={18} />
-                  {editingItem ? 'Update Lift' : 'Save to Lift Bank'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="text-lg leading-none">💽</span>
+                    {editingItem ? 'Update Lift' : 'Save to Lift Bank'}
+                  </button>
+                  {editingItem && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleToggleHidden(editingItem);
+                        setEditingItem(null);
+                        resetForm();
+                      }}
+                      className="flex-1 py-4 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="text-lg leading-none">👁️</span>
+                      {editingItem.hidden ? 'Unhide Lift' : 'Hide Lift'}
+                    </button>
+                  )}
+                </div>
               </form>
             </motion.div>
           </div>
