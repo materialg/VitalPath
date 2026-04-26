@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Undo2, Download } from 'lucide-react';
+import { TrendingDown, Target, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Undo2, Download } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
@@ -325,7 +325,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
           <TodoItem
             icon={<span className="text-xl leading-none">💪</span>}
-            title={todayWorkout ? todayWorkout.title : "Today's Workout"}
+            title="Lift"
             status={todayWorkout?.status || 'none'}
             color="purple"
             onAction={(action) => {
@@ -575,8 +575,8 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
       >
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
-              <Utensils size={24} />
+            <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
+              <span className="text-2xl leading-none">🍴</span>
             </div>
             <div>
               <h3 className="text-2xl font-bold text-[#141414]">Today's Meals</h3>
