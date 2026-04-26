@@ -770,7 +770,6 @@ export function WorkoutCoach({ profile }: Props) {
                 <div className="flex items-start justify-between gap-3 mb-6">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-2xl font-bold text-[#141414] truncate">{ex.name}</h3>
-                    <p className="text-sm font-medium text-[#141414]/60 mt-1">{ex.sets} × {ex.reps} reps</p>
                     {ex.notes && (
                       <p className="text-sm text-[#141414]/60 leading-relaxed mt-2">{ex.notes}</p>
                     )}
@@ -782,11 +781,6 @@ export function WorkoutCoach({ profile }: Props) {
                   >
                     <X size={18} />
                   </button>
-                </div>
-
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Log Performance</p>
-                  <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Target: {ex.reps} Reps</p>
                 </div>
 
                 <div className="space-y-2">
