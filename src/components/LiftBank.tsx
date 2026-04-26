@@ -328,7 +328,6 @@ export function LiftBank({ profile, hideHeader }: Props) {
             <p className="text-center text-sm text-[#141414]/40 py-8">No lifts in this category yet.</p>
           )}
           {displayedItems.map(item => {
-            const isExpanded = expandedMobileId === item.id;
             return (
               <div key={item.id} className={`${item.hidden ? 'opacity-50' : ''}`}>
                 <div className={`flex items-center gap-3 px-4 py-3 ${selectedIds.has(item.id) ? 'bg-[#141414]/[0.02]' : ''}`}>
@@ -354,66 +353,13 @@ export function LiftBank({ profile, hideHeader }: Props) {
                     </div>
                   </div>
                   <button
-                    onClick={() => setExpandedMobileId(isExpanded ? null : item.id)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                      isExpanded ? 'bg-[#141414] text-white' : 'bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414]'
-                    }`}
-                    aria-label={isExpanded ? 'Hide details' : 'Show details'}
+                    onClick={() => setExpandedMobileId(item.id)}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414]"
+                    aria-label="Show details"
                   >
                     <Eye size={16} />
                   </button>
                 </div>
-                <AnimatePresence initial={false}>
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-4 pb-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                            <span className="text-[#141414]/50 font-medium">Category</span>
-                            <span className="font-bold text-[#141414] capitalize">{item.category}</span>
-                          </div>
-                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                            <span className="text-[#141414]/50 font-medium">Equipment</span>
-                            <span className="font-bold text-[#141414] capitalize">{item.equipment || '—'}</span>
-                          </div>
-                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                            <span className="text-[#141414]/50 font-medium">Sets</span>
-                            <span className="font-bold text-[#141414]">{item.defaultSets ?? '—'}</span>
-                          </div>
-                          <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                            <span className="text-[#141414]/50 font-medium">Reps</span>
-                            <span className="font-bold text-[#141414]">{item.defaultReps || '—'}</span>
-                          </div>
-                        </div>
-                        {item.notes && (
-                          <div className="bg-[#141414]/[0.03] rounded-lg px-3 py-2">
-                            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Notes</p>
-                            <p className="text-sm text-[#141414]/80 leading-relaxed">{item.notes}</p>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openForEdit(item)}
-                            className="flex-1 py-2 bg-[#141414]/5 text-[#141414] rounded-xl font-bold text-sm hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
-                          >
-                            <Pencil size={14} /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-all flex items-center justify-center gap-2"
-                          >
-                            <Trash2 size={14} /> Delete
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             );
           })}
@@ -431,6 +377,93 @@ export function LiftBank({ profile, hideHeader }: Props) {
           </div>
         )}
       </div>
+
+      {/* Detail Popout Modal */}
+      <AnimatePresence>
+        {expandedMobileId && (() => {
+          const item = items.find(i => i.id === expandedMobileId);
+          if (!item) return null;
+          return (
+            <div
+              className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setExpandedMobileId(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white w-full max-w-md p-6 rounded-3xl shadow-2xl border border-[#141414]/5"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-3 mb-6">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-2xl font-bold text-[#141414] truncate">{item.name}</h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${CATEGORY_BADGE[item.category] || 'bg-[#141414]/5 text-[#141414]/60'}`}>
+                        {item.category}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setExpandedMobileId(null)}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414] text-white hover:bg-[#141414]/90 transition-colors"
+                    aria-label="Close details"
+                  >
+                    <Eye size={16} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                    <span className="text-[#141414]/50 font-medium">Category</span>
+                    <span className="font-bold text-[#141414] capitalize">{item.category}</span>
+                  </div>
+                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                    <span className="text-[#141414]/50 font-medium">Equipment</span>
+                    <span className="font-bold text-[#141414] capitalize">{item.equipment || '—'}</span>
+                  </div>
+                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                    <span className="text-[#141414]/50 font-medium">Sets</span>
+                    <span className="font-bold text-[#141414]">{item.defaultSets ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between bg-[#141414]/[0.03] rounded-lg px-3 py-2">
+                    <span className="text-[#141414]/50 font-medium">Reps</span>
+                    <span className="font-bold text-[#141414]">{item.defaultReps || '—'}</span>
+                  </div>
+                </div>
+
+                {item.notes && (
+                  <div className="bg-[#141414]/[0.03] rounded-lg px-3 py-2 mb-4">
+                    <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Notes</p>
+                    <p className="text-sm text-[#141414]/80 leading-relaxed">{item.notes}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      openForEdit(item);
+                      setExpandedMobileId(null);
+                    }}
+                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl font-bold text-sm hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Pencil size={14} /> Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDelete(item.id);
+                      setExpandedMobileId(null);
+                    }}
+                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
 
       <AnimatePresence>
         {(isAdding || editingItem) && (
