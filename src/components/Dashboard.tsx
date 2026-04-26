@@ -285,7 +285,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
       return next;
     });
 
-    setShowWorkoutModal(false);
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
         days: newDays,
