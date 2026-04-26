@@ -307,7 +307,11 @@ export function LiftBank({ profile, hideHeader }: Props) {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-[#141414]">{editingItem ? 'Edit Lift' : 'Add New Lift'}</h3>
+                {editingItem ? (
+                  <span />
+                ) : (
+                  <h3 className="text-2xl font-bold text-[#141414]">Add New Lift</h3>
+                )}
                 <button onClick={() => {
                   setIsAdding(false);
                   setEditingItem(null);
