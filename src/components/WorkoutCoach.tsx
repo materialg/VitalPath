@@ -332,8 +332,7 @@ export function WorkoutCoach({ profile }: Props) {
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:mt-8">
-                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible no-scrollbar -mx-2 px-2">
-                  <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
+                <div className="grid grid-cols-7 gap-1 lg:flex lg:flex-col lg:gap-2">
                   {activePlan?.days.map((day, idx) => {
                     const now = new Date();
                     const d = new Date(now);
@@ -343,10 +342,8 @@ export function WorkoutCoach({ profile }: Props) {
                     return (
                       <button
                         key={idx}
-                        ref={selectedDay === idx ? selectedDayRef : null}
                         onClick={() => setSelectedDay(idx)}
-                        className={`shrink-0 rounded-2xl transition-all flex items-center justify-center lg:justify-between
-                          w-14 h-14 lg:w-full lg:h-auto lg:p-4 ${
+                        className={`aspect-square lg:aspect-auto rounded-2xl transition-all flex items-center justify-center lg:justify-between lg:w-full lg:h-auto lg:p-4 ${
                           selectedDay === idx
                             ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
                             : 'text-[#141414]/40 hover:bg-white/50'
@@ -360,7 +357,6 @@ export function WorkoutCoach({ profile }: Props) {
                       </button>
                     );
                   })}
-                  <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
                 </div>
               </div>
             </div>
@@ -562,17 +558,6 @@ export function WorkoutCoach({ profile }: Props) {
             </div>
           </div>
         </div>
-
-        <button
-          onClick={handleGenerate}
-          disabled={isGenerating}
-          className="w-full px-6 py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#141414]/10"
-        >
-          {isGenerating ? (
-            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Sparkles size={18} /></motion.div>
-          ) : <Sparkles size={18} />}
-          {activePlan ? 'Regenerate Plan' : 'Generate Plan'}
-        </button>
 
         <button
           onClick={() => setIsHistoryOpen(true)}
