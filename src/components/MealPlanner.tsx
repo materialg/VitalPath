@@ -235,25 +235,31 @@ export function MealPlanner({ profile }: Props) {
         </div>
       )}
 
-      {/* Day Selector pills (mobile only, above target) */}
+      {/* Day Selector date boxes (mobile only, above target) */}
       {mealPlans.length > 0 && activePlan && (
         <div className="lg:hidden -mx-2 px-2">
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             <div aria-hidden className="shrink-0 w-[40vw]" />
-            {activePlan.days.map((day, idx) => (
-              <button
-                key={idx}
-                ref={selectedDay === idx ? selectedDayRef : undefined}
-                onClick={() => setSelectedDay(idx)}
-                className={`shrink-0 px-4 py-3 rounded-2xl transition-all ${
-                  selectedDay === idx
-                    ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
-                    : 'text-[#141414]/40 hover:bg-white/50'
-                }`}
-              >
-                <span className="font-bold whitespace-nowrap">{MEAL_PLAN_DAYS[idx] || day.day}</span>
-              </button>
-            ))}
+            {activePlan.days.map((day, idx) => {
+              const date = weekDateFor(idx);
+              const month = date ? date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
+              const dayNum = date ? date.getDate() : idx + 1;
+              return (
+                <button
+                  key={idx}
+                  ref={selectedDay === idx ? selectedDayRef : undefined}
+                  onClick={() => setSelectedDay(idx)}
+                  className={`shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-all ${
+                    selectedDay === idx
+                      ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                      : 'text-[#141414]/40 hover:bg-white/50'
+                  }`}
+                >
+                  <span className="text-[9px] font-bold uppercase leading-none">{month}</span>
+                  <span className="text-base font-black leading-tight">{dayNum}</span>
+                </button>
+              );
+            })}
             <div aria-hidden className="shrink-0 w-[40vw]" />
           </div>
         </div>
@@ -408,21 +414,6 @@ export function MealPlanner({ profile }: Props) {
                           </div>
                         ))}
                       </div>
-
-                      {/* date tile */}
-                      {(() => {
-                        const now = new Date();
-                        const d = new Date(now);
-                        d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + selectedDay);
-                        const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-                        const dayNum = d.getDate();
-                        return (
-                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex flex-col items-center justify-center shrink-0">
-                            <span className="text-[9px] font-bold text-[#141414]/50 uppercase leading-none">{month}</span>
-                            <span className="text-sm md:text-base font-black text-[#141414] leading-tight">{dayNum}</span>
-                          </div>
-                        );
-                      })()}
                     </div>
                   );
                 })()}

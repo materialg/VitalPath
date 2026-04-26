@@ -328,27 +328,38 @@ export function WorkoutCoach({ profile }: Props) {
       {workoutPlans.length > 0 ? (
         <>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Day Selector Sidebar */}
+          {/* Day Selector */}
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:mt-8">
                 <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible no-scrollbar -mx-2 px-2">
                   <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
-                  {activePlan?.days.map((day, idx) => (
-                    <button
-                      key={idx}
-                      ref={selectedDay === idx ? selectedDayRef : null}
-                      onClick={() => setSelectedDay(idx)}
-                      className={`shrink-0 lg:w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                        selectedDay === idx
-                          ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
-                          : 'text-[#141414]/40 hover:bg-white/50'
-                      }`}
-                    >
-                      <span className="font-bold whitespace-nowrap lg:whitespace-normal">{day.day}</span>
-                      <ChevronRight size={16} className={`hidden lg:block ${selectedDay === idx ? 'opacity-100' : 'opacity-0'}`} />
-                    </button>
-                  ))}
+                  {activePlan?.days.map((day, idx) => {
+                    const now = new Date();
+                    const d = new Date(now);
+                    d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + idx);
+                    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+                    const dayNum = d.getDate();
+                    return (
+                      <button
+                        key={idx}
+                        ref={selectedDay === idx ? selectedDayRef : null}
+                        onClick={() => setSelectedDay(idx)}
+                        className={`shrink-0 rounded-2xl transition-all flex items-center justify-center lg:justify-between
+                          w-14 h-14 lg:w-full lg:h-auto lg:p-4 ${
+                          selectedDay === idx
+                            ? 'bg-white shadow-md border border-[#141414]/5 text-[#141414]'
+                            : 'text-[#141414]/40 hover:bg-white/50'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center lg:items-start leading-none">
+                          <span className="text-[9px] lg:text-[10px] font-bold uppercase">{month}</span>
+                          <span className="text-base lg:text-lg font-black mt-0.5">{dayNum}</span>
+                        </div>
+                        <ChevronRight size={16} className={`hidden lg:block ${selectedDay === idx ? 'opacity-100' : 'opacity-0'}`} />
+                      </button>
+                    );
+                  })}
                   <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
                 </div>
               </div>
@@ -358,24 +369,9 @@ export function WorkoutCoach({ profile }: Props) {
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-              <div className="flex items-center justify-between mb-4 lg:mb-8 px-3 md:px-4 lg:px-6">
-                <div>
-                  <h3 className="text-xl lg:text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
-                  <p className="text-xs lg:text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
-                </div>
-                {(() => {
-                  const now = new Date();
-                  const d = new Date(now);
-                  d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + selectedDay);
-                  const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-                  const dayNum = d.getDate();
-                  return (
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#141414]/5 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[9px] font-bold text-[#141414]/50 uppercase leading-none">{month}</span>
-                      <span className="text-sm md:text-base font-black text-[#141414] leading-tight">{dayNum}</span>
-                    </div>
-                  );
-                })()}
+              <div className="mb-4 lg:mb-8 px-3 md:px-4 lg:px-6">
+                <h3 className="text-xl lg:text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
+                <p className="text-xs lg:text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
               </div>
 
               <div className="space-y-8">
