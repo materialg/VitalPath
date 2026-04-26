@@ -292,7 +292,7 @@ export function WorkoutCoach({ profile }: Props) {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="text-center md:text-left">
-          <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Workout Coach</h1>
+          <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Workout Coach</h1>
         </div>
       </header>
 

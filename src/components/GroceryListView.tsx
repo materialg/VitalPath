@@ -44,7 +44,7 @@ export function GroceryListView({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-4xl font-sans font-bold text-[#141414] tracking-tight">Grocery List</h1>
+        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Grocery List</h1>
         <p className="text-[#141414]/60">Weekly essentials generated from your meal plan.</p>
       </header>
 
