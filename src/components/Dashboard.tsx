@@ -497,46 +497,42 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[#141414]/60">Date</label>
-            <div className="relative">
-              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20 pointer-events-none" size={18} />
-              <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full h-12 pl-12 pr-4 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] appearance-none"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20 pointer-events-none" size={18} />
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              aria-label="Date"
+              className="w-full h-12 pl-12 pr-4 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] appearance-none"
+            />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[#141414]/60">Weight (lbs)</label>
-            <div className="relative">
-              <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-              <input 
-                type="number" 
-                step="1"
-                value={Number.isNaN(weight) ? '' : weight}
-                onChange={e => setWeight(parseFloat(e.target.value))}
-                className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-              />
-            </div>
+          <div className="relative">
+            <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+            <input
+              type="number"
+              step="1"
+              value={Number.isNaN(weight) ? '' : weight}
+              onChange={e => setWeight(parseFloat(e.target.value))}
+              placeholder="Weight (lbs)"
+              aria-label="Weight (lbs)"
+              className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+            />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[#141414]/60">Body Fat (%)</label>
-            <div className="relative">
-              <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
-              <input 
-                type="number" 
-                step="1"
-                value={Number.isNaN(bodyFat) ? '' : bodyFat}
-                onChange={e => setBodyFat(parseFloat(e.target.value))}
-                className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-              />
-            </div>
+          <div className="relative">
+            <Activity className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20" size={18} />
+            <input
+              type="number"
+              step="1"
+              value={Number.isNaN(bodyFat) ? '' : bodyFat}
+              onChange={e => setBodyFat(parseFloat(e.target.value))}
+              placeholder="Body Fat (%)"
+              aria-label="Body Fat (%)"
+              className="w-full pl-12 pr-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
+            />
           </div>
 
           <button 
