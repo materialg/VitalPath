@@ -5,7 +5,7 @@ import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Trash2, Plus, Search, Undo2, Download, Utensils } from 'lucide-react';
+import { ChevronRight, ChefHat, Flame, Info, History, Calendar, X, Check, Trash2, Plus, Search, Undo2, Download, Utensils } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
