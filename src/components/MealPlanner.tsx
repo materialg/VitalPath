@@ -43,7 +43,7 @@ export function MealPlanner({ profile }: Props) {
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const selectedDayRef = useCallback((el: HTMLButtonElement | null) => {
-    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (el) el.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
   }, []);
 
   const weekDateFor = (idx: number): Date | null => {
@@ -238,7 +238,7 @@ export function MealPlanner({ profile }: Props) {
       {/* Day Selector pills (mobile only, above target) */}
       {mealPlans.length > 0 && activePlan && (
         <div className="lg:hidden -mx-2 px-2">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 scroll-smooth">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             <div aria-hidden className="shrink-0 w-[40vw]" />
             {activePlan.days.map((day, idx) => (
               <button

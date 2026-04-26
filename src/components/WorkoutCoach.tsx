@@ -16,7 +16,7 @@ export function WorkoutCoach({ profile }: Props) {
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const selectedDayRef = useCallback((el: HTMLButtonElement | null) => {
-    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (el) el.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
   }, []);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -332,7 +332,7 @@ export function WorkoutCoach({ profile }: Props) {
           <div className="lg:col-span-1 space-y-8">
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:mt-8">
-                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible no-scrollbar -mx-2 px-2 scroll-smooth">
+                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible no-scrollbar -mx-2 px-2">
                   <div aria-hidden className="shrink-0 w-[40vw] lg:hidden" />
                   {activePlan?.days.map((day, idx) => (
                     <button

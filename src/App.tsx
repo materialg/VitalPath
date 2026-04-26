@@ -18,7 +18,7 @@ import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, BarChart3, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -208,6 +208,7 @@ export default function App() {
   };
 
   return (
+    <MotionConfig transition={{ duration: 0 }}>
     <div className="min-h-screen bg-[#E4E3E0] flex flex-col md:flex-row">
       {/* Sidebar - Desktop Only */}
       <nav className="hidden md:flex w-64 bg-white border-r border-[#141414]/10 flex-col shrink-0 h-screen sticky top-0">
@@ -341,13 +342,14 @@ export default function App() {
 
       <AnimatePresence>
         {showSettings && (
-          <ProfileSettingsModal 
-            profile={profile} 
-            onClose={() => setShowSettings(false)} 
+          <ProfileSettingsModal
+            profile={profile}
+            onClose={() => setShowSettings(false)}
           />
         )}
       </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 }
 
