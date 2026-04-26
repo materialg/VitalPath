@@ -339,21 +339,29 @@ export function WorkoutCoach({ profile }: Props) {
                     d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + idx);
                     const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
                     const dayNum = d.getDate();
+                    const isSelected = selectedDay === idx;
                     return (
                       <button
                         key={idx}
                         onClick={() => setSelectedDay(idx)}
-                        className={`aspect-square lg:aspect-auto rounded-2xl transition-all flex items-center justify-center lg:justify-between lg:w-full lg:h-auto lg:p-4 ${
-                          selectedDay === idx
-                            ? 'bg-white border border-[#141414]/5 text-[#141414]'
+                        className={`relative aspect-square lg:aspect-auto rounded-2xl flex items-center justify-center lg:justify-between lg:w-full lg:h-auto lg:p-4 transition-colors duration-200 ${
+                          isSelected
+                            ? 'text-[#141414]'
                             : 'text-[#141414]/40 hover:bg-white/50'
                         }`}
                       >
-                        <div className="flex flex-col items-center lg:items-start leading-none">
+                        {isSelected && (
+                          <motion.div
+                            layoutId="workout-day-pill"
+                            className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
+                            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                          />
+                        )}
+                        <div className="relative flex flex-col items-center lg:items-start leading-none">
                           <span className="text-[9px] lg:text-[10px] font-bold uppercase">{month}</span>
                           <span className="text-base lg:text-lg font-black mt-0.5">{dayNum}</span>
                         </div>
-                        <ChevronRight size={16} className={`hidden lg:block ${selectedDay === idx ? 'opacity-100' : 'opacity-0'}`} />
+                        <ChevronRight size={16} className={`relative hidden lg:block transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
                       </button>
                     );
                   })}
@@ -374,9 +382,10 @@ export function WorkoutCoach({ profile }: Props) {
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`${activePlanId}-${selectedDay}`}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className="space-y-6"
                   >
                     {activePlan?.days[selectedDay]?.title === 'Rest' ? (

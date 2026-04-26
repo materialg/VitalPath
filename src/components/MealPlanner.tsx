@@ -243,18 +243,26 @@ export function MealPlanner({ profile }: Props) {
               const date = weekDateFor(idx);
               const month = date ? date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
               const dayNum = date ? date.getDate() : idx + 1;
+              const isSelected = selectedDay === idx;
               return (
                 <button
                   key={idx}
                   onClick={() => setSelectedDay(idx)}
-                  className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all ${
-                    selectedDay === idx
-                      ? 'bg-white border border-[#141414]/5 text-[#141414]'
+                  className={`relative aspect-square rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
+                    isSelected
+                      ? 'text-[#141414]'
                       : 'text-[#141414]/40 hover:bg-white/50'
                   }`}
                 >
-                  <span className="text-[9px] font-bold uppercase leading-none">{month}</span>
-                  <span className="text-base font-black leading-tight">{dayNum}</span>
+                  {isSelected && (
+                    <motion.div
+                      layoutId="meal-day-pill-mobile"
+                      className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative text-[9px] font-bold uppercase leading-none">{month}</span>
+                  <span className="relative text-base font-black leading-tight">{dayNum}</span>
                 </button>
               );
             })}
