@@ -17,7 +17,7 @@ import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, BarChart3, X } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, BarChart3, X, Scale } from 'lucide-react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 
 export default function App() {
@@ -193,7 +193,10 @@ export default function App() {
       case 'dashboard': return <Dashboard profile={profile} onNavigate={setActiveTab} />;
       case 'trends': return (
         <div className="space-y-8">
-          <header className="text-center md:text-left">
+          <header className="flex items-center justify-center md:justify-start gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0">
+              <Scale className="w-6 h-6 text-blue-500" />
+            </div>
             <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Trends</h1>
           </header>
           <VitalsTracker profile={profile} />

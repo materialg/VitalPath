@@ -5,7 +5,7 @@ import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Eye, Trash2, Plus, Search, Undo2, Download } from 'lucide-react';
+import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Eye, Trash2, Plus, Search, Undo2, Download, Utensils } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -218,7 +218,10 @@ export function MealPlanner({ profile }: Props) {
   return (
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="text-center md:text-left">
+        <div className="flex items-center justify-center md:justify-start gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0">
+            <Utensils className="w-6 h-6 text-orange-500" />
+          </div>
           <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Meal Planner</h1>
         </div>
       </header>
