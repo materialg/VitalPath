@@ -239,16 +239,16 @@ export default function App() {
             label="Workouts"
           />
           <NavItem
-            active={activeTab === 'database'}
-            onClick={() => setActiveTab('database')}
-            icon={<Database size={20} />}
-            label="Database"
-          />
-          <NavItem
             active={activeTab === 'trends'}
             onClick={() => setActiveTab('trends')}
             icon={<BarChart3 size={20} />}
             label="Trends"
+          />
+          <NavItem
+            active={activeTab === 'database'}
+            onClick={() => setActiveTab('database')}
+            icon={<Database size={20} />}
+            label="Database"
           />
         </div>
 
@@ -305,14 +305,14 @@ export default function App() {
           icon={<Dumbbell size={20} />}
         />
         <MobileNavItem
-          active={activeTab === 'database'}
-          onClick={() => setActiveTab('database')}
-          icon={<Database size={20} />}
-        />
-        <MobileNavItem
           active={activeTab === 'trends'}
           onClick={() => setActiveTab('trends')}
           icon={<BarChart3 size={20} />}
+        />
+        <MobileNavItem
+          active={activeTab === 'database'}
+          onClick={() => setActiveTab('database')}
+          icon={<Database size={20} />}
         />
         <MobileNavItem
           active={activeTab === 'settings'}
