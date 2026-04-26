@@ -603,151 +603,57 @@ export function WorkoutCoach({ profile }: Props) {
                     ) : (
                       activePlan?.days[selectedDay]?.exercises.map((ex, idx) => {
                         const isCompleted = ex.status === 'completed';
-                        const isExpanded = expandedExercise === idx;
                         return (
                         <div key={idx} className="group">
                           <div
-                            onClick={() => setExpandedExercise(isExpanded ? null : idx)}
+                            onClick={() => setExpandedExercise(idx)}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                setExpandedExercise(isExpanded ? null : idx);
+                                setExpandedExercise(idx);
                               }
                             }}
-                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl border transition-all cursor-pointer ${
+                            className={`flex items-center md:items-start gap-3 lg:gap-4 p-3 md:p-4 lg:p-6 rounded-2xl border transition-all cursor-pointer ${
                               isCompleted
                                 ? 'bg-green-50/50 border-green-100'
-                                : isExpanded
-                                  ? 'bg-[#141414]/5 ring-1 ring-[#141414]/10 border-transparent'
-                                  : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
+                                : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
                             }`}
                           >
-                            <div className="flex items-center md:items-start gap-3 lg:gap-4">
-                              {/* Mobile: stacked name + sets × reps, capped to action-box height */}
-                              <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
-                                <h4 className="text-base font-bold truncate text-[#141414] leading-tight">{ex.name}</h4>
-                                <p className="text-xs font-medium text-[#141414]/60 leading-tight">
-                                  {ex.sets} × {ex.reps} reps
-                                </p>
-                              </div>
-
-                              {/* Desktop: full header with badge, notes */}
-                              <div className="flex-1 min-w-0 hidden md:block">
-                                <h4 className="text-lg lg:text-xl font-bold text-[#141414] mb-2">
-                                  {ex.name}
-                                </h4>
-                                <p className="text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
-                              </div>
-
-                              {/* Action icons — consistent across breakpoints */}
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleExerciseStatus(idx);
-                                  }}
-                                  aria-label={isCompleted ? 'Mark exercise pending' : 'Mark exercise completed'}
-                                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                                    isCompleted
-                                      ? 'bg-green-500 text-white hover:bg-green-600'
-                                      : 'bg-[#141414]/5 text-[#141414]/50 hover:bg-green-500 hover:text-white'
-                                  }`}
-                                >
-                                  <Check size={18} />
-                                </button>
-                              </div>
+                            {/* Mobile: stacked name + sets × reps, capped to action-box height */}
+                            <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
+                              <h4 className="text-base font-bold truncate text-[#141414] leading-tight">{ex.name}</h4>
+                              <p className="text-xs font-medium text-[#141414]/60 leading-tight">
+                                {ex.sets} × {ex.reps} reps
+                              </p>
                             </div>
 
-                            <AnimatePresence>
-                              {isExpanded && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: 'auto', opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="pt-4 mt-4 border-t border-[#141414]/10">
-                                    <div className="flex items-center justify-between mb-4">
-                                      <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Log Performance</p>
-                                      <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Target: {ex.reps} Reps</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                      {Array.from({ length: ex.sets }).map((_, sIdx) => (
-                                        <div
-                                          key={sIdx}
-                                          className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-white rounded-xl border border-[#141414]/5"
-                                        >
-                                          <div className="w-7 h-7 md:w-8 md:h-8 bg-[#141414]/5 rounded-lg flex items-center justify-center shrink-0">
-                                            <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
-                                          </div>
+                            {/* Desktop: full header with badge, notes */}
+                            <div className="flex-1 min-w-0 hidden md:block">
+                              <h4 className="text-lg lg:text-xl font-bold text-[#141414] mb-2">
+                                {ex.name}
+                              </h4>
+                              <p className="text-sm text-[#141414]/60 leading-relaxed">{ex.notes}</p>
+                            </div>
 
-                                          <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4">
-                                            <div className="relative">
-                                              <input
-                                                type="number"
-                                                value={ex.setReps?.[sIdx] || ''}
-                                                onChange={(e) => updateSetData(idx, sIdx, 'reps', parseInt(e.target.value) || 0)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                placeholder="0"
-                                                className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-[#141414]/5 border-transparent focus:bg-white focus:ring-2 focus:ring-[#141414]/10"
-                                              />
-                                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
-                                            </div>
-
-                                            <div className="relative">
-                                              <input
-                                                type="number"
-                                                value={ex.setWeights?.[sIdx] || ''}
-                                                onChange={(e) => updateSetData(idx, sIdx, 'weight', parseFloat(e.target.value) || 0)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                placeholder="0"
-                                                className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-[#141414]/5 border-transparent focus:bg-white focus:ring-2 focus:ring-[#141414]/10"
-                                              />
-                                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
-                                            </div>
-                                          </div>
-
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              removeSet(idx, sIdx);
-                                            }}
-                                            disabled={ex.sets <= 1}
-                                            title={ex.sets <= 1 ? 'At least one set is required' : 'Remove set'}
-                                            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#141414]/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#141414]/30 transition-colors"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
-                                        </div>
-                                      ))}
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          addSet(idx);
-                                        }}
-                                        title="Add set"
-                                        className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
-                                      >
-                                        <Plus size={16} />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          removeExercise(idx);
-                                        }}
-                                        title="Delete exercise"
-                                        className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
+                            {/* Action icons — consistent across breakpoints */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleExerciseStatus(idx);
+                                }}
+                                aria-label={isCompleted ? 'Mark exercise pending' : 'Mark exercise completed'}
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                                  isCompleted
+                                    ? 'bg-green-500 text-white hover:bg-green-600'
+                                    : 'bg-[#141414]/5 text-[#141414]/50 hover:bg-green-500 hover:text-white'
+                                }`}
+                              >
+                                <Check size={18} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                         );
@@ -842,6 +748,115 @@ export function WorkoutCoach({ profile }: Props) {
       )}
 
       </div>
+
+      {/* Exercise Log Popout */}
+      <AnimatePresence>
+        {expandedExercise !== null && (() => {
+          const ex = activePlan?.days[selectedDay]?.exercises[expandedExercise];
+          if (!ex) return null;
+          const idx = expandedExercise;
+          return (
+            <div
+              className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setExpandedExercise(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white w-full max-w-md p-6 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-3 mb-6">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-2xl font-bold text-[#141414] truncate">{ex.name}</h3>
+                    <p className="text-sm font-medium text-[#141414]/60 mt-1">{ex.sets} × {ex.reps} reps</p>
+                    {ex.notes && (
+                      <p className="text-sm text-[#141414]/60 leading-relaxed mt-2">{ex.notes}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setExpandedExercise(null)}
+                    aria-label="Close"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414] hover:bg-[#141414]/10 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Log Performance</p>
+                  <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Target: {ex.reps} Reps</p>
+                </div>
+
+                <div className="space-y-2">
+                  {Array.from({ length: ex.sets }).map((_, sIdx) => (
+                    <div
+                      key={sIdx}
+                      className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-[#141414]/[0.03] rounded-xl"
+                    >
+                      <div className="w-7 h-7 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
+                      </div>
+
+                      <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={ex.setReps?.[sIdx] || ''}
+                            onChange={(e) => updateSetData(idx, sIdx, 'reps', parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
+                        </div>
+
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={ex.setWeights?.[sIdx] || ''}
+                            onChange={(e) => updateSetData(idx, sIdx, 'weight', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeSet(idx, sIdx)}
+                        disabled={ex.sets <= 1}
+                        title={ex.sets <= 1 ? 'At least one set is required' : 'Remove set'}
+                        className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#141414]/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#141414]/30 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addSet(idx)}
+                    title="Add set"
+                    className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
+                  >
+                    <Plus size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      removeExercise(idx);
+                      setExpandedExercise(null);
+                    }}
+                    title="Delete exercise"
+                    className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Lift Bank Picker */}
       <AnimatePresence>
