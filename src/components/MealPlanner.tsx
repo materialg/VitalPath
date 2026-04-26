@@ -5,7 +5,7 @@ import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Eye, Trash2, Plus, Search } from 'lucide-react';
+import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Eye, Trash2, Plus, Search, Undo2, Download } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -1217,15 +1217,17 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
           <button
             onClick={onClose}
-            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all"
+            aria-label="Cancel"
+            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
           >
-            Cancel
+            <Undo2 size={20} />
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 py-3 md:py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10"
+            aria-label="Save changes"
+            className="flex-1 py-3 md:py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10 flex items-center justify-center"
           >
-            Save Changes
+            <Download size={20} />
           </button>
         </div>
       </motion.div>

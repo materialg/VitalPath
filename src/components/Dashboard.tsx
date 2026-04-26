@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
+import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye, Undo2, Download } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
@@ -976,8 +976,12 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
           </div>
 
           <div className="flex gap-4">
-            <button onClick={onClose} className="flex-1 py-4 px-6 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all">Cancel</button>
-            <button onClick={handleSave} className="flex-[2] py-4 px-6 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all">Save Changes</button>
+            <button onClick={onClose} aria-label="Cancel" className="flex-1 py-4 px-6 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center">
+              <Undo2 size={20} />
+            </button>
+            <button onClick={handleSave} aria-label="Save changes" className="flex-[2] py-4 px-6 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center">
+              <Download size={20} />
+            </button>
           </div>
         </div>
       </motion.div>
