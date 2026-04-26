@@ -358,7 +358,7 @@ export function WorkoutCoach({ profile }: Props) {
           {/* Day Content */}
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-4 lg:p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
-              <div className="flex items-center justify-between mb-4 lg:mb-8 px-4 lg:px-6">
+              <div className="flex items-center justify-between mb-4 lg:mb-8 px-3 md:px-4 lg:px-6">
                 <div>
                   <h3 className="text-xl lg:text-2xl font-bold text-[#141414]">{activePlan?.days[selectedDay]?.title}</h3>
                   <p className="text-xs lg:text-sm text-[#141414]/40 font-medium">{activePlan?.days[selectedDay]?.day} Session</p>
