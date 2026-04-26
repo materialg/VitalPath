@@ -248,6 +248,37 @@ export function Dashboard({ profile, onNavigate }: Props) {
     }
   };
 
+  const handleRestToday = async () => {
+    if (!latestWorkout || !todayWorkout) return;
+    const calendarOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const todayCal = calendarOrder.indexOf(todayWorkout.day);
+    if (todayCal === -1) return;
+
+    const newDays = latestWorkout.days.map(d => {
+      const dCal = calendarOrder.indexOf(d.day);
+      if (dCal < todayCal) return d;
+      if (dCal === todayCal) {
+        return { ...d, title: 'Rest', exercises: [], status: 'pending' as const };
+      }
+      const sourceName = calendarOrder[dCal - 1];
+      const source = latestWorkout.days.find(x => x.day === sourceName);
+      if (!source) return d;
+      return {
+        ...d,
+        title: source.title,
+        exercises: source.exercises,
+        notes: source.notes,
+        status: source.status,
+      };
+    });
+
+    await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), {
+      days: newDays,
+      updatedAt: new Date().toISOString(),
+    });
+    setShowWorkoutModal(false);
+  };
+
   const handleVitalsToggle = async () => {
     if (vitalsLoggedToday) {
       if (todayEntry) {
@@ -412,6 +443,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
             liftBank={liftBankItems}
             onClose={() => setShowWorkoutModal(false)}
             onConfirm={() => handleWorkoutToggle()}
+            onRest={() => handleRestToday()}
           />
         )}
         {editingMeal && (
@@ -625,7 +657,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
   );
 }
 
-function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, key?: React.Key }) {
+function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, onRest?: () => void, key?: React.Key }) {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const todayName = dayNames[new Date().getDay()];
   const todayWorkout = workout.days.find(d => d.day === todayName) || workout.days[0];
@@ -674,7 +706,7 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout:
           </div>
         </div>
 
-        <div className="space-y-2 mb-8">
+        <div className="space-y-2 mb-6">
           {todayWorkout.title === 'Rest' ? (
             <div className="p-8 bg-blue-50 rounded-2xl text-center">
               <Zap className="text-blue-500 mx-auto mb-4" size={32} />
@@ -695,6 +727,16 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout:
             ))
           )}
         </div>
+
+        {todayWorkout.title !== 'Rest' && onRest && (
+          <button
+            onClick={onRest}
+            className="w-full py-3 bg-[#141414]/5 text-[#141414] rounded-2xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+          >
+            <span className="text-lg leading-none">😴</span>
+            Rest
+          </button>
+        )}
 
       </motion.div>
     </div>
