@@ -241,7 +241,7 @@ export function MealPlanner({ profile }: Props) {
           <div className="grid grid-cols-7 gap-1">
             {activePlan.days.map((day, idx) => {
               const date = weekDateFor(idx);
-              const month = date ? date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
+              const weekday = date ? date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase() : '';
               const dayNum = date ? date.getDate() : idx + 1;
               const isSelected = selectedDay === idx;
               return (
@@ -261,7 +261,7 @@ export function MealPlanner({ profile }: Props) {
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                     />
                   )}
-                  <span className="relative text-[9px] font-bold uppercase leading-none">{month}</span>
+                  <span className="relative text-[9px] font-bold uppercase leading-none">{weekday}</span>
                   <span className="relative text-base font-black leading-tight">{dayNum}</span>
                 </button>
               );

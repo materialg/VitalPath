@@ -337,7 +337,7 @@ export function WorkoutCoach({ profile }: Props) {
                     const now = new Date();
                     const d = new Date(now);
                     d.setDate(now.getDate() - ((now.getDay() + 6) % 7) + idx);
-                    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+                    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
                     const dayNum = d.getDate();
                     const isSelected = selectedDay === idx;
                     return (
@@ -358,7 +358,7 @@ export function WorkoutCoach({ profile }: Props) {
                           />
                         )}
                         <div className="relative flex flex-col items-center lg:items-start leading-none">
-                          <span className="text-[9px] lg:text-[10px] font-bold uppercase">{month}</span>
+                          <span className="text-[9px] lg:text-[10px] font-bold uppercase">{weekday}</span>
                           <span className="text-base lg:text-lg font-black mt-0.5">{dayNum}</span>
                         </div>
                         <ChevronRight size={16} className={`relative hidden lg:block transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
