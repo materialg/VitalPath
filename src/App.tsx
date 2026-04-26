@@ -9,7 +9,6 @@ import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy,
 import { auth, db, signInWithGoogle, logout } from './firebase';
 import { UserProfile, VitalLog } from './types';
 import { Dashboard } from './components/Dashboard';
-import { VitalsTracker } from './components/VitalsTracker';
 import { MealPlanner } from './components/MealPlanner';
 import { WorkoutCoach } from './components/WorkoutCoach';
 import { Database as DatabaseView } from './components/Database';
@@ -17,7 +16,7 @@ import { ProfileSetup } from './components/ProfileSetup';
 import { GroceryListView } from './components/GroceryListView';
 import { ProfileSettingsModal } from './components/ProfileSettingsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, BarChart3, X, Scale } from 'lucide-react';
+import { Activity, Utensils, Dumbbell, User as UserIcon, LogOut, ShoppingCart, Settings, Database, X, Scale } from 'lucide-react';
 import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 
 export default function App() {
@@ -191,14 +190,6 @@ export default function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard profile={profile} onNavigate={setActiveTab} />;
-      case 'trends': return (
-        <div className="space-y-8">
-          <header className="text-center lg:text-left">
-            <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">📈 Trends</h1>
-          </header>
-          <VitalsTracker profile={profile} />
-        </div>
-      );
       case 'meals': return <MealPlanner profile={profile} />;
       case 'database': return <DatabaseView profile={profile} />;
       case 'workouts': return <WorkoutCoach profile={profile} />;
@@ -237,12 +228,6 @@ export default function App() {
             onClick={() => setActiveTab('workouts')}
             icon={<Dumbbell size={20} />}
             label="Workouts"
-          />
-          <NavItem
-            active={activeTab === 'trends'}
-            onClick={() => setActiveTab('trends')}
-            icon={<BarChart3 size={20} />}
-            label="Trends"
           />
           <NavItem
             active={activeTab === 'database'}
@@ -303,11 +288,6 @@ export default function App() {
           active={activeTab === 'workouts'}
           onClick={() => setActiveTab('workouts')}
           icon={<Dumbbell size={20} />}
-        />
-        <MobileNavItem
-          active={activeTab === 'trends'}
-          onClick={() => setActiveTab('trends')}
-          icon={<BarChart3 size={20} />}
         />
         <MobileNavItem
           active={activeTab === 'database'}
