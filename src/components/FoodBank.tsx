@@ -661,18 +661,20 @@ export function FoodBank({ profile, hideHeader }: Props) {
                       setFormData({ ...item, servingUnit: item.servingUnit || 'unit' });
                       setExpandedMobileId(null);
                     }}
-                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl font-bold text-sm hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+                    aria-label="Edit"
+                    className="flex-1 py-3 bg-[#141414]/5 text-[#141414] rounded-xl hover:bg-[#141414]/10 transition-all flex items-center justify-center"
                   >
-                    <Pencil size={14} /> Edit
+                    <Pencil size={18} />
                   </button>
                   <button
                     onClick={() => {
                       handleDelete(item.id);
                       setExpandedMobileId(null);
                     }}
-                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                    aria-label="Delete"
+                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all flex items-center justify-center"
                   >
-                    <Trash2 size={14} /> Delete
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </motion.div>
