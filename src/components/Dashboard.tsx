@@ -713,8 +713,17 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onActio
   const isCompleted = status === 'completed';
 
   return (
-    <div 
-      className={`flex items-center justify-between p-4 rounded-2xl border transition-all group ${
+    <div
+      onClick={() => onAction('view')}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onAction('view');
+        }
+      }}
+      className={`flex items-center justify-between p-4 rounded-2xl border transition-all group cursor-pointer ${
         isCompleted ? 'bg-green-50/50 border-green-100' : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
       }`}
     >
