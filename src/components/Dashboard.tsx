@@ -861,14 +861,9 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
         className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl border border-[#141414]/5 flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-2xl font-bold text-[#141414]">Edit {currentMeal.name}</h3>
-            <p className="text-sm text-[#141414]/40">Customize ingredients and portions.</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
-            <X size={20} />
-          </button>
+        <div className="mb-6">
+          <h3 className="text-2xl font-bold text-[#141414]">Edit {currentMeal.name}</h3>
+          <p className="text-sm text-[#141414]/40">Customize ingredients and portions.</p>
         </div>
 
         <div className="grid grid-cols-5 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">

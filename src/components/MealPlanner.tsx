@@ -1033,14 +1033,9 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         onClick={e => e.stopPropagation()}
       >
         <div className="p-4 md:p-8 pb-0 md:pb-0">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div className="min-w-0">
-            <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate">Edit {currentMeal.name}</h3>
-            <p className="hidden md:block text-sm text-[#141414]/40">Customize ingredients and portions.</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors shrink-0">
-            <X size={20} />
-          </button>
+        <div className="mb-4 md:mb-6 min-w-0">
+          <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate">Edit {currentMeal.name}</h3>
+          <p className="hidden md:block text-sm text-[#141414]/40">Customize ingredients and portions.</p>
         </div>
 
         <div className="mb-3 md:mb-6 p-3 md:p-4 bg-[#141414] text-white rounded-2xl relative shadow-xl">
