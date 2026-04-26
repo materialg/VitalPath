@@ -546,10 +546,10 @@ export function FoodBank({ profile, hideHeader }: Props) {
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 py-4 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+                    className="flex-1 py-4 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
                   >
                     <span className="text-lg leading-none">💽</span>
-                    {editingItem ? 'Update Food' : 'Save to Food Bank'}
+                    {editingItem ? 'Update' : 'Save'}
                   </button>
                   {editingItem && (
                     <button
@@ -562,7 +562,7 @@ export function FoodBank({ profile, hideHeader }: Props) {
                       className="flex-1 py-4 bg-[#141414]/5 text-[#141414] rounded-xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
                     >
                       <span className="text-lg leading-none">👁️</span>
-                      {editingItem.hidden ? 'Unhide Food' : 'Hide Food'}
+                      {editingItem.hidden ? 'Unhide' : 'Hide'}
                     </button>
                   )}
                 </div>
