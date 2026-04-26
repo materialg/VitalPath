@@ -169,7 +169,6 @@ export function WorkoutCoach({ profile }: Props) {
   // see the empty state with a manual Generate button.
   const autoGenAttemptedRef = useRef(false);
   useEffect(() => {
-    if (!isAIReady) return;
     if (isGenerating) return;
     if (autoGenAttemptedRef.current) return;
     if (workoutPlans.length === 0) return;
@@ -197,7 +196,7 @@ export function WorkoutCoach({ profile }: Props) {
 
     autoGenAttemptedRef.current = true;
     handleGenerate();
-  }, [isAIReady, workoutPlans, liftBank, isGenerating]);
+  }, [workoutPlans, liftBank, isGenerating]);
 
   const handlePlanSelect = async (id: string) => {
     setActivePlanId(id);
@@ -402,7 +401,7 @@ export function WorkoutCoach({ profile }: Props) {
           <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
             <Sparkles size={18} />
           </motion.div>
-          <p className="font-medium text-sm">Generating workout plan with AI…</p>
+          <p className="font-medium text-sm">Building this week's plan from your Lift Bank…</p>
         </div>
       )}
 

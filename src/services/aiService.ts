@@ -204,164 +204,97 @@ export async function logDailyTarget(uid: string, profile: any, weight: number, 
 }
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const PPLR_TITLES = ['Push', 'Pull', 'Legs', 'Rest', 'Push', 'Pull', 'Legs'] as const;
+const EXERCISES_PER_DAY = 3;
 
+// Build the week deterministically from the user's Lift Bank — no AI call,
+// no hallucinated exercises. Each training day samples lifts tagged with the
+// matching category. Same-category days within the same week are sampled
+// without replacement when the bank is large enough, so the two Push days
+// (and Pull, Legs) get different exercises.
 export async function generateWorkoutPlan(
-  profile: any,
-  weight: number,
-  bodyFat: number,
+  _profile: any,
+  _weight: number,
+  _bodyFat: number,
   liftBank: LiftBankItem[],
-  previousPlan?: any
+  _previousPlan?: any
 ) {
   const visible = (liftBank || []).filter(l => !l.hidden);
   const byCategory = {
     push: visible.filter(l => l.category === 'push'),
     pull: visible.filter(l => l.category === 'pull'),
     legs: visible.filter(l => l.category === 'legs'),
-    core: visible.filter(l => l.category === 'core'),
-    cardio: visible.filter(l => l.category === 'cardio'),
   };
 
   if (byCategory.push.length === 0 || byCategory.pull.length === 0 || byCategory.legs.length === 0) {
-    throw new Error("Your Lift Bank needs at least one Push, Pull, and Legs exercise before AI can build a plan.");
+    throw new Error("Your Lift Bank needs at least one Push, Pull, and Legs exercise before a plan can be built.");
   }
 
-  const allowedNames = visible.map(l => l.name);
-
-  const liftBankSummary = (['push', 'pull', 'legs', 'core', 'cardio'] as const)
-    .map(cat => {
-      const items = byCategory[cat];
-      if (items.length === 0) return '';
-      const lines = items.map(l => {
-        const equip = l.equipment ? ` [${l.equipment}]` : '';
-        const sr = l.defaultSets ? ` — default ${l.defaultSets}×${l.defaultReps || '8-12'}` : '';
-        const muscles = l.muscleGroups?.length ? ` — targets: ${l.muscleGroups.join(', ')}` : '';
-        return `  - ${l.name}${equip}${sr}${muscles}`;
-      });
-      return `${cat.toUpperCase()}:\n${lines.join('\n')}`;
-    })
-    .filter(Boolean)
-    .join('\n\n');
-
-  const prompt = `Build a 7-day PPLR (Push/Pull/Legs/Rest) plan for:
-Weight: ${weight} lbs, Body Fat: ${bodyFat}%, Goal: ${profile.goalBodyFat}% BF.
-
-HARD CONSTRAINTS — read carefully:
-- Use the PPLR rotation that REPEATS across the week. The exact 7-day schedule is:
-    Monday: Push
-    Tuesday: Pull
-    Wednesday: Legs
-    Thursday: Rest
-    Friday: Push
-    Saturday: Pull
-    Sunday: Legs
-  That's 6 training days and exactly 1 rest day. Do NOT add extra rest days.
-- Each training day must contain 4–6 exercises pulled ONLY from the Lift Bank below. Do NOT invent exercises.
-- "Push" days only use PUSH lifts. "Pull" days only use PULL lifts. "Legs" days only use LEGS lifts. You MAY optionally add at most ONE core or cardio finisher to a training day.
-- Use the EXACT exercise names from the bank (case-sensitive, no paraphrasing).
-- Vary exercise selection between the two Push days (and between the two Pull days, and between the two Legs days) so they aren't identical sessions.
-- The Rest day has an empty exercises array and a short recovery note.
-
-LIFT BANK (the only allowed exercise names):
-
-${liftBankSummary}
-
-Return JSON with a "days" array of 7 entries in Monday→Sunday order.`;
-
-  const text = await callAI(
-    "gemini-2.5-pro",
-    prompt,
-    {
-      systemInstruction: "You are a strength coach. Output JSON only. Each exercise.name MUST be an exact, character-for-character match of a name from the provided Lift Bank — never invent or rename exercises.",
-      thinkingBudget: 1024,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        required: ["days"],
-        properties: {
-          days: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              required: ["day", "title", "exercises", "notes"],
-              properties: {
-                day: { type: Type.STRING, enum: DAY_NAMES },
-                title: { type: Type.STRING, enum: ['Push', 'Pull', 'Legs', 'Rest'] },
-                notes: { type: Type.STRING },
-                exercises: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    required: ["name", "sets", "reps", "notes", "prescribedWeight"],
-                    properties: {
-                      name: { type: Type.STRING, enum: allowedNames },
-                      sets: { type: Type.NUMBER },
-                      reps: { type: Type.STRING },
-                      prescribedWeight: { type: Type.NUMBER },
-                      notes: { type: Type.STRING }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+  const shuffle = <T>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
-  );
-
-  const parsed = JSON.parse(text);
-
-  type LiftCategory = LiftBankItem['category'];
-  const allowedCatForTitle = (title: string): LiftCategory | null => {
-    if (title === 'Push') return 'push';
-    if (title === 'Pull') return 'pull';
-    if (title === 'Legs') return 'legs';
-    return null;
+    return a;
   };
-  const liftByName = new Map(visible.map(l => [l.name.toLowerCase().trim(), l] as const));
 
-  if (!Array.isArray(parsed.days) || parsed.days.length !== 7) {
-    throw new Error('AI returned a malformed week. Try again.');
-  }
+  const pools = {
+    push: shuffle(byCategory.push),
+    pull: shuffle(byCategory.pull),
+    legs: shuffle(byCategory.legs),
+  };
+  const used: Record<'push' | 'pull' | 'legs', Set<string>> = {
+    push: new Set(),
+    pull: new Set(),
+    legs: new Set(),
+  };
 
-  // Force the PPLR rotation regardless of what the model returned for titles.
-  const PPLR_TITLES = ['Push', 'Pull', 'Legs', 'Rest', 'Push', 'Pull', 'Legs'];
-
-  for (let i = 0; i < parsed.days.length; i++) {
-    const day = parsed.days[i];
-    day.day = DAY_NAMES[i];
-    day.title = PPLR_TITLES[i];
-
-    if (day.title === 'Rest') {
-      day.exercises = [];
-      day.notes = day.notes || 'Active recovery and mobility.';
-      continue;
+  const pickFor = (cat: 'push' | 'pull' | 'legs', count: number): LiftBankItem[] => {
+    const pool = pools[cat];
+    const fresh = pool.filter(l => !used[cat].has(l.id));
+    const picks = fresh.slice(0, count);
+    if (picks.length < count) {
+      // Bank too small to fill this day with fresh lifts — refill from the top
+      // of the (still shuffled) pool, allowing repeats across the two same-cat days.
+      const refill = pool.filter(l => !picks.some(p => p.id === l.id));
+      picks.push(...refill.slice(0, count - picks.length));
     }
+    picks.forEach(p => used[cat].add(p.id));
+    return picks;
+  };
 
-    if (!Array.isArray(day.exercises)) day.exercises = [];
-    const okCat = allowedCatForTitle(day.title);
-    const cleaned: any[] = [];
-    const seen = new Set<string>();
-    for (const ex of day.exercises) {
-      const key = (ex?.name || '').toLowerCase().trim();
-      if (!key || seen.has(key)) continue;
-      const match = liftByName.get(key);
-      if (!match) continue;
-      // On-theme exercises only; one core/cardio finisher is allowed.
-      if (match.category !== okCat && match.category !== 'core' && match.category !== 'cardio') continue;
-      seen.add(key);
-      cleaned.push({
-        name: match.name,
-        sets: ex.sets || match.defaultSets || 3,
-        reps: ex.reps || match.defaultReps || '8-12',
-        prescribedWeight: ex.prescribedWeight || 0,
-        notes: ex.notes || match.notes || '',
-        setReps: [],
-        setWeights: [],
-      });
+  const exerciseFromLift = (lift: LiftBankItem) => {
+    const sets = lift.defaultSets || 3;
+    return {
+      name: lift.name,
+      sets,
+      reps: lift.defaultReps || '8-12',
+      prescribedWeight: 0,
+      notes: lift.notes || '',
+      setReps: Array(sets).fill(0),
+      setWeights: Array(sets).fill(0),
+    };
+  };
+
+  const days = PPLR_TITLES.map((title, i) => {
+    if (title === 'Rest') {
+      return {
+        day: DAY_NAMES[i],
+        title: 'Rest',
+        exercises: [],
+        notes: 'Active recovery and mobility.',
+      };
     }
-    day.exercises = cleaned;
-  }
+    const cat = title.toLowerCase() as 'push' | 'pull' | 'legs';
+    const lifts = pickFor(cat, EXERCISES_PER_DAY);
+    return {
+      day: DAY_NAMES[i],
+      title,
+      exercises: lifts.map(exerciseFromLift),
+      notes: '',
+    };
+  });
 
-  return parsed;
+  return { days };
 }
