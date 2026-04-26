@@ -1203,12 +1203,12 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
               </button>
             </div>
           ) : (
-            <button 
+            <button
               onClick={() => setShowFoodBank(true)}
-              className="w-full py-4 border-2 border-dashed border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
+              className="w-full py-4 border-2 border-solid border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
+              aria-label="Add food"
             >
               <Plus size={18} />
-              <span className="font-bold">Add Item from Food Bank</span>
             </button>
           )}
         </div>
