@@ -521,12 +521,12 @@ export function MealPlanner({ profile }: Props) {
                               : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
                           }`}
                         >
-                          {/* Mobile: stacked name + calories, capped to action-box height */}
-                          <div className="flex-1 min-w-0 md:hidden flex flex-col justify-center h-10">
+                          {/* Mobile: name on left, calories in middle */}
+                          <div className="flex-1 min-w-0 md:hidden flex items-center justify-between h-10 gap-3">
                             <h4 className="text-base font-bold truncate text-[#141414] leading-tight">
                               {MEAL_SLOT_NAMES[mIdx] || meal.name}
                             </h4>
-                            <p className={`text-xs font-medium text-[#141414]/60 leading-tight ${isEmpty ? 'opacity-30' : ''}`}>
+                            <p className={`text-xs font-medium text-[#141414]/60 leading-tight shrink-0 ${isEmpty ? 'opacity-30' : ''}`}>
                               {Math.round(meal.calories || 0)} cal
                             </p>
                           </div>
