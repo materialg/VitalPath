@@ -767,9 +767,9 @@ export function WorkoutCoach({ profile }: Props) {
 
         <button
           onClick={() => setIsHistoryOpen(true)}
-          className="w-full p-4 flex items-center justify-between rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-dashed border-[#141414]/10"
+          aria-label="View history"
+          className="w-full p-4 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10"
         >
-          <span className="font-bold text-sm">View History</span>
           <Calendar size={18} />
         </button>
 
