@@ -338,80 +338,80 @@ export function MealPlanner({ profile }: Props) {
       })()}
 
       {/* Daily Target - Always Visible */}
-      <div className="bg-[#141414] text-white p-4 md:p-8 rounded-3xl shadow-xl overflow-hidden relative">
+      <div className="bg-white p-4 md:p-8 rounded-3xl border border-[#141414]/5 shadow-sm overflow-hidden relative">
         <div className="relative z-10">
           {/* Mobile: compact header-style row */}
           <div className="md:hidden flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
               <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
             </div>
             <div className="flex-1 grid grid-cols-5 gap-1 min-w-0">
               <div className="text-center min-w-0">
-                <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider mb-1">Target</p>
-                <p className="text-sm font-black text-green-400 whitespace-nowrap">{targets.dailyCalories}</p>
+                <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Target</p>
+                <p className="text-sm font-black text-green-500 whitespace-nowrap">{targets.dailyCalories}</p>
               </div>
               <div className="text-center min-w-0">
-                <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider mb-1">P</p>
-                <p className="text-sm font-black text-blue-400 whitespace-nowrap">{targets.macros.protein}</p>
+                <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">P</p>
+                <p className="text-sm font-black text-blue-500 whitespace-nowrap">{targets.macros.protein}</p>
               </div>
               <div className="text-center min-w-0">
-                <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider mb-1">C</p>
-                <p className="text-sm font-black text-yellow-400 whitespace-nowrap">{targets.macros.carbs}</p>
+                <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">C</p>
+                <p className="text-sm font-black text-yellow-500 whitespace-nowrap">{targets.macros.carbs}</p>
               </div>
               <div className="text-center min-w-0">
-                <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider mb-1">F</p>
-                <p className="text-sm font-black text-purple-400 whitespace-nowrap">{targets.macros.fats}</p>
+                <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">F</p>
+                <p className="text-sm font-black text-purple-500 whitespace-nowrap">{targets.macros.fats}</p>
               </div>
               <div className="text-center min-w-0">
-                <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider mb-1">Fib</p>
-                <p className="text-sm font-black text-emerald-400 whitespace-nowrap">{targets.macros.fiber}</p>
+                <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Fib</p>
+                <p className="text-sm font-black text-emerald-500 whitespace-nowrap">{targets.macros.fiber}</p>
               </div>
             </div>
           </div>
 
           {/* Desktop: full grid with extras */}
           <div className="hidden md:block">
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-[#141414]">
               <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
               Daily Target
             </h3>
             <div className="grid md:grid-cols-4 lg:grid-cols-7 gap-4 lg:gap-6">
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Deficit</p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Deficit</p>
                 <p className="text-xl font-black text-orange-500">-{targets.dailyDeficit} <span className="text-xs font-normal opacity-40">cal</span></p>
               </div>
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Target</p>
-                <p className="text-xl font-black text-green-400">{targets.dailyCalories} <span className="text-xs font-normal opacity-40">cal</span></p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Target</p>
+                <p className="text-xl font-black text-green-500">{targets.dailyCalories} <span className="text-xs font-normal opacity-40">cal</span></p>
               </div>
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
-                <p className="text-xl font-black text-blue-400">{targets.macros.protein}g</p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
+                <p className="text-xl font-black text-blue-500">{targets.macros.protein}g</p>
               </div>
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Carbs</p>
-                <p className="text-xl font-black text-yellow-400">{targets.macros.carbs}g</p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Carbs</p>
+                <p className="text-xl font-black text-yellow-500">{targets.macros.carbs}g</p>
               </div>
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fats</p>
-                <p className="text-xl font-black text-purple-400">{targets.macros.fats}g</p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fats</p>
+                <p className="text-xl font-black text-purple-500">{targets.macros.fats}g</p>
               </div>
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fiber</p>
-                <p className="text-xl font-black text-emerald-400">{targets.macros.fiber}g</p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fiber</p>
+                <p className="text-xl font-black text-emerald-500">{targets.macros.fiber}g</p>
               </div>
               <div>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Days Left</p>
-                <p className="text-xl font-black">{targets.daysLeft}</p>
+                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Days Left</p>
+                <p className="text-xl font-black text-[#141414]">{targets.daysLeft}</p>
               </div>
             </div>
-            <div className="mt-6 pt-6 border-t border-white/10 flex items-center gap-4 text-sm text-white/60">
+            <div className="mt-6 pt-6 border-t border-[#141414]/10 flex items-center gap-4 text-sm text-[#141414]/60">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-orange-500" />
                 <span>Target Weight: {targets.targetWeight} lbs</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-400" />
+                <div className="w-2 h-2 rounded-full bg-green-500" />
                 <span>Rate: {Math.round((targets.dailyDeficit * 7 / 3500) * 10) / 10} lbs/week</span>
               </div>
             </div>
