@@ -357,20 +357,30 @@ export function MealPlanner({ profile }: Props) {
           {/* Day Selector (desktop sidebar) */}
           <div className="hidden lg:block lg:col-span-1">
             <div className="flex flex-col gap-2">
-              {activePlan?.days.map((day, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDay(idx)}
-                  className={`w-full p-4 flex items-center justify-between rounded-2xl transition-all ${
-                    selectedDay === idx
-                      ? 'bg-white border border-[#141414]/5 text-[#141414]'
-                      : 'text-[#141414]/40 hover:bg-white/50'
-                  }`}
-                >
-                  <span className="font-bold">{MEAL_PLAN_DAYS[idx] || day.day}</span>
-                  <ChevronRight size={16} className={selectedDay === idx ? 'opacity-100' : 'opacity-0'} />
-                </button>
-              ))}
+              {activePlan?.days.map((day, idx) => {
+                const isSelected = selectedDay === idx;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedDay(idx)}
+                    className={`relative w-full p-4 flex items-center justify-between rounded-2xl transition-colors duration-200 ${
+                      isSelected
+                        ? 'text-[#141414]'
+                        : 'text-[#141414]/40 hover:bg-white/50'
+                    }`}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        layoutId="meal-day-pill-desktop"
+                        className="absolute inset-0 bg-white border border-[#141414]/5 rounded-2xl"
+                        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative font-bold">{MEAL_PLAN_DAYS[idx] || day.day}</span>
+                    <ChevronRight size={16} className={`relative transition-opacity duration-200 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -430,9 +440,10 @@ export function MealPlanner({ profile }: Props) {
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`${activePlanId}-${selectedDay}`}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className="space-y-3 md:space-y-6"
                   >
                     {MEAL_SLOT_NAMES.map((slotName, mIdx) => {
