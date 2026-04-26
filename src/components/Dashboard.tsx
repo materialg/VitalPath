@@ -316,7 +316,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
             icon={<span className="text-xl leading-none">📈</span>}
             title="Vitals"
             status={vitalsLoggedToday ? 'completed' : 'none'}
-            color="blue"
             onAction={(action) => {
               if (action === 'approve') handleVitalsToggle();
               if (action === 'view') setShowVitalsModal(true);
@@ -327,7 +326,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
             icon={<span className="text-xl leading-none">💪</span>}
             title="Lift"
             status={todayWorkout?.status || 'none'}
-            color="purple"
             onAction={(action) => {
               if (action === 'approve') handleWorkoutToggle();
               if (action === 'view') setShowWorkoutModal(true);
@@ -339,7 +337,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
               icon={<span className="text-xl leading-none">🍴</span>}
               title="Meals"
               status={todayMealPlan.status === 'completed' ? 'completed' : 'none'}
-              color="orange"
               onAction={(action) => {
                 if (action === 'approve') handleAllMealsToggle();
                 if (action === 'view') setShowMealModal(true);
@@ -350,7 +347,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
               icon={<span className="text-xl leading-none">🍴</span>}
               title="Meals"
               status="none"
-              color="orange"
               onAction={() => onNavigate('meals')}
             />
           )}
@@ -713,17 +709,10 @@ interface TodoItemProps {
   icon: React.ReactNode;
   title: string;
   status: 'completed' | 'skipped' | 'none' | 'pending';
-  color: string;
   onAction: (action: 'approve' | 'deny' | 'view') => void;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onAction }) => {
-  const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
-    orange: 'bg-orange-50 text-orange-600',
-    purple: 'bg-purple-50 text-purple-600'
-  }[color as 'blue' | 'orange' | 'purple'];
-
+const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, onAction }) => {
   const isCompleted = status === 'completed';
 
   return (
@@ -742,7 +731,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, color, onActio
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${colorClasses}`}>
+        <div className="w-10 h-10 flex items-center justify-center">
           {icon}
         </div>
         <div>
