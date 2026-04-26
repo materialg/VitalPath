@@ -348,7 +348,7 @@ export function MealPlanner({ profile }: Props) {
             <div className="flex-1 grid grid-cols-4 gap-1 md:gap-4 min-w-0">
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Target</p>
-                <p className="text-sm font-black text-green-500 whitespace-nowrap">{targets.dailyCalories}</p>
+                <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.dailyCalories}</p>
               </div>
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">P</p>
@@ -378,7 +378,7 @@ export function MealPlanner({ profile }: Props) {
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Target</p>
-                <p className="text-xl font-black text-green-500">{targets.dailyCalories} <span className="text-xs font-normal opacity-40">cal</span></p>
+                <p className="text-xl font-black text-[#141414]">{targets.dailyCalories} <span className="text-xs font-normal opacity-40">cal</span></p>
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
