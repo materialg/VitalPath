@@ -271,7 +271,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
   return (
     <div className="space-y-8">
       <header className="text-center lg:text-left">
-        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">Welcome back, {profile.displayName.split(' ')[0]}</h1>
+        <h1 className="text-3xl lg:text-4xl font-sans font-bold text-[#141414] tracking-tight">👋 Welcome back!</h1>
       </header>
 
       <div className="space-y-4">
