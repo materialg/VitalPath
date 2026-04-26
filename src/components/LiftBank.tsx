@@ -45,6 +45,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<LiftBankItem | null>(null);
   const [expandedMobileId, setExpandedMobileId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<LiftCategory | 'all'>('all');
   const [formData, setFormData] = useState<any>({
     name: '',
     category: 'push' as LiftCategory,
@@ -142,11 +143,19 @@ export function LiftBank({ profile, hideHeader }: Props) {
     setSelectedIds(new Set());
   };
 
+  const displayedItems = categoryFilter === 'all'
+    ? items
+    : items.filter(i => i.category === categoryFilter);
+
   const toggleSelectAll = () => {
-    if (selectedIds.size === items.length) {
-      setSelectedIds(new Set());
+    if (displayedItems.length > 0 && displayedItems.every(i => selectedIds.has(i.id))) {
+      const next = new Set(selectedIds);
+      displayedItems.forEach(i => next.delete(i.id));
+      setSelectedIds(next);
     } else {
-      setSelectedIds(new Set(items.map(i => i.id)));
+      const next = new Set(selectedIds);
+      displayedItems.forEach(i => next.add(i.id));
+      setSelectedIds(next);
     }
   };
 
@@ -174,6 +183,24 @@ export function LiftBank({ profile, hideHeader }: Props) {
           >
             <Plus size={18} />
           </button>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          {(['all', ...CATEGORY_OPTIONS] as const).map(cat => {
+            const active = categoryFilter === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                  active
+                    ? 'bg-[#141414] text-white'
+                    : 'bg-white text-[#141414]/60 border border-[#141414]/10 hover:text-[#141414]'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -209,7 +236,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
                 <th className="px-6 py-4 w-10">
                   <input
                     type="checkbox"
-                    checked={items.length > 0 && selectedIds.size === items.length}
+                    checked={displayedItems.length > 0 && displayedItems.every(i => selectedIds.has(i.id))}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded border-[#141414]/20 text-[#141414] focus:ring-[#141414]"
                   />
@@ -224,7 +251,7 @@ export function LiftBank({ profile, hideHeader }: Props) {
             </thead>
             <tbody>
               <AnimatePresence mode="popLayout">
-                {items.map(item => (
+                {displayedItems.map(item => (
                   <motion.tr
                     key={item.id}
                     layout
@@ -287,7 +314,10 @@ export function LiftBank({ profile, hideHeader }: Props) {
 
         {/* Mobile list */}
         <div className="md:hidden divide-y divide-[#141414]/5">
-          {items.map(item => {
+          {displayedItems.length === 0 && (
+            <p className="text-center text-sm text-[#141414]/40 py-8">No lifts in this category yet.</p>
+          )}
+          {displayedItems.map(item => {
             const isExpanded = expandedMobileId === item.id;
             return (
               <div key={item.id} className={`${item.hidden ? 'opacity-50' : ''}`}>
