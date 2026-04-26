@@ -749,10 +749,10 @@ export function WorkoutCoach({ profile }: Props) {
                     {activePlan?.days[selectedDay]?.title !== 'Rest' && (
                       <button
                         onClick={() => { setPickerSearch(''); setIsPickingLift(true); }}
-                        className="w-full p-4 lg:p-6 rounded-2xl border-2 border-dashed border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center gap-2 text-sm font-bold"
+                        aria-label="Add exercise from Lift Bank"
+                        className="w-full p-4 lg:p-6 rounded-2xl border-2 border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
                       >
-                        <Plus size={18} />
-                        Add Exercise from Lift Bank
+                        <Plus size={20} />
                       </button>
                     )}
                   </motion.div>
