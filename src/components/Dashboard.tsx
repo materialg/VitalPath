@@ -332,7 +332,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
             }}
           />
 
-          {todayMealPlan ? (
+          {todayMealPlan && todayMealPlan.meals.length > 0 ? (
             <TodoItem
               icon={<Utensils size={18} />}
               title="Meals"
