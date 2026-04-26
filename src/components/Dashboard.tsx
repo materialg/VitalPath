@@ -288,11 +288,26 @@ export function Dashboard({ profile, onNavigate }: Props) {
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
         days: newDays,
+        restBackup: { day: todayWorkout.day, days: latestWorkout.days },
         updatedAt: new Date().toISOString(),
       }));
       setShowWorkoutModal(false);
     } catch (err) {
       console.error('Failed to rest today:', err);
+    }
+  };
+
+  const handleUndoRest = async () => {
+    if (!latestWorkout || !latestWorkout.restBackup) return;
+    try {
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
+        days: latestWorkout.restBackup.days,
+        restBackup: null,
+        updatedAt: new Date().toISOString(),
+      } as any));
+      setShowWorkoutModal(false);
+    } catch (err) {
+      console.error('Failed to undo rest:', err);
     }
   };
 
@@ -461,6 +476,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
             onClose={() => setShowWorkoutModal(false)}
             onConfirm={() => handleWorkoutToggle()}
             onRest={() => handleRestToday()}
+            onUndoRest={() => handleUndoRest()}
           />
         )}
         {editingMeal && (
@@ -674,7 +690,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
   );
 }
 
-function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, onRest?: () => void, key?: React.Key }) {
+function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest, onUndoRest }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, onRest?: () => void, onUndoRest?: () => void, key?: React.Key }) {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const todayName = dayNames[new Date().getDay()];
   const todayWorkout = workout.days.find(d => d.day === todayName) || workout.days[0];
@@ -757,6 +773,16 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest }: { 
           >
             <span className="text-lg leading-none">😴</span>
             Rest
+          </button>
+        )}
+
+        {todayWorkout.title === 'Rest' && onUndoRest && workout.restBackup?.day === todayWorkout.day && (
+          <button
+            onClick={onUndoRest}
+            className="w-full py-3 bg-[#141414]/5 text-[#141414] rounded-2xl font-medium hover:bg-[#141414]/10 transition-all flex items-center justify-center gap-2"
+          >
+            <span className="text-lg leading-none">↩️</span>
+            Undo Rest
           </button>
         )}
 

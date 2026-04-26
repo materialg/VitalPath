@@ -105,6 +105,10 @@ export interface WorkoutPlan {
   weekStartDate: string;
   updatedAt: string;
   days: WorkoutDay[];
+  restBackup?: {
+    day: string;
+    days: WorkoutDay[];
+  };
 }
 
 export type LiftCategory = 'push' | 'pull' | 'legs';
