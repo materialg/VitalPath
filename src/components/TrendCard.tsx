@@ -65,6 +65,7 @@ export default function TrendCard({ weightData, bfData }: Props) {
       background: '#FFF3EA',
       borderRadius: 16,
       overflow: 'hidden',
+      paddingBottom: 32,
     }}>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }}>
         <defs>
