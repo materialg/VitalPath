@@ -774,23 +774,23 @@ export function WorkoutCoach({ profile }: Props) {
             onClick={handleRegenerate}
             disabled={isGenerating || !activePlan}
             aria-label={isGenerating ? 'Regenerating workouts' : 'Regenerate workouts'}
-            className="flex-1 p-3 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10 disabled:opacity-50 disabled:hover:bg-transparent"
+            className="flex-1 p-3 flex items-center justify-center rounded-2xl transition-all bg-white hover:bg-[#141414]/5 border border-[#141414]/10 disabled:opacity-50 disabled:hover:bg-white"
           >
             {isGenerating ? (
               <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
-                <Sparkles size={18} />
+                <span className="text-lg leading-none">✨</span>
               </motion.div>
             ) : (
-              <Sparkles size={18} />
+              <span className="text-lg leading-none">✨</span>
             )}
           </button>
 
           <button
             onClick={() => setIsHistoryOpen(true)}
             aria-label="View history"
-            className="flex-1 p-3 flex items-center justify-center rounded-2xl transition-all text-[#141414]/40 hover:bg-[#141414]/5 border border-[#141414]/10"
+            className="flex-1 p-3 flex items-center justify-center rounded-2xl transition-all bg-white hover:bg-[#141414]/5 border border-[#141414]/10"
           >
-            <Calendar size={18} />
+            <span className="text-lg leading-none">🗓️</span>
           </button>
         </div>
         </>
