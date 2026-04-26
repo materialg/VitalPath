@@ -142,7 +142,7 @@ export function WorkoutCoach({ profile }: Props) {
         }
       }
 
-      const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, activePlan);
+      const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, liftBank, activePlan);
       const newPlan = {
         ...plan,
         weekStartDate: wsStr,
@@ -174,6 +174,14 @@ export function WorkoutCoach({ profile }: Props) {
     if (autoGenAttemptedRef.current) return;
     if (workoutPlans.length === 0) return;
 
+    // Lift bank must be loaded with at least one Push, Pull, and Legs lift.
+    const visible = liftBank.filter(l => !l.hidden);
+    const hasPPL =
+      visible.some(l => l.category === 'push') &&
+      visible.some(l => l.category === 'pull') &&
+      visible.some(l => l.category === 'legs');
+    if (!hasPPL) return;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const hasRealPlanForToday = workoutPlans.some(p => {
@@ -189,7 +197,7 @@ export function WorkoutCoach({ profile }: Props) {
 
     autoGenAttemptedRef.current = true;
     handleGenerate();
-  }, [isAIReady, workoutPlans, isGenerating]);
+  }, [isAIReady, workoutPlans, liftBank, isGenerating]);
 
   const handlePlanSelect = async (id: string) => {
     setActivePlanId(id);
