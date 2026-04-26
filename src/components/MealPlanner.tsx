@@ -685,7 +685,7 @@ export function MealPlanner({ profile }: Props) {
           aria-label="View history"
           className="w-full p-4 flex items-center justify-center rounded-2xl transition-all bg-white border border-[#141414]/5 shadow-sm hover:bg-[#141414]/5"
         >
-          <span className="text-xl leading-none">📓</span>
+          <span className="text-xl leading-none">🗓️</span>
         </button>
       )}
 
