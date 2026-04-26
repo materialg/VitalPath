@@ -352,19 +352,19 @@ export function MealPlanner({ profile }: Props) {
               </div>
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">P</p>
-                <p className="text-sm font-black text-blue-500 whitespace-nowrap">{targets.macros.protein}</p>
+                <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.macros.protein}</p>
               </div>
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">C</p>
-                <p className="text-sm font-black text-yellow-500 whitespace-nowrap">{targets.macros.carbs}</p>
+                <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.macros.carbs}</p>
               </div>
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">F</p>
-                <p className="text-sm font-black text-purple-500 whitespace-nowrap">{targets.macros.fats}</p>
+                <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.macros.fats}</p>
               </div>
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Fib</p>
-                <p className="text-sm font-black text-emerald-500 whitespace-nowrap">{targets.macros.fiber}</p>
+                <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.macros.fiber}</p>
               </div>
             </div>
           </div>
@@ -386,19 +386,19 @@ export function MealPlanner({ profile }: Props) {
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Protein</p>
-                <p className="text-xl font-black text-blue-500">{targets.macros.protein}g</p>
+                <p className="text-xl font-black text-[#141414]">{targets.macros.protein}g</p>
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Carbs</p>
-                <p className="text-xl font-black text-yellow-500">{targets.macros.carbs}g</p>
+                <p className="text-xl font-black text-[#141414]">{targets.macros.carbs}g</p>
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fats</p>
-                <p className="text-xl font-black text-purple-500">{targets.macros.fats}g</p>
+                <p className="text-xl font-black text-[#141414]">{targets.macros.fats}g</p>
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fiber</p>
-                <p className="text-xl font-black text-emerald-500">{targets.macros.fiber}g</p>
+                <p className="text-xl font-black text-[#141414]">{targets.macros.fiber}g</p>
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Days Left</p>
