@@ -1024,12 +1024,12 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-stretch md:items-center justify-center md:p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white w-full max-w-2xl rounded-t-3xl md:rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto overscroll-contain"
+        className="bg-white w-full max-w-2xl rounded-none md:rounded-3xl shadow-2xl border-0 md:border md:border-[#141414]/5 h-[100dvh] md:h-auto md:max-h-[90vh] overflow-y-auto overscroll-contain"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-4 md:p-8 pb-0 md:pb-0">
