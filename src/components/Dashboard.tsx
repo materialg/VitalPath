@@ -615,7 +615,7 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
           </div>
         </div>
 
-        <div className="space-y-4 mb-8">
+        <div className="space-y-2 mb-8">
           {todayWorkout.title === 'Rest' ? (
             <div className="p-8 bg-blue-50 rounded-2xl text-center">
               <Zap className="text-blue-500 mx-auto mb-4" size={32} />
@@ -624,24 +624,16 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
             </div>
           ) : (
             todayWorkout.exercises.map((ex, idx) => (
-              <div 
+              <div
                 key={`ex-${idx}-${ex.name}`}
-                className="flex flex-col md:flex-row md:items-center gap-4 lg:gap-6 p-6 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all"
+                className="flex items-center gap-3 p-3 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all"
               >
-          <div className="flex items-center gap-4 flex-1">
-            <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center text-white font-bold shrink-0">
-              {idx + 1}
-            </div>
-            <div>
-              <h5 className="font-bold text-[#141414]">{ex.name}</h5>
-              <p className="text-xs lg:text-sm text-[#141414]/60">{ex.notes}</p>
-            </div>
-          </div>
-          <div className="text-left md:text-right pl-14 md:pl-0">
-            <p className="font-bold text-[#141414]">{ex.sets} × {ex.reps}</p>
-            <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest">Sets & Reps</p>
-          </div>
-        </div>
+                <div className="w-8 h-8 bg-[#141414] rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {idx + 1}
+                </div>
+                <h5 className="flex-1 font-bold text-[#141414] truncate">{ex.name}</h5>
+                <p className="font-bold text-[#141414] whitespace-nowrap">{ex.sets} × {ex.reps}</p>
+              </div>
             ))
           )}
         </div>
