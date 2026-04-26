@@ -169,10 +169,10 @@ export function LiftBank({ profile, hideHeader }: Props) {
               resetForm();
               setIsAdding(true);
             }}
-            className="w-full lg:w-auto px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center gap-2"
+            aria-label="Add Lift"
+            className="w-full lg:w-auto px-6 py-3 bg-[#141414] text-white rounded-xl font-medium hover:bg-[#141414]/90 transition-all flex items-center justify-center"
           >
             <Plus size={18} />
-            Add Lift
           </button>
         </div>
       </header>
