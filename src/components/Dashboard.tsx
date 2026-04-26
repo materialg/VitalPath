@@ -300,7 +300,6 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const handleUndoRest = async () => {
     if (!latestWorkout || !latestWorkout.restBackup?.days?.length) return;
     const restoredDays = latestWorkout.restBackup.days;
-    setShowWorkoutModal(false);
     try {
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
         days: restoredDays,
