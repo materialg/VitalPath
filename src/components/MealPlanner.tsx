@@ -345,8 +345,8 @@ export function MealPlanner({ profile }: Props) {
             <div className="w-10 h-10 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
               <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
             </div>
-            <div className="flex-1 grid grid-cols-4 gap-1 min-w-0">
-              <div className="text-center min-w-0">
+            <div className="flex-1 grid grid-cols-5 gap-1 md:gap-4 min-w-0">
+              <div className="text-center min-w-0 col-span-2">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Target</p>
                 <p className="text-sm font-black text-green-500 whitespace-nowrap">{targets.dailyCalories}</p>
               </div>
