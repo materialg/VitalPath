@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem } from '../types';
+import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Eye } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
@@ -21,6 +21,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
   const [editingMeal, setEditingMeal] = useState<{ mIdx: number; meal: Meal } | null>(null);
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
+  const [liftBankItems, setLiftBankItems] = useState<LiftBankItem[]>([]);
 
   useEffect(() => {
     const vitalsQuery = query(
@@ -69,11 +70,17 @@ export function Dashboard({ profile, onNavigate }: Props) {
       setFoodBankItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FoodBankItem)));
     });
 
+    const liftBankQuery = query(collection(db, 'users', profile.uid, 'liftBank'));
+    const unsubscribeLiftBank = onSnapshot(liftBankQuery, (snap) => {
+      setLiftBankItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LiftBankItem)));
+    });
+
     return () => {
       unsubscribeVitals();
       unsubscribeMeals();
       unsubscribeWorkouts();
       unsubscribeFoodBank();
+      unsubscribeLiftBank();
     };
   }, [profile.uid]);
 
@@ -345,10 +352,11 @@ export function Dashboard({ profile, onNavigate }: Props) {
           />
         )}
         {showWorkoutModal && latestWorkout && (
-          <WorkoutModal 
+          <WorkoutModal
             key="workout-modal"
-            workout={latestWorkout} 
-            onClose={() => setShowWorkoutModal(false)} 
+            workout={latestWorkout}
+            liftBank={liftBankItems}
+            onClose={() => setShowWorkoutModal(false)}
             onConfirm={() => handleWorkoutToggle()}
           />
         )}
@@ -563,7 +571,32 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
   );
 }
 
-function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, onClose: () => void, onConfirm?: () => void, key?: React.Key }) {
+function normalizeLiftTokens(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(t => (t.length > 3 && t.endsWith('s') ? t.slice(0, -1) : t));
+}
+
+function resolveLiftName(name: string, bank: LiftBankItem[]): string {
+  if (!bank.length) return name;
+  const exTokens = new Set(normalizeLiftTokens(name));
+  let best: { name: string; score: number } | null = null;
+  for (const lift of bank) {
+    if (lift.hidden) continue;
+    const bTokens = normalizeLiftTokens(lift.name);
+    if (!bTokens.length) continue;
+    const allMatch = bTokens.every(t => exTokens.has(t));
+    if (allMatch && (!best || bTokens.length > best.score)) {
+      best = { name: lift.name, score: bTokens.length };
+    }
+  }
+  return best?.name || name;
+}
+
+function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, key?: React.Key }) {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const todayName = dayNames[new Date().getDay()];
   const todayWorkout = workout.days.find(d => d.day === todayName) || workout.days[0];
@@ -628,7 +661,7 @@ function WorkoutModal({ workout, onClose, onConfirm }: { workout: WorkoutPlan, o
                 <div className="w-8 h-8 bg-[#141414] rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0">
                   {idx + 1}
                 </div>
-                <h5 className="flex-1 font-bold text-[#141414] truncate">{ex.name}</h5>
+                <h5 className="flex-1 font-bold text-[#141414] truncate">{resolveLiftName(ex.name, liftBank)}</h5>
                 <p className="font-bold text-[#141414] whitespace-nowrap">{ex.sets} × {ex.reps}</p>
               </div>
             ))
