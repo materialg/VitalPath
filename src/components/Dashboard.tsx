@@ -493,8 +493,8 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-2xl font-bold text-[#141414] flex items-center gap-2">
-            <Plus size={24} />
-            New Entry
+            <span className="text-2xl leading-none">📈</span>
+            Vitals
           </h3>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
             <X size={20} />
@@ -504,12 +504,15 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-[#141414]/60">Date</label>
-            <input 
-              type="date" 
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full px-4 py-3 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414]"
-            />
+            <div className="relative">
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#141414]/20 pointer-events-none" size={18} />
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-full h-12 pl-12 pr-4 bg-[#141414]/5 rounded-xl border-none focus:ring-2 focus:ring-[#141414] appearance-none"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
