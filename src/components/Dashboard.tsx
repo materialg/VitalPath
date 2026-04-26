@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, 
 import { db } from '../firebase';
 import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { TrendingDown, Target, Dumbbell, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Undo2, Download } from 'lucide-react';
+import { TrendingDown, Target, Utensils, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search, Undo2, Download } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 
@@ -652,12 +652,12 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm }: { workout:
       >
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
-              <Dumbbell size={24} />
+            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+              <span className="text-2xl leading-none">💪</span>
             </div>
             <div>
               <h3 className="text-2xl font-bold text-[#141414]">{todayWorkout.title}</h3>
-              <p className="text-[#141414]/60">{todayWorkout.exercises.length} Exercises • {todayWorkout.day}</p>
+              <p className="text-[#141414]/60">{todayWorkout.day} • {todayWorkout.exercises.length} Exercises</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[#141414]/5 rounded-xl transition-colors">
