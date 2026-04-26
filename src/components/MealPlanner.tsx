@@ -263,11 +263,28 @@ export function MealPlanner({ profile }: Props) {
           return ws;
         })() : null;
         const handlePick = async (d: Date) => {
-          const p = planForDate(d);
-          if (!p) return;
+          let p = planForDate(d);
+          if (!p) {
+            const monday = new Date(d);
+            monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+            const wsStr = monday.toLocaleDateString('en-CA');
+            const days = MEAL_PLAN_DAYS.map(day => ({ day, meals: [] }));
+            const newPlan = stripUndefined({
+              days,
+              dailyCalories: targets.dailyCalories,
+              macros: targets.macros,
+              weekStartDate: wsStr,
+              updatedAt: new Date().toISOString(),
+            });
+            const docRef = await addDoc(collection(db, 'users', profile.uid, 'mealPlans'), newPlan);
+            await updateDoc(doc(db, 'users', profile.uid), { activeMealPlanId: docRef.id });
+            setActivePlanId(docRef.id);
+            p = { id: docRef.id, ...newPlan } as MealPlan;
+          } else if (p.id !== activePlanId) {
+            await handlePlanSelect(p.id);
+          }
           const ws = new Date(p.weekStartDate + 'T00:00:00');
           const dayInPlan = Math.round((d.getTime() - ws.getTime()) / 86400000);
-          if (p.id !== activePlanId) await handlePlanSelect(p.id);
           setSelectedDay(dayInPlan);
         };
         return (
@@ -284,13 +301,12 @@ export function MealPlanner({ profile }: Props) {
                     key={idx}
                     ref={isSelected ? selectedDayRef : undefined}
                     onClick={() => handlePick(d)}
-                    disabled={!hasPlan}
                     className={`relative shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-colors duration-200 ${
                       isSelected
                         ? 'text-[#141414]'
                         : hasPlan
                           ? 'text-[#141414]/40 hover:bg-white/50'
-                          : 'text-[#141414]/20'
+                          : 'text-[#141414]/25 hover:bg-white/50'
                     }`}
                   >
                     {isSelected && (
