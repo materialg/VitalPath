@@ -313,7 +313,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       <div className="bg-white p-8 rounded-3xl border border-[#141414]/5 shadow-sm">
         <div className="space-y-4">
           <TodoItem
-            icon={<Scale size={18} />}
+            icon={<span className="text-xl leading-none">📈</span>}
             title="Vitals"
             status={vitalsLoggedToday ? 'completed' : 'none'}
             color="blue"
@@ -324,7 +324,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
           />
 
           <TodoItem
-            icon={<Dumbbell size={18} />}
+            icon={<span className="text-xl leading-none">💪</span>}
             title={todayWorkout ? todayWorkout.title : "Today's Workout"}
             status={todayWorkout?.status || 'none'}
             color="purple"
@@ -336,7 +336,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
           {todayMealPlan ? (
             <TodoItem
-              icon={<Utensils size={18} />}
+              icon={<span className="text-xl leading-none">🍴</span>}
               title="Meals"
               status={todayMealPlan.status === 'completed' ? 'completed' : 'none'}
               color="orange"
@@ -347,7 +347,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
             />
           ) : (
             <TodoItem
-              icon={<Utensils size={18} />}
+              icon={<span className="text-xl leading-none">🍴</span>}
               title="Meals"
               status="none"
               color="orange"
