@@ -16,7 +16,7 @@ export function WorkoutCoach({ profile }: Props) {
   const todayIdx = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState(todayIdx);
   const selectedDayRef = useCallback((el: HTMLButtonElement | null) => {
-    if (el) el.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+    if (el) el.scrollIntoView({ behavior: 'instant' as ScrollBehavior, inline: 'center', block: 'nearest' });
   }, []);
   const [latestVital, setLatestVital] = useState<VitalLog | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -495,7 +495,7 @@ export function WorkoutCoach({ profile }: Props) {
                   };
                   return (
                     <div className="lg:hidden -mx-4 px-4">
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar">
                         <div aria-hidden className="shrink-0 w-[calc(50vw-2.75rem)]" />
                         {wheelDates.map((d, idx) => {
                           const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
