@@ -484,9 +484,11 @@ export function Dashboard({ profile, onNavigate }: Props) {
           />
         )}
         {editingMeal && (
-          <EditMealModal 
+          <EditMealModal
              key="edit-meal-modal"
              meal={editingMeal.meal}
+             mealName={["Breakfast", "Lunch", "Dinner"][editingMeal.mIdx] || editingMeal.meal.name}
+             targetCalories={currentTargets.dailyCalories}
              foodBank={foodBankItems}
              onClose={() => setEditingMeal(null)}
              onSave={(updatedMeal) => handleUpdateMeal(editingMeal.mIdx, updatedMeal)}
@@ -861,7 +863,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ icon, title, status, onAction }) =>
   );
 }
 
-function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void, key?: React.Key }) {
+function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSave }: { meal: any, mealName?: string, targetCalories?: number, foodBank: FoodBankItem[], onClose: () => void, onSave: (updatedMeal: any) => void, key?: React.Key }) {
   const [currentMeal, setCurrentMeal] = useState(meal);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFoodBank, setShowFoodBank] = useState(false);
@@ -964,22 +966,27 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
         onClick={e => e.stopPropagation()}
       >
         <div className="mb-6 -ml-0.5">
-          <h3 className="text-2xl font-bold text-[#141414] tracking-tight">Edit {currentMeal.name}</h3>
-          <p className="text-sm text-[#141414]/40 ml-0.5">Customize ingredients and portions.</p>
+          <h3 className="text-2xl font-bold text-[#141414] tracking-tight">Edit {mealName || currentMeal.name}</h3>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
-          {[
-            { label: 'Calories', val: currentMeal.calories, unit: '' },
-            { label: 'Protein', val: currentMeal.protein, unit: 'g' },
-            { label: 'Carbs', val: currentMeal.carbs, unit: 'g' },
-            { label: 'Fats', val: currentMeal.fats, unit: 'g' },
-          ].map((s, i) => (
-            <div key={i} className="text-center">
-              <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{s.label}</p>
-              <p className="text-lg font-bold text-[#141414]">{s.val}{s.unit}</p>
-            </div>
-          ))}
+        <div className="flex items-center gap-3 mb-8 p-4 bg-[#141414]/5 rounded-2xl">
+          <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
+            <span className="text-xl leading-none">🔥</span>
+          </div>
+          <div className="flex-1 grid grid-cols-5 gap-2">
+            {[
+              { label: 'Target', val: targetCalories ?? '—', highlight: true },
+              { label: 'Kcal', val: currentMeal.calories },
+              { label: 'P', val: currentMeal.protein },
+              { label: 'C', val: currentMeal.carbs },
+              { label: 'F', val: currentMeal.fats },
+            ].map((s, i) => (
+              <div key={i} className="text-center">
+                <p className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-1">{s.label}</p>
+                <p className={`text-base font-bold ${s.highlight ? 'text-emerald-500' : 'text-[#141414]'}`}>{s.val}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2">
@@ -1022,15 +1029,12 @@ function EditMealModal({ meal, foodBank, onClose, onSave }: { meal: any, foodBan
 
         <div className="space-y-4">
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowFoodBank(!showFoodBank)}
-              className="w-full py-4 px-6 bg-[#141414]/5 text-[#141414] rounded-xl font-medium flex items-center justify-between group"
+              aria-label="Add ingredient"
+              className="w-full py-4 px-6 bg-white border border-[#141414]/10 text-[#141414] rounded-xl font-medium flex items-center justify-center hover:bg-[#141414]/5 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <PlusCircle size={20} className="text-[#141414]/40 group-hover:text-[#141414]" />
-                Add Ingredient from Food Bank
-              </div>
-              <Activity size={18} className="text-[#141414]/20" />
+              <Plus size={20} className="text-[#141414]/40" />
             </button>
 
             <AnimatePresence>
