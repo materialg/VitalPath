@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
@@ -58,14 +58,22 @@ export function WorkoutCoach({ profile }: Props) {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const planForToday = plans.find(p => {
+      const planCoversToday = (p: WorkoutPlan) => {
         if (!p.weekStartDate) return false;
         const ws = new Date(p.weekStartDate + 'T00:00:00');
         ws.setHours(0, 0, 0, 0);
         const we = new Date(ws);
         we.setDate(ws.getDate() + 7);
         return today >= ws && today < we;
-      });
+      };
+      const isPlanStub = (p: WorkoutPlan) =>
+        !Array.isArray(p.days) || !p.days.some(d =>
+          Array.isArray((d as any).exercises) && (d as any).exercises.length > 0
+        );
+      // Prefer a real (non-stub) plan covering today; fall back to a stub if it's
+      // all we have so the wheel still has something selected.
+      const planForToday = plans.find(p => planCoversToday(p) && !isPlanStub(p))
+        || plans.find(planCoversToday);
 
       // First snapshot after mount: prefer the plan that covers today,
       // so the wheel can highlight + center on the current day.
@@ -103,32 +111,85 @@ export function WorkoutCoach({ profile }: Props) {
   const activePlan = workoutPlans.find(p => p.id === activePlanId) || workoutPlans[0];
   const targets = latestVital ? calculateDailyTargets(profile, latestVital.weight, latestVital.bodyFat) : null;
 
-  const handleGenerate = async () => {
+  const mondayOfDate = (d: Date) => {
+    const m = new Date(d);
+    m.setHours(0, 0, 0, 0);
+    m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+    return m;
+  };
+
+  // A "stub" is a placeholder plan with no real exercises — created when an
+  // older version of the wheel auto-built an empty rest-week. We treat them
+  // as missing so AI generation can replace them.
+  const isStubPlan = (p: WorkoutPlan) =>
+    !Array.isArray(p.days) || !p.days.some(day =>
+      Array.isArray((day as any).exercises) && (day as any).exercises.length > 0
+    );
+
+  const handleGenerate = async (weekStartOverride?: string): Promise<string | null> => {
     setIsGenerating(true);
     setError(null);
     try {
+      const wsStr = weekStartOverride || mondayOfDate(new Date()).toLocaleDateString('en-CA');
+
+      // Drop any empty stub plans for this week so we don't accumulate orphans.
+      const stubsForWeek = workoutPlans.filter(p => p.weekStartDate === wsStr && isStubPlan(p));
+      for (const stub of stubsForWeek) {
+        try {
+          await deleteDoc(doc(db, 'users', profile.uid, 'workouts', stub.id));
+        } catch (err) {
+          console.warn('Failed to delete stub plan, continuing:', err);
+        }
+      }
+
       const plan = await generateWorkoutPlan(profile, latestVital?.weight || 180, latestVital?.bodyFat || 20, activePlan);
-      const monday = new Date();
-      monday.setHours(0, 0, 0, 0);
-      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-      const tzOffsetMs = monday.getTimezoneOffset() * 60_000;
       const newPlan = {
         ...plan,
-        weekStartDate: new Date(monday.getTime() - tzOffsetMs).toISOString().split('T')[0],
+        weekStartDate: wsStr,
         updatedAt: new Date().toISOString(),
       };
       const docRef = await addDoc(collection(db, 'users', profile.uid, 'workouts'), newPlan);
-      
+
       setActivePlanId(docRef.id);
       await updateDoc(doc(db, 'users', profile.uid), {
         activeWorkoutId: docRef.id
       });
+      return docRef.id;
     } catch (err: any) {
       setError(err.message || "Failed to generate workout plan");
+      return null;
     } finally {
       setIsGenerating(false);
     }
   };
+
+  // Auto-generate the current week's plan once per session if the user
+  // already has prior plans but none cover today with real content (a new
+  // week rolled over, or only an empty stub exists). First-time users still
+  // see the empty state with a manual Generate button.
+  const autoGenAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!isAIReady) return;
+    if (isGenerating) return;
+    if (autoGenAttemptedRef.current) return;
+    if (workoutPlans.length === 0) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const hasRealPlanForToday = workoutPlans.some(p => {
+      if (!p.weekStartDate) return false;
+      const ws = new Date(p.weekStartDate + 'T00:00:00');
+      ws.setHours(0, 0, 0, 0);
+      const we = new Date(ws);
+      we.setDate(ws.getDate() + 7);
+      if (!(today >= ws && today < we)) return false;
+      return !isStubPlan(p);
+    });
+    if (hasRealPlanForToday) return;
+
+    autoGenAttemptedRef.current = true;
+    handleGenerate();
+  }, [isAIReady, workoutPlans, isGenerating]);
 
   const handlePlanSelect = async (id: string) => {
     setActivePlanId(id);
@@ -328,6 +389,15 @@ export function WorkoutCoach({ profile }: Props) {
         </div>
       )}
 
+      {isGenerating && workoutPlans.length > 0 && (
+        <div className="p-4 bg-blue-50 border border-blue-100 text-blue-700 rounded-2xl flex items-center gap-3">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+            <Sparkles size={18} />
+          </motion.div>
+          <p className="font-medium text-sm">Generating workout plan with AI…</p>
+        </div>
+      )}
+
       {/* Daily Target Header (Consistent with Meal Planner) */}
       <div className="hidden md:block bg-[#141414] p-5 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl transition-all group-hover:bg-white/10" />
@@ -359,13 +429,7 @@ export function WorkoutCoach({ profile }: Props) {
                 {/* Mobile: 28-day wheel (2 weeks back + 2 weeks forward from today's Monday)
                     with cross-week plan navigation, matching the Meal Planner. */}
                 {(() => {
-                  const mondayOf = (d: Date) => {
-                    const m = new Date(d);
-                    m.setHours(0, 0, 0, 0);
-                    m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
-                    return m;
-                  };
-                  const todayMonday = mondayOf(new Date());
+                  const todayMonday = mondayOfDate(new Date());
                   const startMonday = new Date(todayMonday);
                   startMonday.setDate(todayMonday.getDate() - 14);
                   const wheelDates = Array.from({ length: 28 }, (_, i) => {
@@ -393,21 +457,13 @@ export function WorkoutCoach({ profile }: Props) {
                   const handlePick = async (d: Date) => {
                     const p = planForDate(d);
                     if (!p) {
-                      const monday = mondayOf(d);
+                      const monday = mondayOfDate(d);
                       const wsLabel = monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      const ok = window.confirm(`No workout plan for the week of ${wsLabel}. Create an empty week?`);
+                      const ok = window.confirm(`No workout plan for the week of ${wsLabel}. Generate one with AI?`);
                       if (!ok) return;
                       const wsStr = monday.toLocaleDateString('en-CA');
-                      const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                      const days = dayNames.map(day => ({ day, title: 'Rest', exercises: [] }));
-                      const newPlan = {
-                        days,
-                        weekStartDate: wsStr,
-                        updatedAt: new Date().toISOString(),
-                      };
-                      const docRef = await addDoc(collection(db, 'users', profile.uid, 'workouts'), newPlan);
-                      await updateDoc(doc(db, 'users', profile.uid), { activeWorkoutId: docRef.id });
-                      setActivePlanId(docRef.id);
+                      const newId = await handleGenerate(wsStr);
+                      if (!newId) return;
                       const dayInPlan = Math.round((d.getTime() - new Date(wsStr + 'T00:00:00').getTime()) / 86400000);
                       setSelectedDay(dayInPlan);
                       return;
