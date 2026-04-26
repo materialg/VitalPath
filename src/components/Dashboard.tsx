@@ -547,15 +547,12 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h5 className="text-[10px] font-bold text-[#141414]/40 uppercase tracking-widest mb-2">Ingredients</h5>
-                <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5">
-                      {ing}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {(Array.isArray(meal.ingredients) ? meal.ingredients : []).map((ing, idx) => (
+                  <span key={idx} className="px-2 py-1 bg-white rounded-md text-[10px] font-medium text-[#141414]/60 border border-[#141414]/5">
+                    {ing}
+                  </span>
+                ))}
               </div>
             </div>
           ))}
