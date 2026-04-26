@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { UserProfile, WorkoutPlan, VitalLog, WorkoutDay, LiftBankItem, LiftCategory } from '../types';
 import { generateWorkoutPlan, calculateDailyTargets, checkIsAIConfigured } from '../services/aiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, Check, Eye } from 'lucide-react';
+import { Dumbbell, Sparkles, CheckCircle2, Info, Timer, Zap, ChevronRight, Calendar, X, Flame, Target, TrendingDown, Clock, Plus, Trash2, Check } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -612,7 +612,16 @@ export function WorkoutCoach({ profile }: Props) {
                         return (
                         <div key={idx} className="group">
                           <div
-                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl border transition-all ${
+                            onClick={() => setExpandedExercise(isExpanded ? null : idx)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setExpandedExercise(isExpanded ? null : idx);
+                              }
+                            }}
+                            className={`flex flex-col gap-4 p-3 md:p-4 lg:p-6 rounded-2xl border transition-all cursor-pointer ${
                               isCompleted
                                 ? 'bg-green-50/50 border-green-100'
                                 : isExpanded
@@ -640,14 +649,10 @@ export function WorkoutCoach({ profile }: Props) {
                               {/* Action icons — consistent across breakpoints */}
                               <div className="flex items-center gap-2 shrink-0">
                                 <button
-                                  onClick={() => setExpandedExercise(isExpanded ? null : idx)}
-                                  aria-label={isExpanded ? 'Collapse exercise' : 'Edit exercise'}
-                                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 hover:bg-[#141414]/10 hover:text-[#141414] transition-colors"
-                                >
-                                  <Eye size={16} />
-                                </button>
-                                <button
-                                  onClick={() => toggleExerciseStatus(idx)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExerciseStatus(idx);
+                                  }}
                                   aria-label={isCompleted ? 'Mark exercise pending' : 'Mark exercise completed'}
                                   className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
                                     isCompleted

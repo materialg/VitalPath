@@ -5,7 +5,7 @@ import { UserProfile, MealPlan, VitalLog, FoodBankItem } from '../types';
 import { calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Eye, Trash2, Plus, Search, Undo2, Download, Utensils } from 'lucide-react';
+import { ChevronRight, ChefHat, Flame, Info, Target, History, Calendar, X, Check, Trash2, Plus, Search, Undo2, Download, Utensils } from 'lucide-react';
 
 interface Props {
   profile: UserProfile;
@@ -525,7 +525,16 @@ export function MealPlanner({ profile }: Props) {
                       return (
                       <div key={mIdx} className="group">
                         <div
-                          className={`flex items-center md:items-start gap-3 md:gap-4 p-3 md:p-6 rounded-2xl border transition-all ${
+                          onClick={() => setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) })}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) });
+                            }
+                          }}
+                          className={`flex items-center md:items-start gap-3 md:gap-4 p-3 md:p-6 rounded-2xl border transition-all cursor-pointer ${
                             meal.status === 'completed'
                               ? 'bg-green-50/50 border-green-100'
                               : 'bg-white border-[#141414]/5 hover:border-[#141414]/10'
@@ -587,14 +596,10 @@ export function MealPlanner({ profile }: Props) {
                           {/* Action icons — consistent across breakpoints */}
                           <div className="flex items-center gap-2 shrink-0">
                             <button
-                              onClick={() => setEditingMeal({ mIdx, meal: JSON.parse(JSON.stringify(meal)) })}
-                              aria-label="Edit meal"
-                              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#141414]/5 text-[#141414]/50 hover:bg-[#141414]/10 hover:text-[#141414] transition-colors"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => toggleMealStatus(mIdx)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMealStatus(mIdx);
+                              }}
                               aria-label={meal.status === 'completed' ? 'Mark meal pending' : 'Mark meal completed'}
                               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
                                 meal.status === 'completed'
