@@ -345,7 +345,7 @@ export function MealPlanner({ profile }: Props) {
             <div className="w-10 h-10 rounded-xl bg-[#141414]/5 flex items-center justify-center shrink-0">
               <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
             </div>
-            <div className="flex-1 grid grid-cols-5 gap-1 min-w-0">
+            <div className="flex-1 grid grid-cols-4 gap-1 min-w-0">
               <div className="text-center min-w-0">
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Target</p>
                 <p className="text-sm font-black text-green-500 whitespace-nowrap">{targets.dailyCalories}</p>
@@ -362,10 +362,6 @@ export function MealPlanner({ profile }: Props) {
                 <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">F</p>
                 <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.macros.fats}</p>
               </div>
-              <div className="text-center min-w-0">
-                <p className="text-[9px] font-bold text-[#141414]/40 uppercase tracking-wider mb-1">Fib</p>
-                <p className="text-sm font-black text-[#141414] whitespace-nowrap">{targets.macros.fiber}</p>
-              </div>
             </div>
           </div>
 
@@ -375,7 +371,7 @@ export function MealPlanner({ profile }: Props) {
               <span className="text-xl leading-none" aria-label="Target" role="img">🎯</span>
               Daily Target
             </h3>
-            <div className="grid md:grid-cols-4 lg:grid-cols-7 gap-4 lg:gap-6">
+            <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Deficit</p>
                 <p className="text-xl font-black text-orange-500">-{targets.dailyDeficit} <span className="text-xs font-normal opacity-40">cal</span></p>
@@ -395,10 +391,6 @@ export function MealPlanner({ profile }: Props) {
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fats</p>
                 <p className="text-xl font-black text-[#141414]">{targets.macros.fats}g</p>
-              </div>
-              <div>
-                <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Fiber</p>
-                <p className="text-xl font-black text-[#141414]">{targets.macros.fiber}g</p>
               </div>
               <div>
                 <p className="text-[#141414]/40 text-[10px] font-bold uppercase tracking-widest mb-1">Days Left</p>
@@ -476,7 +468,6 @@ export function MealPlanner({ profile }: Props) {
                     { label: 'P', value: Math.round(totals.protein), unit: 'g' },
                     { label: 'C', value: Math.round(totals.carbs), unit: 'g' },
                     { label: 'F', value: Math.round(totals.fats), unit: 'g' },
-                    { label: 'Fib', value: Math.round(totals.fiber), unit: 'g' },
                   ];
                   return (
                     <div className="flex items-center gap-2 md:gap-3 w-full">
@@ -486,7 +477,7 @@ export function MealPlanner({ profile }: Props) {
                       </div>
 
                       {/* evenly-spaced stats */}
-                      <div className="flex-1 grid grid-cols-6 gap-1 md:gap-4 min-w-0">
+                      <div className="flex-1 grid grid-cols-5 gap-1 md:gap-4 min-w-0">
                         {stats.map((stat, i) => (
                           <div key={i} className="text-center min-w-0">
                             <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">{stat.label}</p>
