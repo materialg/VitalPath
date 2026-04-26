@@ -221,12 +221,11 @@ export function Dashboard({ profile, onNavigate }: Props) {
     const updatedDays = [...latestMealPlan.days];
     const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
     if (dayIndex !== -1) {
-      const meals = [...updatedDays[dayIndex].meals];
-      const areAllCompleted = meals.every(m => m.status === 'completed');
-      const newStatus = areAllCompleted ? 'none' : 'completed';
-
-      const newMeals = meals.map(m => ({ ...m, status: newStatus }));
-      updatedDays[dayIndex].meals = newMeals;
+      const isCompleted = updatedDays[dayIndex].status === 'completed';
+      updatedDays[dayIndex] = {
+        ...updatedDays[dayIndex],
+        status: isCompleted ? 'pending' : 'completed',
+      };
 
       await updateDoc(doc(db, 'users', profile.uid, 'mealPlans', latestMealPlan.id), stripUndefined({
         days: updatedDays,
@@ -332,11 +331,11 @@ export function Dashboard({ profile, onNavigate }: Props) {
             }}
           />
 
-          {todayMealPlan && todayMealPlan.meals.length > 0 ? (
+          {todayMealPlan ? (
             <TodoItem
               icon={<Utensils size={18} />}
               title="Meals"
-              status={todayMealPlan.meals.every(m => m.status === 'completed') ? 'completed' : 'none'}
+              status={todayMealPlan.status === 'completed' ? 'completed' : 'none'}
               color="orange"
               onAction={(action) => {
                 if (action === 'approve') handleAllMealsToggle();
@@ -346,7 +345,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
           ) : (
             <TodoItem
               icon={<Utensils size={18} />}
-              title="Today's Meal Plan"
+              title="Meals"
               status="none"
               color="orange"
               onAction={() => onNavigate('meals')}

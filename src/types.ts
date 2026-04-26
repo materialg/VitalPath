@@ -47,6 +47,7 @@ export interface Meal {
 export interface DayPlan {
   day: string;
   meals: Meal[];
+  status?: 'pending' | 'completed' | 'skipped';
 }
 
 export interface MealPlan {
