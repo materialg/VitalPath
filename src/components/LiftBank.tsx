@@ -333,20 +333,23 @@ export function LiftBank({ profile, hideHeader }: Props) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-[#141414]/60">Category</label>
                   <div className="grid grid-cols-5 gap-2">
-                    {CATEGORY_OPTIONS.map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, category: cat })}
-                        className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 ${
-                          formData.category === cat
-                            ? 'bg-[#141414] text-white border-[#141414]'
-                            : 'bg-white text-[#141414]/40 border-[#141414]/5 hover:border-[#141414]/20'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                    {CATEGORY_OPTIONS.map(cat => {
+                      const selected = formData.category === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, category: cat })}
+                          className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 ${
+                            selected
+                              ? `${CATEGORY_BADGE[cat]} border-transparent ring-2 ring-[#141414]`
+                              : `${CATEGORY_BADGE[cat]} opacity-40 border-transparent hover:opacity-70`
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
