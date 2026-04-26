@@ -254,16 +254,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
         await deleteDoc(doc(db, 'users', profile.uid, 'vitals', todayEntry.id));
       }
     } else {
-      const isoDate = new Date().toISOString();
-      await addDoc(collection(db, 'users', profile.uid, 'vitals'), {
-        date: isoDate,
-        weight: currentWeight,
-        bodyFat: currentBF,
-        createdAt: isoDate,
-        updatedAt: isoDate
-      });
-      // Also updates targets and logs snapshot
-      await logDailyTarget(profile.uid, profile, currentWeight, currentBF, isoDate);
+      setShowVitalsModal(true);
     }
   };
 
@@ -358,13 +349,13 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
       <AnimatePresence>
         {showVitalsModal && (
-          <VitalsModal 
+          <VitalsModal
             key="vitals-modal"
-            profile={profile} 
-            currentWeight={todayEntry?.weight || currentWeight}
-            currentBodyFat={todayEntry?.bodyFat || currentBF}
+            profile={profile}
+            currentWeight={todayEntry?.weight ?? NaN}
+            currentBodyFat={todayEntry?.bodyFat ?? NaN}
             existingId={todayEntry?.id}
-            onClose={() => setShowVitalsModal(false)} 
+            onClose={() => setShowVitalsModal(false)}
           />
         )}
         {showMealModal && todayMealPlan && (
@@ -437,6 +428,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (Number.isNaN(weight) || Number.isNaN(bodyFat)) return;
     setIsSubmitting(true);
     try {
       // Create a date object that represents the selected day at current local time
