@@ -709,7 +709,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                       <button
                         onClick={(e) => { e.stopPropagation(); onToggleMeal?.(mIdx); }}
                         className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-all ${
-                          isCompleted ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white text-orange-600 shadow-sm'
+                          isCompleted ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-white text-[#141414]/60 shadow-sm'
                         }`}
                       >
                         {isCompleted ? <Check size={16} /> : (slotName[0])}
@@ -724,7 +724,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
                     )}
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className={`text-sm font-bold transition-all ${isCompleted ? 'text-green-600' : isEmpty ? 'text-[#141414]/40' : 'text-orange-600'}`}>{meal?.calories || 0} cal</span>
+                    <span className={`text-sm font-bold transition-all ${isCompleted ? 'text-green-600' : isEmpty ? 'text-[#141414]/40' : 'text-[#141414]/70'}`}>{meal?.calories || 0} cal</span>
                   </div>
                 </div>
               </div>
