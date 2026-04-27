@@ -1140,7 +1140,7 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
           <button
             onClick={handleSave}
             aria-label="Save changes"
-            className="flex-1 py-3 md:py-4 bg-[#141414] text-white rounded-2xl font-bold hover:bg-[#141414]/90 transition-all shadow-lg shadow-[#141414]/10 flex items-center justify-center"
+            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
           >
             <span className="text-xl leading-none">✅</span>
           </button>
