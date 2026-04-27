@@ -864,9 +864,9 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
   const [searchQuery, setSearchQuery] = useState('');
   const [showFoodBank, setShowFoodBank] = useState(false);
 
-  const filteredFoodBank = foodBank.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFoodBank = searchQuery.trim()
+    ? foodBank.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
 
   const cleanName = (name: string) => name?.toLowerCase().replace(/[^a-z0-9]/g, '').trim() || '';
 
