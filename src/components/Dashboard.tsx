@@ -682,8 +682,8 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
         <div className="space-y-6">
           {slots.map((meal, mIdx) => {
             const slotName = MEAL_SLOT_NAMES[mIdx];
-            const isEmpty = !meal;
-            const isCompleted = meal?.status === 'completed';
+            const isEmpty = !meal || !((meal as any).ingredientsWithAmounts?.length);
+            const isCompleted = !isEmpty && meal?.status === 'completed';
             return (
               <div
                 key={mIdx}
