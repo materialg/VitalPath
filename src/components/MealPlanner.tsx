@@ -1024,9 +1024,18 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
         onClick={e => e.stopPropagation()}
       >
         <div className="p-4 md:p-8 pb-0 md:pb-0">
-        <div className="mb-4 md:mb-6 min-w-0 text-center">
-          <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate tracking-tight text-center">Edit {currentMeal.name}</h3>
-          <p className="hidden md:block text-sm text-[#141414]/40 text-center">Customize ingredients and portions.</p>
+        <div className="flex items-start justify-between gap-3 mb-4 md:mb-6">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate tracking-tight">Edit {currentMeal.name}</h3>
+            <p className="hidden md:block text-sm text-[#141414]/40">Customize ingredients and portions.</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414] hover:bg-[#141414]/10 transition-colors"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {(() => {
@@ -1153,27 +1162,20 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
           ) : (
             <button
               onClick={() => setShowFoodBank(true)}
-              className="w-full py-4 border-2 border-solid border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
               aria-label="Add food"
+              className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
             >
-              <Plus size={18} />
+              <span className="text-xl leading-none">＋</span>
             </button>
           )}
         </div>
 
         </div>
-        <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
-          <button
-            onClick={onClose}
-            aria-label="Cancel"
-            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
-          >
-            <span className="text-xl leading-none">❌</span>
-          </button>
+        <div className="sticky bottom-0 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
           <button
             onClick={handleSave}
             aria-label="Save changes"
-            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+            className="w-full py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
           >
             <span className="text-xl leading-none">✅</span>
           </button>
