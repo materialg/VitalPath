@@ -201,31 +201,41 @@ export function Dashboard({ profile, onNavigate }: Props) {
     : undefined;
   const timelinePct = timelineProgress(profile.goalStartDate, profile.targetDate);
 
-  // Migration: snapshot current values as the goal baseline once, on first
-  // dashboard load after this feature ships. Skip if baseline already exists,
-  // if we have no real vitals to snapshot, or if there's no body-fat target
-  // to derive target_weight from.
+  // Backfill the goal baseline from the user's *first* vital log (their
+  // onboarding entry), not from current values. New ProfileSetup signups
+  // already write goalStart* directly; this effect catches legacy accounts
+  // and also corrects accounts that got the wrong baseline (== current
+  // values) from the previous version of this migration.
   const migrationRanRef = useRef(false);
   useEffect(() => {
     if (migrationRanRef.current) return;
-    if (hasBaseline) return;
     if (vitals.length === 0) return;
     if (profile.goalBodyFat === undefined) return;
+    const first = vitals[0];
+    const onboardWeight = first.weight;
+    const onboardBF = first.bodyFat;
+    if (!Number.isFinite(onboardWeight) || onboardBF === undefined) return;
+    const baselineMatchesOnboarding =
+      profile.goalStartWeight !== undefined &&
+      Math.abs(profile.goalStartWeight - onboardWeight) < 0.5 &&
+      profile.goalStartBodyFat !== undefined &&
+      Math.abs(profile.goalStartBodyFat - onboardBF) < 0.5;
+    if (baselineMatchesOnboarding) return;
     migrationRanRef.current = true;
-    const target = deriveTargetWeight(currentWeight, currentBF, profile.goalBodyFat);
+    const target = deriveTargetWeight(onboardWeight, onboardBF, profile.goalBodyFat);
     const patch: Partial<UserProfile> = {
-      goalStartWeight: currentWeight,
-      goalStartBodyFat: currentBF,
-      goalStartDate: new Date().toISOString(),
+      goalStartWeight: onboardWeight,
+      goalStartBodyFat: onboardBF,
+      goalStartDate: first.date ?? profile.createdAt,
       goalDirection: profile.goalDirection ?? 'cut',
     };
     if (target !== null) patch.targetWeight = target;
     updateDoc(doc(db, 'users', profile.uid), patch as Record<string, unknown>)
       .catch(err => {
         migrationRanRef.current = false;
-        console.error('Goal baseline migration failed:', err);
+        console.error('Goal baseline backfill failed:', err);
       });
-  }, [hasBaseline, vitals.length, profile.uid, profile.goalBodyFat, profile.goalDirection, currentWeight, currentBF]);
+  }, [vitals, profile.uid, profile.goalBodyFat, profile.goalDirection, profile.goalStartWeight, profile.goalStartBodyFat, profile.createdAt]);
 
   // Re-derive target_weight when target_bf changes (and the user hasn't pinned a value
   // out-of-band). We treat the stored targetWeight as stale if it disagrees with the
