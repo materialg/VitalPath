@@ -1320,16 +1320,18 @@ function EditExerciseModal({ exercise, liftBank, onClose, onUpdate, onRemove }: 
           <button
             onClick={addSet}
             title="Add set"
-            className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
+            aria-label="Add set"
+            className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
           >
-            <Plus size={16} />
+            <span className="text-xl leading-none">＋</span>
           </button>
           <button
             onClick={onRemove}
             title="Delete exercise"
-            className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
+            aria-label="Delete exercise"
+            className="w-full py-2.5 rounded-xl border-2 border-red-200 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
           >
-            <Trash2 size={16} />
+            <span className="text-xl leading-none">🗑️</span>
           </button>
         </div>
       </motion.div>
