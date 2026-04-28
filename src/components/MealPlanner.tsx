@@ -996,6 +996,19 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
     });
   };
 
+  const handleClearMeal = () => {
+    onSave({
+      ...currentMeal,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fats: 0,
+      fiber: 0,
+      ingredients: [],
+      ingredientsWithAmounts: [],
+    });
+  };
+
   const addIngredient = (food: FoodBankItem) => {
     let unit = (food.servingUnit || 'unit').toLowerCase();
     if (unit === 'units') unit = 'unit';
@@ -1030,7 +1043,7 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
             <p className="hidden md:block text-sm text-[#141414]/40">Customize ingredients and portions.</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleSave}
             aria-label="Close"
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414] hover:bg-[#141414]/10 transition-colors"
           >
@@ -1160,25 +1173,25 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setShowFoodBank(true)}
-              aria-label="Add food"
-              className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
-            >
-              <span className="text-xl leading-none">＋</span>
-            </button>
+            <>
+              <button
+                onClick={() => setShowFoodBank(true)}
+                aria-label="Add food"
+                className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">＋</span>
+              </button>
+              <button
+                onClick={handleClearMeal}
+                aria-label="Clear meal"
+                className="w-full py-2.5 rounded-xl border-2 border-red-200 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">🗑️</span>
+              </button>
+            </>
           )}
         </div>
 
-        </div>
-        <div className="sticky bottom-0 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
-          <button
-            onClick={handleSave}
-            aria-label="Save changes"
-            className="w-full py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
-          >
-            <span className="text-xl leading-none">✅</span>
-          </button>
         </div>
       </motion.div>
     </div>
