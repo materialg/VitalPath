@@ -1065,13 +1065,13 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
             const unitLabel = unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit;
             return (
               <div key={idx} className="p-3 md:p-4 bg-white border border-[#141414]/5 rounded-2xl">
-                <div className="min-w-0 mb-3">
-                  <p className="font-bold text-[#141414] truncate">{food?.name || ing.name}</p>
-                  <p className="text-xs text-[#141414]/40 truncate">
-                    {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="min-w-0 shrink basis-20 md:basis-32">
+                    <p className="font-bold text-[#141414] truncate">{food?.name || ing.name}</p>
+                    <p className="text-xs text-[#141414]/40 truncate">
+                      {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
+                    </p>
+                  </div>
                   <div className="flex-1 min-w-0 flex items-center justify-between bg-[#141414]/5 rounded-xl p-1 gap-1">
                     <button
                       type="button"
