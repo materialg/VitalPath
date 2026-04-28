@@ -39,3 +39,12 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
+/* Prevent iOS Safari from auto-zooming on focused form controls.
+   Anything under 16px triggers the zoom; force 16px regardless of any
+   Tailwind text-* class (which would otherwise win on specificity). */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
