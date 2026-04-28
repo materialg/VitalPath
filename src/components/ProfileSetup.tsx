@@ -5,6 +5,7 @@ import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { UserProfile, ActivityLevel, Gender } from '../types';
 import { calculateTargetDate as getTargetDate } from '../services/aiService';
+import { deriveTargetWeight } from '../services/progress';
 import { motion } from 'motion/react';
 import { User as UserIcon, ArrowRight } from 'lucide-react';
 
@@ -41,6 +42,8 @@ export function ProfileSetup({ user, onComplete }: Props) {
 
     try {
       const { currentWeight, currentBodyFat, ...rest } = formData;
+      const createdAt = new Date().toISOString();
+      const targetWeight = deriveTargetWeight(currentWeight, currentBodyFat, formData.goalBodyFat);
       const profile: UserProfile = {
         uid: user.uid,
         displayName: user.displayName || 'User',
@@ -48,7 +51,12 @@ export function ProfileSetup({ user, onComplete }: Props) {
         photoURL: user.photoURL || undefined,
         ...rest,
         targetDate: formData.targetDate || calculateTargetDate(),
-        createdAt: new Date().toISOString(),
+        createdAt,
+        goalStartWeight: currentWeight,
+        goalStartBodyFat: currentBodyFat,
+        goalStartDate: createdAt,
+        goalDirection: 'cut',
+        ...(targetWeight !== null ? { targetWeight } : {}),
       };
 
       console.log("Saving profile document...");

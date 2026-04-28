@@ -154,15 +154,17 @@ export function Dashboard({ profile, onNavigate }: Props) {
       });
   }, [latestWorkout, liftBankItems, profile.uid]);
 
-  const currentWeight = vitals.length > 0 ? vitals[vitals.length - 1].weight : 180;
-  const startWeight = vitals.length > 0 ? vitals[0].weight : 180;
+  const onboardingWeight = profile.goalStartWeight ?? 0;
+  const onboardingBF = profile.goalStartBodyFat ?? 0;
+  const currentWeight = vitals.length > 0 ? vitals[vitals.length - 1].weight : onboardingWeight;
+  const startWeight = vitals.length > 0 ? vitals[0].weight : onboardingWeight;
   const weightDiff = currentWeight - startWeight;
 
   const daysLeft = profile.targetDate
     ? Math.max(0, Math.ceil((new Date(profile.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const currentBF = vitals.length > 0 ? (vitals[vitals.length - 1].bodyFat || 20) : 20;
+  const currentBF = vitals.length > 0 ? (vitals[vitals.length - 1].bodyFat || onboardingBF) : onboardingBF;
 
   const currentTargets = calculateDailyTargets(profile, currentWeight, currentBF);
 
