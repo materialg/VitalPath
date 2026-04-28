@@ -1088,14 +1088,14 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
             const unitLabel = unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit;
             return (
               <div key={idx} className="p-3 md:p-4 bg-white border border-[#141414]/5 rounded-2xl">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="min-w-0 shrink basis-20 md:basis-32">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-[#141414] truncate">{food?.name || ing.name}</p>
                     <p className="text-xs text-[#141414]/40 truncate">
                       {food ? `${food.calories} cal / ${food.servingSize} ${unit === 'unit' ? (food.servingSize === 1 ? 'unit' : 'units') : unit}` : 'Custom item'}
                     </p>
                   </div>
-                  <div className="flex-1 min-w-0 flex items-center justify-between bg-[#141414]/5 rounded-xl p-1 gap-1">
+                  <div className="shrink-0 flex items-center bg-[#141414]/5 rounded-xl p-0.5 gap-0.5">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1103,20 +1103,20 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
                         const val = parseFloat(ing.amount) || 0;
                         updateIngredientAmount(idx, `${Math.max(0, val - 1)}`);
                       }}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
+                      className="w-7 h-8 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
                     >
                       −
                     </button>
-                    <div className="flex-1 flex items-center justify-center gap-1 min-w-0">
+                    <div className="flex items-center gap-0.5">
                       <input
                         type="number"
                         inputMode="numeric"
                         value={unit === 'unit' ? Math.round(parseFloat(ing.amount) || 0) : Math.ceil(parseFloat(ing.amount) || 0)}
                         step="1"
                         onChange={(e) => updateIngredientAmount(idx, e.target.value)}
-                        className="w-12 bg-transparent border-none text-base font-bold text-right focus:ring-0 p-0 appearance-none"
+                        className="w-9 bg-transparent border-none text-sm font-bold text-right focus:ring-0 p-0 appearance-none"
                       />
-                      <span className="text-[10px] font-bold text-[#141414]/40 uppercase truncate">{unitLabel}</span>
+                      <span className="text-[9px] font-bold text-[#141414]/40 uppercase">{unitLabel}</span>
                     </div>
                     <button
                       type="button"
@@ -1125,7 +1125,7 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
                         const val = parseFloat(ing.amount) || 0;
                         updateIngredientAmount(idx, `${val + 1}`);
                       }}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
+                      className="w-7 h-8 flex items-center justify-center hover:bg-[#141414]/10 rounded-lg text-[#141414]/60 hover:text-[#141414] transition-colors text-lg font-bold shrink-0"
                     >
                       +
                     </button>
@@ -1133,9 +1133,9 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
                   <button
                     type="button"
                     onClick={() => removeIngredient(idx)}
-                    className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shrink-0"
+                    className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
