@@ -1085,7 +1085,6 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
           {(currentMeal.ingredientsWithAmounts || []).map((ing: any, idx: number) => {
             const food = findFoodItem(ing.name);
             const unit = (food?.servingUnit || 'unit').toLowerCase();
-            const unitLabel = unit === 'unit' ? (parseFloat(ing.amount) === 1 ? 'unit' : 'units') : unit;
             return (
               <div key={idx} className="p-3 md:p-4 bg-white border border-[#141414]/5 rounded-2xl">
                 <div className="flex items-center gap-2">
@@ -1107,17 +1106,14 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
                     >
                       −
                     </button>
-                    <div className="flex items-center gap-0.5">
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={unit === 'unit' ? Math.round(parseFloat(ing.amount) || 0) : Math.ceil(parseFloat(ing.amount) || 0)}
-                        step="1"
-                        onChange={(e) => updateIngredientAmount(idx, e.target.value)}
-                        className="w-9 bg-transparent border-none text-sm font-bold text-right focus:ring-0 p-0 appearance-none"
-                      />
-                      <span className="text-[9px] font-bold text-[#141414]/40 uppercase">{unitLabel}</span>
-                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={unit === 'unit' ? Math.round(parseFloat(ing.amount) || 0) : Math.ceil(parseFloat(ing.amount) || 0)}
+                      step="1"
+                      onChange={(e) => updateIngredientAmount(idx, e.target.value)}
+                      className="w-12 bg-transparent border-none text-sm font-bold text-center focus:ring-0 p-0 appearance-none"
+                    />
                     <button
                       type="button"
                       onClick={(e) => {
