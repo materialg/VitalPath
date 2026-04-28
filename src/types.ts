@@ -1,5 +1,6 @@
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 export type Gender = 'male' | 'female' | 'other';
+export type GoalDirection = 'cut' | 'bulk' | 'recomp';
 
 export interface UserProfile {
   uid: string;
@@ -16,6 +17,14 @@ export interface UserProfile {
   activeMealPlanId?: string;
   activeWorkoutId?: string;
   createdAt: string;
+  // Goal baseline + targets. Snapshot-style: captured once at goal start
+  // and re-derived only when target_bf changes (target_weight) — never silently
+  // overwritten on every dashboard load.
+  goalStartWeight?: number;   // pounds
+  goalStartBodyFat?: number;  // %
+  goalStartDate?: string;     // ISO date
+  targetWeight?: number;      // pounds, derived OR user-set
+  goalDirection?: GoalDirection;
 }
 
 export interface VitalLog {

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
 import { safeMeals, stripUndefined } from '../services/mealSanitizer';
+import { calculateProgress, deriveTargetWeight, timelineProgress, progressDirectionFor } from '../services/progress';
 
 interface Props {
   profile: UserProfile;
@@ -156,19 +157,13 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const currentWeight = vitals.length > 0 ? vitals[vitals.length - 1].weight : 180;
   const startWeight = vitals.length > 0 ? vitals[0].weight : 180;
   const weightDiff = currentWeight - startWeight;
-  
-  const daysLeft = profile.targetDate 
+
+  const daysLeft = profile.targetDate
     ? Math.max(0, Math.ceil((new Date(profile.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
-  
-  const totalDays = profile.targetDate && profile.createdAt
-    ? Math.ceil((new Date(profile.targetDate).getTime() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24))
-    : 90;
-  
-  const timelineProgress = totalDays > 0 ? Math.round(Math.min(100, Math.max(0, ((totalDays - daysLeft) / totalDays) * 100))) : 0;
 
   const currentBF = vitals.length > 0 ? (vitals[vitals.length - 1].bodyFat || 20) : 20;
-  
+
   const currentTargets = calculateDailyTargets(profile, currentWeight, currentBF);
 
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -191,10 +186,60 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
   const todayEntry = vitals.find(v => isToday(v.date));
   const vitalsLoggedToday = !!todayEntry;
-  const bfProgress = profile.goalBodyFat && currentBF ? Math.min(100, Math.round((profile.goalBodyFat / currentBF) * 100)) : 0;
-  const weightProgress = currentTargets.targetWeight && currentWeight
-    ? Math.min(100, Math.round((currentTargets.targetWeight / currentWeight) * 100))
-    : 0;
+
+  const goalDirection = profile.goalDirection ?? 'cut';
+  const weightDir = progressDirectionFor(goalDirection, 'weight');
+  const bfDir = progressDirectionFor(goalDirection, 'bodyFat');
+  const hasBaseline = profile.goalStartWeight !== undefined && profile.goalStartBodyFat !== undefined;
+  const weightProgress = hasBaseline && weightDir && profile.targetWeight !== undefined
+    ? calculateProgress(profile.goalStartWeight!, currentWeight, profile.targetWeight, weightDir)
+    : undefined;
+  const bfProgress = hasBaseline && bfDir && profile.goalBodyFat !== undefined
+    ? calculateProgress(profile.goalStartBodyFat!, currentBF, profile.goalBodyFat, bfDir)
+    : undefined;
+  const timelinePct = timelineProgress(profile.goalStartDate, profile.targetDate);
+
+  // Migration: snapshot current values as the goal baseline once, on first
+  // dashboard load after this feature ships. Skip if baseline already exists,
+  // if we have no real vitals to snapshot, or if there's no body-fat target
+  // to derive target_weight from.
+  const migrationRanRef = useRef(false);
+  useEffect(() => {
+    if (migrationRanRef.current) return;
+    if (hasBaseline) return;
+    if (vitals.length === 0) return;
+    if (profile.goalBodyFat === undefined) return;
+    migrationRanRef.current = true;
+    const target = deriveTargetWeight(currentWeight, currentBF, profile.goalBodyFat);
+    const patch: Partial<UserProfile> = {
+      goalStartWeight: currentWeight,
+      goalStartBodyFat: currentBF,
+      goalStartDate: new Date().toISOString(),
+      goalDirection: profile.goalDirection ?? 'cut',
+    };
+    if (target !== null) patch.targetWeight = target;
+    updateDoc(doc(db, 'users', profile.uid), patch as Record<string, unknown>)
+      .catch(err => {
+        migrationRanRef.current = false;
+        console.error('Goal baseline migration failed:', err);
+      });
+  }, [hasBaseline, vitals.length, profile.uid, profile.goalBodyFat, profile.goalDirection, currentWeight, currentBF]);
+
+  // Re-derive target_weight when target_bf changes (and the user hasn't pinned a value
+  // out-of-band). We treat the stored targetWeight as stale if it disagrees with the
+  // freshly derived value by more than a pound — that lets a user-set override stand
+  // until they edit goalBodyFat again.
+  useEffect(() => {
+    if (!hasBaseline) return;
+    if (profile.goalBodyFat === undefined) return;
+    if (profile.goalStartWeight === undefined || profile.goalStartBodyFat === undefined) return;
+    const expected = deriveTargetWeight(profile.goalStartWeight, profile.goalStartBodyFat, profile.goalBodyFat);
+    if (expected === null) return;
+    if (profile.targetWeight !== undefined && Math.abs(profile.targetWeight - expected) < 1) return;
+    if (profile.targetWeight === expected) return;
+    updateDoc(doc(db, 'users', profile.uid), { targetWeight: expected })
+      .catch(err => console.error('targetWeight recalc failed:', err));
+  }, [profile.uid, profile.goalBodyFat, profile.goalStartWeight, profile.goalStartBodyFat, profile.targetWeight, hasBaseline]);
 
   const handleMealStatusToggle = async (mIdx: number) => {
     if (!latestMealPlan || !todayMealPlan) return;
@@ -394,7 +439,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-3 lg:gap-6 max-w-6xl mx-auto w-full">
         <StatCard
-          progress={timelineProgress}
+          progress={timelinePct}
           label="Timeline"
           value={`${daysLeft} Days`}
           color="text-emerald-500"
