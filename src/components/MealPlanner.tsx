@@ -1028,7 +1028,7 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-stretch md:items-center justify-center md:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-stretch md:items-center justify-center md:p-4" onClick={handleSave}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
