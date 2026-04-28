@@ -273,12 +273,26 @@ export function Dashboard({ profile, onNavigate }: Props) {
 
   const handleUpdateExercise = async (eIdx: number, updatedExercise: Exercise) => {
     if (!latestWorkout || !todayWorkout) return;
-    setEditingExercise(null);
     const updatedDays = [...latestWorkout.days];
     const dayIndex = updatedDays.findIndex(d => d.day === todayWorkout.day);
     if (dayIndex !== -1) {
       const exercises = [...(updatedDays[dayIndex].exercises || [])];
       exercises[eIdx] = updatedExercise;
+      updatedDays[dayIndex] = { ...updatedDays[dayIndex], exercises };
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      }));
+    }
+  };
+
+  const handleRemoveExercise = async (eIdx: number) => {
+    if (!latestWorkout || !todayWorkout) return;
+    setEditingExercise(null);
+    const updatedDays = [...latestWorkout.days];
+    const dayIndex = updatedDays.findIndex(d => d.day === todayWorkout.day);
+    if (dayIndex !== -1) {
+      const exercises = (updatedDays[dayIndex].exercises || []).filter((_, i) => i !== eIdx);
       updatedDays[dayIndex] = { ...updatedDays[dayIndex], exercises };
       await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
         days: updatedDays,
@@ -538,15 +552,19 @@ export function Dashboard({ profile, onNavigate }: Props) {
              onSave={(updatedMeal) => handleUpdateMeal(editingMeal.mIdx, updatedMeal)}
           />
         )}
-        {editingExercise && (
-          <EditExerciseModal
-             key="edit-exercise-modal"
-             exercise={editingExercise.exercise}
-             liftBank={liftBankItems}
-             onClose={() => setEditingExercise(null)}
-             onSave={(updatedExercise) => handleUpdateExercise(editingExercise.eIdx, updatedExercise)}
-          />
-        )}
+        {editingExercise && (() => {
+          const liveExercise = todayWorkout?.exercises?.[editingExercise.eIdx] ?? editingExercise.exercise;
+          return (
+            <EditExerciseModal
+               key="edit-exercise-modal"
+               exercise={liveExercise}
+               liftBank={liftBankItems}
+               onClose={() => setEditingExercise(null)}
+               onUpdate={(updatedExercise) => handleUpdateExercise(editingExercise.eIdx, updatedExercise)}
+               onRemove={() => handleRemoveExercise(editingExercise.eIdx)}
+            />
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
@@ -1192,158 +1210,126 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
   );
 }
 
-function EditExerciseModal({ exercise, liftBank, onClose, onSave }: { exercise: Exercise, liftBank: LiftBankItem[], onClose: () => void, onSave: (updatedExercise: Exercise) => void, key?: React.Key }) {
-  const normalize = (length: number, source?: number[]) => {
-    const safeLen = Math.max(1, length);
-    const arr = Array.isArray(source) ? source.slice(0, safeLen) : [];
-    while (arr.length < safeLen) arr.push(0);
-    return arr;
-  };
-
-  const [currentExercise, setCurrentExercise] = useState<Exercise>(() => {
-    const sets = Math.max(1, exercise.sets || 1);
-    return {
-      ...exercise,
-      sets,
-      setReps: normalize(sets, exercise.setReps),
-      setWeights: normalize(sets, exercise.setWeights),
-    };
-  });
+function EditExerciseModal({ exercise, liftBank, onClose, onUpdate, onRemove }: { exercise: Exercise, liftBank: LiftBankItem[], onClose: () => void, onUpdate: (updatedExercise: Exercise) => void, onRemove: () => void, key?: React.Key }) {
+  const sets = Math.max(1, exercise.sets || 1);
+  const setReps = exercise.setReps || [];
+  const setWeights = exercise.setWeights || [];
 
   const updateSet = (sIdx: number, field: 'reps' | 'weight', value: number) => {
     const key = field === 'reps' ? 'setReps' : 'setWeights';
-    const next = [...(currentExercise[key] || [])];
+    const source = field === 'reps' ? setReps : setWeights;
+    const next = source.length >= sets ? [...source] : [...source, ...Array(sets - source.length).fill(0)];
     next[sIdx] = Number.isFinite(value) ? value : 0;
-    setCurrentExercise({ ...currentExercise, [key]: next });
+    onUpdate({ ...exercise, sets, [key]: next });
   };
 
   const addSet = () => {
-    const sets = currentExercise.sets + 1;
-    setCurrentExercise({
-      ...currentExercise,
-      sets,
-      setReps: [...(currentExercise.setReps || []), 0],
-      setWeights: [...(currentExercise.setWeights || []), 0],
+    onUpdate({
+      ...exercise,
+      sets: sets + 1,
+      setReps: [...setReps, ...Array(Math.max(0, sets - setReps.length)).fill(0), 0],
+      setWeights: [...setWeights, ...Array(Math.max(0, sets - setWeights.length)).fill(0), 0],
     });
   };
 
   const removeSet = (sIdx: number) => {
-    if (currentExercise.sets <= 1) return;
-    const sets = currentExercise.sets - 1;
-    setCurrentExercise({
-      ...currentExercise,
-      sets,
-      setReps: (currentExercise.setReps || []).filter((_, i) => i !== sIdx),
-      setWeights: (currentExercise.setWeights || []).filter((_, i) => i !== sIdx),
+    if (sets <= 1) return;
+    onUpdate({
+      ...exercise,
+      sets: sets - 1,
+      setReps: setReps.filter((_, i) => i !== sIdx),
+      setWeights: setWeights.filter((_, i) => i !== sIdx),
     });
   };
 
-  const handleSave = () => {
-    onSave(currentExercise);
-  };
-
-  const displayName = resolveLiftName(currentExercise.name, liftBank);
+  const displayName = resolveLiftName(exercise.name, liftBank);
 
   return (
-    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-stretch md:items-center justify-center md:p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white w-full max-w-2xl rounded-none md:rounded-3xl shadow-2xl border-0 md:border md:border-[#141414]/5 h-[100dvh] md:h-auto md:max-h-[90vh] overflow-y-auto overscroll-contain"
+        className="bg-white w-full max-w-md p-6 rounded-3xl shadow-2xl border border-[#141414]/5 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-4 md:p-8 pb-0 md:pb-0">
-          <div className="mb-4 md:mb-6 min-w-0 text-center">
-            <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate tracking-tight text-center">Edit {displayName}</h3>
-            <p className="hidden md:block text-sm text-[#141414]/40 text-center">Adjust sets, reps, and weights.</p>
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-2xl font-bold text-[#141414] truncate">{displayName}</h3>
+            {exercise.notes && (
+              <p className="text-sm text-[#141414]/60 leading-relaxed mt-2">{exercise.notes}</p>
+            )}
           </div>
-
-          <div className="mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl flex items-center gap-2 md:gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center shrink-0">
-              <span className="text-2xl md:text-3xl leading-none">💪</span>
-            </div>
-            <div className="flex-1 grid grid-cols-2 gap-1 md:gap-4 min-w-0">
-              <div className="text-center min-w-0">
-                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Sets</p>
-                <p className="text-sm md:text-lg font-black text-[#141414] whitespace-nowrap">{currentExercise.sets}</p>
-              </div>
-              <div className="text-center min-w-0">
-                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Target</p>
-                <p className="text-sm md:text-lg font-black text-[#141414] whitespace-nowrap">{currentExercise.reps}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
-            {Array.from({ length: currentExercise.sets }).map((_, sIdx) => (
-              <div
-                key={sIdx}
-                className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-[#141414]/[0.03] rounded-xl"
-              >
-                <div className="w-7 h-7 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
-                </div>
-                <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={currentExercise.setReps?.[sIdx] || ''}
-                      onChange={(e) => updateSet(sIdx, 'reps', parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={currentExercise.setWeights?.[sIdx] || ''}
-                      onChange={(e) => updateSet(sIdx, 'weight', parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                      className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeSet(sIdx)}
-                  disabled={currentExercise.sets <= 1}
-                  title={currentExercise.sets <= 1 ? 'At least one set is required' : 'Remove set'}
-                  className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#141414]/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#141414]/30 transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-
-            <button
-              onClick={addSet}
-              aria-label="Add set"
-              className="w-full py-3 border-2 border-solid border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
-            >
-              <Plus size={18} />
-            </button>
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
           <button
             onClick={onClose}
-            aria-label="Cancel"
-            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+            aria-label="Close"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#141414]/5 text-[#141414]/40 hover:text-[#141414] hover:bg-[#141414]/10 transition-colors"
           >
-            <span className="text-xl leading-none">❌</span>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {Array.from({ length: sets }).map((_, sIdx) => (
+            <div
+              key={sIdx}
+              className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-[#141414]/[0.03] rounded-xl"
+            >
+              <div className="w-7 h-7 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
+              </div>
+
+              <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4">
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={setReps[sIdx] || ''}
+                    onChange={(e) => updateSet(sIdx, 'reps', parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={setWeights[sIdx] || ''}
+                    onChange={(e) => updateSet(sIdx, 'weight', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => removeSet(sIdx)}
+                disabled={sets <= 1}
+                title={sets <= 1 ? 'At least one set is required' : 'Remove set'}
+                className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#141414]/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#141414]/30 transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={addSet}
+            title="Add set"
+            className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
+          >
+            <Plus size={16} />
           </button>
           <button
-            onClick={handleSave}
-            aria-label="Save changes"
-            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+            onClick={onRemove}
+            title="Delete exercise"
+            className="w-full py-2.5 rounded-xl border-2 border-red-200 text-red-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
           >
-            <span className="text-xl leading-none">✅</span>
+            <Trash2 size={16} />
           </button>
         </div>
       </motion.div>
