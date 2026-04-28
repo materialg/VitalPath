@@ -1289,7 +1289,7 @@ function EditExerciseModal({ exercise, liftBank, onClose, onUpdate, onRemove }: 
                     value={setReps[sIdx] || ''}
                     onChange={(e) => updateSet(sIdx, 'reps', parseInt(e.target.value) || 0)}
                     placeholder="0"
-                    className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                    className="w-full pl-3 pr-10 py-2 rounded-lg text-base font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
                 </div>
@@ -1300,7 +1300,7 @@ function EditExerciseModal({ exercise, liftBank, onClose, onUpdate, onRemove }: 
                     value={setWeights[sIdx] || ''}
                     onChange={(e) => updateSet(sIdx, 'weight', parseFloat(e.target.value) || 0)}
                     placeholder="0"
-                    className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                    className="w-full pl-3 pr-10 py-2 rounded-lg text-base font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
                 </div>
