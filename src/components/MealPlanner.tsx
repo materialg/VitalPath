@@ -996,19 +996,6 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
     });
   };
 
-  const handleClearMeal = () => {
-    onSave({
-      ...currentMeal,
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      fats: 0,
-      fiber: 0,
-      ingredients: [],
-      ingredientsWithAmounts: [],
-    });
-  };
-
   const addIngredient = (food: FoodBankItem) => {
     let unit = (food.servingUnit || 'unit').toLowerCase();
     if (unit === 'units') unit = 'unit';
@@ -1173,22 +1160,13 @@ function EditMealModal({ meal, foodBank, targets, dayProgressOffset, onClose, on
               </button>
             </div>
           ) : (
-            <>
-              <button
-                onClick={() => setShowFoodBank(true)}
-                aria-label="Add food"
-                className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
-              >
-                <span className="text-xl leading-none">＋</span>
-              </button>
-              <button
-                onClick={handleClearMeal}
-                aria-label="Clear meal"
-                className="w-full py-2.5 rounded-xl border-2 border-red-200 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
-              >
-                <span className="text-xl leading-none">🗑️</span>
-              </button>
-            </>
+            <button
+              onClick={() => setShowFoodBank(true)}
+              aria-label="Add food"
+              className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
+            >
+              <span className="text-xl leading-none">＋</span>
+            </button>
           )}
         </div>
 

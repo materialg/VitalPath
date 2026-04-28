@@ -221,7 +221,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
     const updatedDays = [...latestMealPlan.days];
     const dayIndex = updatedDays.findIndex(d => d.day === todayMealPlan.day);
     if (dayIndex !== -1) {
-      const slotNames = ["Breakfast", "Lunch", "Dinner"];
+      const slotNames = ["Breakfast", "Lunch", "Dinner", "Snack"];
       const meals = [...(updatedDays[dayIndex].meals || [])];
       while (meals.length <= mIdx) {
         meals.push({
@@ -478,7 +478,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
              onClose={() => setShowMealModal(false)}
              onEditMeal={(mIdx) => {
                const safe = safeMeals(todayMealPlan.meals, foodBankItems);
-               const slotName = ["Breakfast", "Lunch", "Dinner"][mIdx] || `Meal ${mIdx + 1}`;
+               const slotName = ["Breakfast", "Lunch", "Dinner", "Snack"][mIdx] || `Meal ${mIdx + 1}`;
                const meal = safe[mIdx] ?? {
                  name: slotName,
                  calories: 0,
@@ -545,7 +545,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
           <EditMealModal
              key="edit-meal-modal"
              meal={editingMeal.meal}
-             mealName={["Breakfast", "Lunch", "Dinner"][editingMeal.mIdx] || editingMeal.meal.name}
+             mealName={["Breakfast", "Lunch", "Dinner", "Snack"][editingMeal.mIdx] || editingMeal.meal.name}
              targetCalories={currentTargets.dailyCalories}
              foodBank={foodBankItems}
              onClose={() => setEditingMeal(null)}
@@ -693,7 +693,7 @@ function VitalsModal({ profile, currentWeight, currentBodyFat, existingId, onClo
 function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggleMeal, onEditMeal }: { meals: Meal[], dayName: string, targetCalories?: number, onClose: () => void, onConfirm?: () => void, onToggleMeal?: (idx: number) => void, onEditMeal?: (idx: number) => void, key?: React.Key }) {
   const safe = (meals || []).filter(Boolean);
   const totalCalories = safe.reduce((sum, m) => sum + (m?.calories || 0), 0);
-  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner"];
+  const MEAL_SLOT_NAMES = ["Breakfast", "Lunch", "Dinner", "Snack"];
   const slots = MEAL_SLOT_NAMES.map((_, i) => safe[i] ?? null);
   
   return (
@@ -1026,19 +1026,6 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
     onSave(currentMeal);
   };
 
-  const handleClearMeal = () => {
-    onSave({
-      ...currentMeal,
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      fats: 0,
-      fiber: 0,
-      ingredients: [],
-      ingredientsWithAmounts: [],
-    });
-  };
-
   const addIngredient = (food: FoodBankItem) => {
     let unit = (food.servingUnit || 'unit').toLowerCase();
     if (unit === 'units') unit = 'unit';
@@ -1196,22 +1183,13 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
               </button>
             </div>
           ) : (
-            <>
-              <button
-                onClick={() => setShowFoodBank(true)}
-                aria-label="Add food"
-                className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
-              >
-                <span className="text-xl leading-none">＋</span>
-              </button>
-              <button
-                onClick={handleClearMeal}
-                aria-label="Clear meal"
-                className="w-full py-2.5 rounded-xl border-2 border-red-200 hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center"
-              >
-                <span className="text-xl leading-none">🗑️</span>
-              </button>
-            </>
+            <button
+              onClick={() => setShowFoodBank(true)}
+              aria-label="Add food"
+              className="w-full py-2.5 rounded-xl border-2 border-[#141414]/10 hover:border-[#141414]/20 hover:bg-[#141414]/5 transition-all flex items-center justify-center"
+            >
+              <span className="text-xl leading-none">＋</span>
+            </button>
           )}
         </div>
 
