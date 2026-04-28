@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, limit, onSnapshot, doc, updateDoc, addDoc, where, getDocs, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
-import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem } from '../types';
+import { UserProfile, VitalLog, MealPlan, WorkoutPlan, Meal, FoodBankItem, LiftBankItem, Exercise } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingDown, Target, Calendar, Check, X, Pencil, ListTodo, Scale, Plus, Activity, ChefHat, Timer, Zap, CheckCircle2, History, RotateCcw, PlusCircle, Trash2, Search } from 'lucide-react';
 import { logDailyTarget, calculateDailyTargets } from '../services/aiService';
@@ -45,6 +45,7 @@ export function Dashboard({ profile, onNavigate }: Props) {
   const [showMealModal, setShowMealModal] = useState(false);
   const [showWorkoutModal, setShowWorkoutModal] = useState(false);
   const [editingMeal, setEditingMeal] = useState<{ mIdx: number; meal: Meal } | null>(null);
+  const [editingExercise, setEditingExercise] = useState<{ eIdx: number; exercise: Exercise } | null>(null);
   const [foodBankItems, setFoodBankItems] = useState<FoodBankItem[]>([]);
   const [liftBankItems, setLiftBankItems] = useState<LiftBankItem[]>([]);
 
@@ -267,6 +268,22 @@ export function Dashboard({ profile, onNavigate }: Props) {
         days: updatedDays,
         updatedAt: new Date().toISOString()
       });
+    }
+  };
+
+  const handleUpdateExercise = async (eIdx: number, updatedExercise: Exercise) => {
+    if (!latestWorkout || !todayWorkout) return;
+    setEditingExercise(null);
+    const updatedDays = [...latestWorkout.days];
+    const dayIndex = updatedDays.findIndex(d => d.day === todayWorkout.day);
+    if (dayIndex !== -1) {
+      const exercises = [...(updatedDays[dayIndex].exercises || [])];
+      exercises[eIdx] = updatedExercise;
+      updatedDays[dayIndex] = { ...updatedDays[dayIndex], exercises };
+      await updateDoc(doc(db, 'users', profile.uid, 'workouts', latestWorkout.id), stripUndefined({
+        days: updatedDays,
+        updatedAt: new Date().toISOString()
+      }));
     }
   };
 
@@ -502,6 +519,12 @@ export function Dashboard({ profile, onNavigate }: Props) {
             onConfirm={() => handleWorkoutToggle()}
             onRest={() => handleRestToday()}
             onUndoRest={() => handleUndoRest()}
+            onEditExercise={(eIdx) => {
+              if (!todayWorkout) return;
+              const exercise = todayWorkout.exercises?.[eIdx];
+              if (!exercise) return;
+              setEditingExercise({ eIdx, exercise: JSON.parse(JSON.stringify(exercise)) });
+            }}
           />
         )}
         {editingMeal && (
@@ -513,6 +536,15 @@ export function Dashboard({ profile, onNavigate }: Props) {
              foodBank={foodBankItems}
              onClose={() => setEditingMeal(null)}
              onSave={(updatedMeal) => handleUpdateMeal(editingMeal.mIdx, updatedMeal)}
+          />
+        )}
+        {editingExercise && (
+          <EditExerciseModal
+             key="edit-exercise-modal"
+             exercise={editingExercise.exercise}
+             liftBank={liftBankItems}
+             onClose={() => setEditingExercise(null)}
+             onSave={(updatedExercise) => handleUpdateExercise(editingExercise.eIdx, updatedExercise)}
           />
         )}
       </AnimatePresence>
@@ -737,7 +769,7 @@ function MealModal({ meals, dayName, targetCalories, onClose, onConfirm, onToggl
   );
 }
 
-function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest, onUndoRest }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, onRest?: () => void, onUndoRest?: () => void, key?: React.Key }) {
+function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest, onUndoRest, onEditExercise }: { workout: WorkoutPlan, liftBank?: LiftBankItem[], onClose: () => void, onConfirm?: () => void, onRest?: () => void, onUndoRest?: () => void, onEditExercise?: (idx: number) => void, key?: React.Key }) {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const todayName = dayNames[new Date().getDay()];
   const todayWorkout = workout.days.find(d => d.day === todayName) || workout.days[0];
@@ -802,7 +834,17 @@ function WorkoutModal({ workout, liftBank = [], onClose, onConfirm, onRest, onUn
             todayWorkout.exercises.map((ex, idx) => (
               <div
                 key={`ex-${idx}-${ex.name}`}
-                className="flex items-center gap-3 p-3 bg-[#141414]/5 rounded-2xl border border-transparent hover:border-[#141414]/10 transition-all"
+                onClick={() => onEditExercise?.(idx)}
+                role={onEditExercise ? 'button' : undefined}
+                tabIndex={onEditExercise ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (!onEditExercise) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onEditExercise(idx);
+                  }
+                }}
+                className={`flex items-center gap-3 p-3 bg-[#141414]/5 rounded-2xl border border-transparent transition-all ${onEditExercise ? 'cursor-pointer hover:ring-2 hover:ring-[#141414]/10' : 'hover:border-[#141414]/10'}`}
               >
                 <div className="w-8 h-8 bg-[#141414] rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0">
                   {idx + 1}
@@ -1129,6 +1171,165 @@ function EditMealModal({ meal, mealName, targetCalories, foodBank, onClose, onSa
         </div>
 
         </div>
+        <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
+          <button
+            onClick={onClose}
+            aria-label="Cancel"
+            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+          >
+            <span className="text-xl leading-none">❌</span>
+          </button>
+          <button
+            onClick={handleSave}
+            aria-label="Save changes"
+            className="flex-1 py-3 md:py-4 bg-[#141414]/5 text-[#141414] rounded-2xl font-bold hover:bg-[#141414]/10 transition-all flex items-center justify-center"
+          >
+            <span className="text-xl leading-none">✅</span>
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function EditExerciseModal({ exercise, liftBank, onClose, onSave }: { exercise: Exercise, liftBank: LiftBankItem[], onClose: () => void, onSave: (updatedExercise: Exercise) => void, key?: React.Key }) {
+  const normalize = (length: number, source?: number[]) => {
+    const safeLen = Math.max(1, length);
+    const arr = Array.isArray(source) ? source.slice(0, safeLen) : [];
+    while (arr.length < safeLen) arr.push(0);
+    return arr;
+  };
+
+  const [currentExercise, setCurrentExercise] = useState<Exercise>(() => {
+    const sets = Math.max(1, exercise.sets || 1);
+    return {
+      ...exercise,
+      sets,
+      setReps: normalize(sets, exercise.setReps),
+      setWeights: normalize(sets, exercise.setWeights),
+    };
+  });
+
+  const updateSet = (sIdx: number, field: 'reps' | 'weight', value: number) => {
+    const key = field === 'reps' ? 'setReps' : 'setWeights';
+    const next = [...(currentExercise[key] || [])];
+    next[sIdx] = Number.isFinite(value) ? value : 0;
+    setCurrentExercise({ ...currentExercise, [key]: next });
+  };
+
+  const addSet = () => {
+    const sets = currentExercise.sets + 1;
+    setCurrentExercise({
+      ...currentExercise,
+      sets,
+      setReps: [...(currentExercise.setReps || []), 0],
+      setWeights: [...(currentExercise.setWeights || []), 0],
+    });
+  };
+
+  const removeSet = (sIdx: number) => {
+    if (currentExercise.sets <= 1) return;
+    const sets = currentExercise.sets - 1;
+    setCurrentExercise({
+      ...currentExercise,
+      sets,
+      setReps: (currentExercise.setReps || []).filter((_, i) => i !== sIdx),
+      setWeights: (currentExercise.setWeights || []).filter((_, i) => i !== sIdx),
+    });
+  };
+
+  const handleSave = () => {
+    onSave(currentExercise);
+  };
+
+  const displayName = resolveLiftName(currentExercise.name, liftBank);
+
+  return (
+    <div className="fixed inset-0 bg-[#141414]/60 backdrop-blur-sm z-50 flex items-stretch md:items-center justify-center md:p-4" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white w-full max-w-2xl rounded-none md:rounded-3xl shadow-2xl border-0 md:border md:border-[#141414]/5 h-[100dvh] md:h-auto md:max-h-[90vh] overflow-y-auto overscroll-contain"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-4 md:p-8 pb-0 md:pb-0">
+          <div className="mb-4 md:mb-6 min-w-0 text-center">
+            <h3 className="text-xl md:text-2xl font-bold text-[#141414] truncate tracking-tight text-center">Edit {displayName}</h3>
+            <p className="hidden md:block text-sm text-[#141414]/40 text-center">Adjust sets, reps, and weights.</p>
+          </div>
+
+          <div className="mb-4 md:mb-8 p-3 md:p-4 bg-[#141414]/5 rounded-2xl flex items-center gap-2 md:gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center shrink-0">
+              <span className="text-2xl md:text-3xl leading-none">💪</span>
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-1 md:gap-4 min-w-0">
+              <div className="text-center min-w-0">
+                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Sets</p>
+                <p className="text-sm md:text-lg font-black text-[#141414] whitespace-nowrap">{currentExercise.sets}</p>
+              </div>
+              <div className="text-center min-w-0">
+                <p className="text-[9px] md:text-[10px] font-bold text-[#141414]/40 uppercase tracking-wider md:tracking-widest mb-1">Target</p>
+                <p className="text-sm md:text-lg font-black text-[#141414] whitespace-nowrap">{currentExercise.reps}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
+            {Array.from({ length: currentExercise.sets }).map((_, sIdx) => (
+              <div
+                key={sIdx}
+                className="flex items-center gap-2 md:gap-4 p-2 md:p-3 bg-[#141414]/[0.03] rounded-xl"
+              >
+                <div className="w-7 h-7 md:w-8 md:h-8 bg-white rounded-lg flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-[#141414]/40">{sIdx + 1}</span>
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={currentExercise.setReps?.[sIdx] || ''}
+                      onChange={(e) => updateSet(sIdx, 'reps', parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">reps</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={currentExercise.setWeights?.[sIdx] || ''}
+                      onChange={(e) => updateSet(sIdx, 'weight', parseFloat(e.target.value) || 0)}
+                      placeholder="0"
+                      className="w-full pl-3 pr-10 py-2 rounded-lg text-sm font-bold transition-all bg-white border border-[#141414]/10 focus:ring-2 focus:ring-[#141414]/10"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-[#141414]/20">lbs</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeSet(sIdx)}
+                  disabled={currentExercise.sets <= 1}
+                  title={currentExercise.sets <= 1 ? 'At least one set is required' : 'Remove set'}
+                  className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-[#141414]/30 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#141414]/30 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={addSet}
+              aria-label="Add set"
+              className="w-full py-3 border-2 border-solid border-[#141414]/10 rounded-2xl flex items-center justify-center gap-2 text-[#141414]/40 hover:text-[#141414] hover:border-[#141414]/20 transition-all"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+        </div>
+
         <div className="sticky bottom-0 flex gap-2 md:gap-4 p-4 md:px-8 md:py-6 bg-white border-t border-[#141414]/5">
           <button
             onClick={onClose}
